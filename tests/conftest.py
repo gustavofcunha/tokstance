@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for isolated study directories, synthetic datasets, and clocks."""
+"""Fixtures compartilhadas de pytest para diretorios isolados, dados sinteticos e relogios."""
 
 from datetime import datetime, timedelta
 import json
@@ -8,31 +8,45 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from tokstance.config import BRT_TZ, DataPaths, resolve_data_paths
+from tokstance.config import BRT_TZ, CaminhosDados, resolver_caminhos_dados
 
 
-class DeterministicClock:
-    """Controllable clock anchored in Brasilia time for deterministic test execution."""
+class RelogioDeterministico:
+    """Relogio controlavel ancorado no fuso de Brasilia para execucao deterministica de testes."""
 
-    def __init__(self, initial_moment: datetime | None = None) -> None:
-        self._current = initial_moment or datetime(2026, 10, 31, 12, 0, 0, tzinfo=BRT_TZ)
-        self._monotonic = 1000.0
+    def __init__(self, momento_inicial: datetime | None = None) -> None:
+        self._atual = momento_inicial or datetime(2026, 10, 31, 12, 0, 0, tzinfo=BRT_TZ)
+        self._monotonico = 1000.0
+
+    def agora(self) -> datetime:
+        """Retorna o datetime simulado atual em horario de Brasilia."""
+        return self._atual
 
     def now(self) -> datetime:
-        """Return the current simulated Brasilia datetime."""
-        return self._current
+        """Alias de compatibilidade para o datetime simulado atual."""
+        return self._atual
+
+    def monotonico(self) -> float:
+        """Retorna o timestamp monotonico simulado atual em segundos."""
+        return self._monotonico
 
     def monotonic(self) -> float:
-        """Return the current simulated monotonic timestamp in seconds."""
-        return self._monotonic
+        """Alias de compatibilidade para o timestamp monotonico simulado."""
+        return self._monotonico
+
+    def avancar(self, segundos: float) -> None:
+        """Avanca o relogio de parede e o monotonico pelo numero de segundos informado."""
+        self._atual = self._atual + timedelta(seconds=float(segundos))
+        self._monotonico += float(segundos)
 
     def advance(self, seconds: float) -> None:
-        """Advance both wall-clock and monotonic time by the given number of seconds."""
-        self._current = self._current + timedelta(seconds=float(seconds))
-        self._monotonic += float(seconds)
+        """Alias de compatibilidade para avancar o relogio."""
+        self.avancar(seconds)
 
 
-DEFAULT_SYNTHETIC_VIDEOS = [
+DeterministicClock = RelogioDeterministico
+
+VIDEOS_SINTETICOS_PADRAO = [
     {
         "id": "7100000000000000001",
         "url": "https://www.tiktok.com/@creator1/video/7100000000000000001",
@@ -66,8 +80,9 @@ DEFAULT_SYNTHETIC_VIDEOS = [
         "video_duration": "22.0",
     },
 ]
+DEFAULT_SYNTHETIC_VIDEOS = VIDEOS_SINTETICOS_PADRAO
 
-DEFAULT_SYNTHETIC_RESERVES = [
+RESERVAS_SINTETICAS_PADRAO = [
     {
         "id": "7900000000000000001",
         "url": "https://www.tiktok.com/@reserve1/video/7900000000000000001",
@@ -85,46 +100,49 @@ DEFAULT_SYNTHETIC_RESERVES = [
         "video_duration": "26.0",
     },
 ]
+DEFAULT_SYNTHETIC_RESERVES = RESERVAS_SINTETICAS_PADRAO
 
 
-def write_synthetic_study_files(
-    base_dir: Path,
+def gravar_arquivos_estudo_sinteticos(
+    diretorio_base: Path,
     videos: list[dict[str, Any]] | None = None,
-    reserves: list[dict[str, Any]] | None = None,
+    reservas: list[dict[str, Any]] | None = None,
     config_payload: dict[str, Any] | None = None,
-) -> DataPaths:
-    """Populate an isolated directory with synthetic CSV and JSON study files."""
-    base_dir.mkdir(parents=True, exist_ok=True)
-    paths = resolve_data_paths(base_dir)
+) -> CaminhosDados:
+    """Popula um diretorio isolado com arquivos CSV e JSON sinteticos."""
+    diretorio_base.mkdir(parents=True, exist_ok=True)
+    caminhos = resolver_caminhos_dados(diretorio_base)
 
-    video_rows = videos if videos is not None else DEFAULT_SYNTHETIC_VIDEOS
-    reserve_rows = reserves if reserves is not None else DEFAULT_SYNTHETIC_RESERVES
-    pd.DataFrame(video_rows).to_csv(paths.videos_file, index=False)
-    pd.DataFrame(reserve_rows).to_csv(paths.reserve_videos_file, index=False)
+    linhas_video = videos if videos is not None else VIDEOS_SINTETICOS_PADRAO
+    linhas_reserva = reservas if reservas is not None else RESERVAS_SINTETICAS_PADRAO
+    pd.DataFrame(linhas_video).to_csv(caminhos.arquivo_videos, index=False)
+    pd.DataFrame(linhas_reserva).to_csv(caminhos.arquivo_videos_reserva, index=False)
 
-    effective_config = config_payload or {
-        "admins": ["admin"],
-        "labelers": ["alice", "bob"],
-        "overlap_percent": 50,
-        "invite_token": "TOKSTANCE-2026",
+    configuracao_efetiva = config_payload or {
+        "administradores": ["admin"],
+        "rotuladores": ["alice", "bob"],
+        "percentual_sobreposicao": 50,
+        "codigo_convite": "TOKSTANCE-2026",
     }
-    paths.config_file.write_text(
-        json.dumps(effective_config, ensure_ascii=False, indent=4),
+    caminhos.arquivo_configuracao.write_text(
+        json.dumps(configuracao_efetiva, ensure_ascii=False, indent=4),
         encoding="utf-8",
     )
-    return paths
+    return caminhos
+
+
+write_synthetic_study_files = gravar_arquivos_estudo_sinteticos
 
 
 @pytest.fixture()
-def deterministic_clock() -> DeterministicClock:
-    """Provide a controllable clock anchored in Brasilia time (UTC-03:00)."""
-    return DeterministicClock()
+def deterministic_clock() -> RelogioDeterministico:
+    """Fornece um relogio controlavel ancorado no horario de Brasilia (UTC-03:00)."""
+    return RelogioDeterministico()
 
 
 @pytest.fixture()
-def study_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DataPaths:
-    """Provide an isolated temporary study directory wired into TOKSTANCE_DATA_DIR."""
+def study_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> CaminhosDados:
+    """Fornece um diretorio temporario isolado vinculado a TOKSTANCE_DATA_DIR."""
     study_dir = tmp_path / "study_data"
     monkeypatch.setenv("TOKSTANCE_DATA_DIR", str(study_dir))
-    return write_synthetic_study_files(study_dir)
-
+    return gravar_arquivos_estudo_sinteticos(study_dir)

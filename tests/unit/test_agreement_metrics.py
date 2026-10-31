@@ -1,19 +1,19 @@
-"""Unit tests for configurable label distance, Krippendorff alpha, and fast annotation alerts."""
+"""Testes unitarios para distancias configuraveis entre rotulos, alfa de Krippendorff e alertas."""
 
 import pandas as pd
 import pytest
 
 from tokstance.backend.domain.agreement import (
-    assignment_table_for_version,
-    assignment_versions,
-    calculate_agreement,
-    filter_by_assignment_version,
-    find_fast_annotations,
-    label_distance,
+    calcular_concordancia,
+    distancia_rotulos,
+    encontrar_anotacoes_rapidas,
+    filtrar_por_versao_atribuicao,
+    tabela_atribuicoes_por_versao,
+    versoes_atribuicao,
 )
 from tokstance.backend.domain.models import (
-    DEFAULT_LABEL_DISTANCES,
-    generate_label_combinations,
+    DISTANCIAS_ROTULOS_PADRAO,
+    gerar_combinacoes_rotulos,
 )
 
 
@@ -21,25 +21,25 @@ from tokstance.backend.domain.models import (
 def test_label_distance_returns_zero_for_identical_labels() -> None:
     custom_distances = {"Baixo|Médio": 1.5, "Baixo|Alto": 4.0, "Médio|Alto": 2.0}
 
-    assert label_distance("Baixo", "Baixo", custom_distances) == 0.0
-    assert label_distance("Contra", "Contra", DEFAULT_LABEL_DISTANCES) == 0.0
+    assert distancia_rotulos("Baixo", "Baixo", custom_distances) == 0.0
+    assert distancia_rotulos("Contra", "Contra", DISTANCIAS_ROTULOS_PADRAO) == 0.0
 
 
 @pytest.mark.unit
 def test_label_distance_is_symmetric_and_reads_configured_penalties() -> None:
-    assert label_distance("Contra", "A Favor", DEFAULT_LABEL_DISTANCES) == 3.0
-    assert label_distance("A Favor", "Contra", DEFAULT_LABEL_DISTANCES) == 3.0
-    assert label_distance("Contra", "Neutro", DEFAULT_LABEL_DISTANCES) == 1.0
-    assert label_distance("Neutro", "A Favor", DEFAULT_LABEL_DISTANCES) == 1.0
+    assert distancia_rotulos("Contra", "A Favor", DISTANCIAS_ROTULOS_PADRAO) == 3.0
+    assert distancia_rotulos("A Favor", "Contra", DISTANCIAS_ROTULOS_PADRAO) == 3.0
+    assert distancia_rotulos("Contra", "Neutro", DISTANCIAS_ROTULOS_PADRAO) == 1.0
+    assert distancia_rotulos("Neutro", "A Favor", DISTANCIAS_ROTULOS_PADRAO) == 1.0
     assert (
-        label_distance(
-            "Vídeo não relacionado ao target", "Contra", DEFAULT_LABEL_DISTANCES
+        distancia_rotulos(
+            "Vídeo não relacionado ao target", "Contra", DISTANCIAS_ROTULOS_PADRAO
         )
         == 2.0
     )
     assert (
-        label_distance(
-            "A Favor", "Vídeo não relacionado ao target", DEFAULT_LABEL_DISTANCES
+        distancia_rotulos(
+            "A Favor", "Vídeo não relacionado ao target", DISTANCIAS_ROTULOS_PADRAO
         )
         == 2.0
     )
@@ -50,8 +50,10 @@ def test_generate_label_combinations_builds_all_pairs_for_custom_task_options() 
     custom_options = ["Leve", "Moderado", "Grave"]
     configured_penalties = {"Leve|Grave": 5.0, "Leve|Moderado": 1.5}
 
-    pairs = generate_label_combinations(
-        custom_options, existing_distances=configured_penalties, default_penalty=2.0
+    pairs = gerar_combinacoes_rotulos(
+        custom_options,
+        distancias_existentes=configured_penalties,
+        penalidade_padrao=2.0,
     )
 
     assert pairs == {
@@ -72,7 +74,7 @@ def test_calculate_agreement_returns_none_alpha_when_no_video_has_multiple_annot
         ]
     )
 
-    summary = calculate_agreement(single_annotations)
+    summary = calcular_concordancia(single_annotations)
 
     assert summary["alfa"] is None
     assert summary["videos_com_multiplas_anotacoes"] == 0
@@ -82,8 +84,8 @@ def test_calculate_agreement_returns_none_alpha_when_no_video_has_multiple_annot
 @pytest.mark.unit
 def test_calculate_agreement_returns_unit_alpha_for_perfect_consensus_on_custom_task() -> None:
     custom_config = {
-        "stance_options": ["Tóxico", "Não Tóxico", "Incerto"],
-        "label_distances": {
+        "opcoes_posicao": ["Tóxico", "Não Tóxico", "Incerto"],
+        "distancias_rotulos": {
             "Tóxico|Não Tóxico": 4.0,
             "Tóxico|Incerto": 1.5,
             "Não Tóxico|Incerto": 1.5,
@@ -98,7 +100,9 @@ def test_calculate_agreement_returns_unit_alpha_for_perfect_consensus_on_custom_
         ]
     )
 
-    summary = calculate_agreement(consensus_annotations, config=custom_config)
+    summary = calcular_concordancia(
+        consensus_annotations, configuracao=custom_config
+    )
 
     assert summary["alfa"] == 1.0
     assert summary["videos_com_multiplas_anotacoes"] == 2
@@ -127,8 +131,8 @@ def test_calculate_agreement_uses_configured_penalties_for_disagreement_severity
         ]
     )
 
-    neutral_summary = calculate_agreement(neutral_shift)
-    polar_summary = calculate_agreement(polar_divergence)
+    neutral_summary = calcular_concordancia(neutral_shift)
+    polar_summary = calcular_concordancia(polar_divergence)
 
     assert neutral_summary["videos_com_discordancia"][0]["discordancia_ordinal"] == 1.0
     assert polar_summary["videos_com_discordancia"][0]["discordancia_ordinal"] == 3.0
@@ -149,12 +153,12 @@ def test_calculate_agreement_ranks_outlier_annotator_highest_in_penalty_list(
         ]
     )
 
-    summary = calculate_agreement(results)
-    penalties = summary["labelers_com_maior_discordancia"]
+    summary = calcular_concordancia(results)
+    penalties = summary["rotuladores_com_maior_discordancia"]
 
-    assert penalties[0]["labeler"] == "carol"
+    assert penalties[0]["rotulador"] == "carol"
     assert penalties[0]["penalidade"] == 3.0
-    assert penalties[-1]["labeler"] == "bob"
+    assert penalties[-1]["rotulador"] == "bob"
     assert penalties[-1]["penalidade"] == 2.0
 
 
@@ -183,12 +187,14 @@ def test_find_fast_annotations_flags_submissions_faster_than_duration_minus_tole
         ]
     )
 
-    alerts = find_fast_annotations(results, videos, tolerance_seconds=5.0)
+    alerts = encontrar_anotacoes_rapidas(
+        results, videos, tolerancia_segundos=5.0
+    )
 
     assert len(alerts) == 2
-    assert alerts[0]["labeler"] == "bob"
+    assert alerts[0]["rotulador"] == "bob"
     assert alerts[0]["diferenca_segundos"] == 22.0
-    assert alerts[1]["labeler"] == "alice"
+    assert alerts[1]["rotulador"] == "alice"
     assert alerts[1]["diferenca_segundos"] == 13.0
 
 
@@ -206,7 +212,9 @@ def test_find_fast_annotations_ignores_submissions_within_tolerance_threshold() 
         ]
     )
 
-    alerts = find_fast_annotations(results, videos, tolerance_seconds=5.0)
+    alerts = encontrar_anotacoes_rapidas(
+        results, videos, tolerancia_segundos=5.0
+    )
 
     assert alerts == []
 
@@ -222,7 +230,7 @@ def test_assignment_versions_lists_active_version_first_and_excludes_legacy_pref
     )
     errors = pd.DataFrame([{"assignment_id": "v_old_002:carol:103"}])
 
-    versions = assignment_versions(assignments, results, errors)
+    versions = versoes_atribuicao(assignments, results, errors)
 
     assert versions == ["v_active_003", "v_old_002", "v_old_001"]
 
@@ -249,8 +257,8 @@ def test_filter_by_assignment_version_and_table_reconstruct_historical_round() -
         [{"assignment_id": "v_old_001:bob:102", "labeler": "bob", "video_id": "102"}]
     )
 
-    filtered_results = filter_by_assignment_version(results, "v_old_001")
-    reconstructed = assignment_table_for_version(
+    filtered_results = filtrar_por_versao_atribuicao(results, "v_old_001")
+    reconstructed = tabela_atribuicoes_por_versao(
         assignments, results, errors, "v_old_001"
     )
 

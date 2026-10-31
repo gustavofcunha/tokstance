@@ -1,4 +1,4 @@
-"""Core domain models, dataclasses, and tabular schema definitions."""
+"""Modelos de dominio, estruturas de dados e definicoes de esquemas tabulares."""
 
 from dataclasses import dataclass, field
 from itertools import combinations
@@ -8,13 +8,26 @@ from typing import Any
 
 import pandas as pd
 
-from tokstance.config import DEFAULT_INVITE_TOKEN, resolve_data_paths
+from tokstance.config import CODIGO_CONVITE_PADRAO, resolver_caminhos_dados
 
-VIDEO_REQUIRED_COLUMNS = ("id", "url", "target")
-VIDEO_OPTIONAL_COLUMNS = ("video_description", "voice_to_text", "video_duration")
-VIDEO_COLUMNS = VIDEO_REQUIRED_COLUMNS + VIDEO_OPTIONAL_COLUMNS
+PAPEL_ADMINISTRADOR = "administrador"
+PAPEL_ROTULADOR = "rotulador"
+PAPEIS_VALIDOS = (PAPEL_ADMINISTRADOR, PAPEL_ROTULADOR)
 
-ASSIGNMENT_COLUMNS = (
+POOL_PRINCIPAL = "principal"
+POOL_RESERVA = "reserva"
+TIPOS_POOL_VALIDOS = (POOL_PRINCIPAL, POOL_RESERVA)
+
+COLUNAS_OBRIGATORIAS_VIDEO = ("id", "url", "target")
+VIDEO_REQUIRED_COLUMNS = COLUNAS_OBRIGATORIAS_VIDEO
+
+COLUNAS_OPCIONAIS_VIDEO = ("video_description", "voice_to_text", "video_duration")
+VIDEO_OPTIONAL_COLUMNS = COLUNAS_OPCIONAIS_VIDEO
+
+COLUNAS_VIDEO = COLUNAS_OBRIGATORIAS_VIDEO + COLUNAS_OPCIONAIS_VIDEO
+VIDEO_COLUMNS = COLUNAS_VIDEO
+
+COLUNAS_ATRIBUICAO = (
     "assignment_version",
     "assignment_id",
     "labeler",
@@ -25,8 +38,9 @@ ASSIGNMENT_COLUMNS = (
     "voice_to_text",
     "video_duration",
 )
+ASSIGNMENT_COLUMNS = COLUNAS_ATRIBUICAO
 
-RESULT_COLUMNS = (
+COLUNAS_RESULTADO = (
     "timestamp",
     "labeler",
     "video_id",
@@ -37,8 +51,9 @@ RESULT_COLUMNS = (
     "video_duration",
     "assignment_id",
 )
+RESULT_COLUMNS = COLUNAS_RESULTADO
 
-ERROR_COLUMNS = (
+COLUNAS_ERRO = (
     "timestamp",
     "video_id",
     "url",
@@ -49,23 +64,31 @@ ERROR_COLUMNS = (
     "replacement_assignment_id",
     "replacement_status",
 )
+ERROR_COLUMNS = COLUNAS_ERRO
 
-LOG_COLUMNS = (
+COLUNAS_LOG = (
     "timestamp",
     "usuario",
     "acao",
     "tempo_desde_login_segundos",
 )
+LOG_COLUMNS = COLUNAS_LOG
 
-DEFAULT_TASK_NAME = "Detecção de Posição"
-DEFAULT_TASK_QUESTION = "Qual a posição expressa no vídeo em relação ao target?"
-DEFAULT_TASK_OPTIONS = (
+NOME_TAREFA_PADRAO = "Detecção de Posição"
+DEFAULT_TASK_NAME = NOME_TAREFA_PADRAO
+
+PERGUNTA_TAREFA_PADRAO = "Qual a posição expressa no vídeo em relação ao target?"
+DEFAULT_TASK_QUESTION = PERGUNTA_TAREFA_PADRAO
+
+OPCOES_TAREFA_PADRAO = (
     "Contra",
     "A Favor",
     "Neutro",
     "Vídeo não relacionado ao target",
 )
-DEFAULT_LABEL_DISTANCES: dict[str, float] = {
+DEFAULT_TASK_OPTIONS = OPCOES_TAREFA_PADRAO
+
+DISTANCIAS_ROTULOS_PADRAO: dict[str, float] = {
     "Contra|A Favor": 3.0,
     "Contra|Neutro": 1.0,
     "Contra|Vídeo não relacionado ao target": 2.0,
@@ -73,41 +96,70 @@ DEFAULT_LABEL_DISTANCES: dict[str, float] = {
     "A Favor|Vídeo não relacionado ao target": 2.0,
     "Neutro|Vídeo não relacionado ao target": 2.0,
 }
+DEFAULT_LABEL_DISTANCES = DISTANCIAS_ROTULOS_PADRAO
 
 
-def pair_key(left: str, right: str) -> str:
-    """Format a canonical key for an unordered pair of task labels."""
-    return f"{str(left).strip()}|{str(right).strip()}"
+def chave_par_rotulos(esquerda: str, direita: str) -> str:
+    """Formata a chave canonica para um par de rotulos da tarefa."""
+    return f"{str(esquerda).strip()}|{str(direita).strip()}"
 
 
-def generate_label_combinations(
-    options: list[str] | tuple[str, ...],
+pair_key = chave_par_rotulos
+
+
+def limpar_usuarios(valor: str | list[str] | tuple[str, ...] | None) -> list[str]:
+    """Normaliza uma lista de itens ou usuarios separada por virgula ou quebra de linha."""
+    if isinstance(valor, (list, tuple, set)):
+        texto_bruto = "\n".join(str(item) for item in valor)
+    else:
+        texto_bruto = str(valor or "")
+    candidatos = texto_bruto.replace(",", "\n").splitlines()
+    return list(dict.fromkeys(usuario.strip() for usuario in candidatos if usuario.strip()))
+
+
+clean_users = limpar_usuarios
+
+
+def gerar_combinacoes_rotulos(
+    opcoes: list[str] | tuple[str, ...],
+    distancias_existentes: dict[str, Any] | None = None,
+    penalidade_padrao: float = 1.0,
+    *,
     existing_distances: dict[str, Any] | None = None,
-    default_penalty: float = 1.0,
+    default_penalty: float | None = None,
 ) -> dict[str, float]:
-    """Build all pairwise label combinations and their penalty weights for a task."""
-    normalized_options = clean_users(list(options))
-    lookup: dict[frozenset[str], float] = {}
-    if isinstance(existing_distances, dict):
-        for raw_pair, raw_weight in existing_distances.items():
-            parts = [part.strip() for part in str(raw_pair).split("|", maxsplit=1)]
-            if len(parts) == 2 and parts[0] and parts[1] and parts[0] != parts[1]:
+    """Gera todas as combinacoes par-a-par de rotulos e seus pesos de penalidade."""
+    opcoes_normalizadas = limpar_usuarios(list(opcoes))
+    mapa_distancias = (
+        existing_distances if existing_distances is not None else distancias_existentes
+    )
+    peso_padrao = (
+        float(default_penalty) if default_penalty is not None else float(penalidade_padrao)
+    )
+    tabela_pesos: dict[frozenset[str], float] = {}
+    if isinstance(mapa_distancias, dict):
+        for par_bruto, peso_bruto in mapa_distancias.items():
+            partes = [parte.strip() for parte in str(par_bruto).split("|", maxsplit=1)]
+            if len(partes) == 2 and partes[0] and partes[1] and partes[0] != partes[1]:
                 try:
-                    lookup[frozenset(parts)] = float(raw_weight)
+                    tabela_pesos[frozenset(partes)] = float(peso_bruto)
                 except (TypeError, ValueError):
                     continue
 
-    generated: dict[str, float] = {}
-    for left, right in combinations(normalized_options, 2):
-        key = pair_key(left, right)
-        weight = lookup.get(frozenset((left, right)), float(default_penalty))
-        generated[key] = float(weight)
-    return generated
+    geradas: dict[str, float] = {}
+    for esquerda, direita in combinations(opcoes_normalizadas, 2):
+        chave = chave_par_rotulos(esquerda, direita)
+        peso = tabela_pesos.get(frozenset((esquerda, direita)), peso_padrao)
+        geradas[chave] = float(peso)
+    return geradas
+
+
+generate_label_combinations = gerar_combinacoes_rotulos
 
 
 @dataclass(frozen=True)
-class VideoRecord:
-    """Immutable representation of a primary or reserve TikTok video item."""
+class RegistroVideo:
+    """Representacao imutavel de um item de video principal ou reserva."""
 
     video_id: str
     url: str
@@ -115,219 +167,399 @@ class VideoRecord:
     video_description: str = ""
     voice_to_text: str = ""
     video_duration: str = ""
+    tipo_pool: str = POOL_PRINCIPAL
+
+
+VideoRecord = RegistroVideo
 
 
 @dataclass
-class StudyConfig:
-    """Normalized configuration for an annotation round."""
+class ConfiguracaoEstudo:
+    """Configuracao normalizada de uma tarefa de anotacao."""
 
-    admins: list[str] = field(default_factory=lambda: ["admin"])
-    labelers: list[str] = field(default_factory=list)
-    videos_per_labeler: int = 10
-    overlap_percent: float = 0.0
-    tarefa: str = DEFAULT_TASK_NAME
-    pergunta: str = DEFAULT_TASK_QUESTION
-    stance_options: list[str] = field(
-        default_factory=lambda: list(DEFAULT_TASK_OPTIONS)
+    administradores: list[str] = field(default_factory=lambda: ["admin"])
+    rotuladores: list[str] = field(default_factory=list)
+    videos_por_rotulador: int = 10
+    percentual_sobreposicao: float = 0.0
+    tarefa: str = NOME_TAREFA_PADRAO
+    pergunta: str = PERGUNTA_TAREFA_PADRAO
+    opcoes_posicao: list[str] = field(
+        default_factory=lambda: list(OPCOES_TAREFA_PADRAO)
     )
-    label_distances: dict[str, float] = field(
-        default_factory=lambda: dict(DEFAULT_LABEL_DISTANCES)
+    distancias_rotulos: dict[str, float] = field(
+        default_factory=lambda: dict(DISTANCIAS_ROTULOS_PADRAO)
     )
-    invite_token: str = DEFAULT_INVITE_TOKEN
+    codigo_convite: str = CODIGO_CONVITE_PADRAO
 
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize study configuration to a JSON-compatible dictionary."""
+    @property
+    def admins(self) -> list[str]:
+        return self.administradores
+
+    @property
+    def labelers(self) -> list[str]:
+        return self.rotuladores
+
+    @property
+    def videos_per_labeler(self) -> int:
+        return self.videos_por_rotulador
+
+    @property
+    def overlap_percent(self) -> float:
+        return self.percentual_sobreposicao
+
+    @property
+    def stance_options(self) -> list[str]:
+        return self.opcoes_posicao
+
+    @property
+    def label_distances(self) -> dict[str, float]:
+        return self.distancias_rotulos
+
+    @property
+    def invite_token(self) -> str:
+        return self.codigo_convite
+
+    def para_dicionario(self) -> dict[str, Any]:
+        """Serializa a configuracao do estudo em dicionario compativel com JSON."""
+        distancias = gerar_combinacoes_rotulos(
+            self.opcoes_posicao, self.distancias_rotulos
+        )
         return {
-            "admins": list(self.admins),
-            "labelers": list(self.labelers),
-            "videos_per_labeler": int(self.videos_per_labeler),
-            "overlap_percent": float(self.overlap_percent),
+            "administradores": list(self.administradores),
+            "rotuladores": list(self.rotuladores),
+            "videos_por_rotulador": int(self.videos_por_rotulador),
+            "percentual_sobreposicao": float(self.percentual_sobreposicao),
             "tarefa": str(self.tarefa),
             "pergunta": str(self.pergunta),
-            "stance_options": list(self.stance_options),
-            "label_distances": generate_label_combinations(
-                self.stance_options, self.label_distances
-            ),
-            "invite_token": str(self.invite_token),
+            "opcoes_posicao": list(self.opcoes_posicao),
+            "distancias_rotulos": dict(distancias),
+            "codigo_convite": str(self.codigo_convite),
         }
 
+    def to_dict(self) -> dict[str, Any]:
+        """Alias de compatibilidade para serializacao em dicionario."""
+        return self.para_dicionario()
 
-@dataclass(frozen=True)
-class UserAccount:
-    """Registered user account with role and assigned slot metadata."""
 
-    username: str
-    password_hash: str
-    role: str
-    assigned_slot: str = ""
-    created_at: str = ""
+StudyConfig = ConfiguracaoEstudo
 
 
 @dataclass(frozen=True)
-class AnnotationRecord:
-    """Completed stance annotation submitted by a labeler."""
+class ContaUsuario:
+    """Conta de usuario cadastrada com papel e vaga atribuida."""
+
+    nome_usuario: str
+    senha_hash: str
+    papel: str = PAPEL_ROTULADOR
+    vaga_atribuida: str = ""
+    criado_em: str = ""
+
+    @property
+    def username(self) -> str:
+        return self.nome_usuario
+
+    @property
+    def password_hash(self) -> str:
+        return self.senha_hash
+
+    @property
+    def role(self) -> str:
+        return self.papel
+
+    @property
+    def assigned_slot(self) -> str:
+        return self.vaga_atribuida
+
+    @property
+    def created_at(self) -> str:
+        return self.criado_em
+
+
+UserAccount = ContaUsuario
+
+
+@dataclass(frozen=True)
+class RegistroAnotacao:
+    """Anotacao de posicao concluida e submetida por um rotulador."""
 
     timestamp: str
-    labeler: str
+    rotulador: str
     video_id: str
     url: str
     target: str
-    stance: str
+    posicao: str
     tempo_analise_segundos: float
     video_duration: str
     assignment_id: str
 
+    @property
+    def labeler(self) -> str:
+        return self.rotulador
+
+    @property
+    def stance(self) -> str:
+        return self.posicao
+
+
+AnnotationRecord = RegistroAnotacao
+
 
 @dataclass(frozen=True)
-class VideoErrorRecord:
-    """Reported unavailable video event and its reserve replacement outcome."""
+class RegistroErroVideo:
+    """Registro de video indisponivel reportado e resultado da substituicao por reserva."""
 
     timestamp: str
     video_id: str
     url: str
-    labeler: str
+    rotulador: str
     assignment_id: str
     replacement_video_id: str = ""
     replacement_url: str = ""
     replacement_assignment_id: str = ""
     replacement_status: str = ""
 
+    @property
+    def labeler(self) -> str:
+        return self.rotulador
 
-def load_videos(videos_file: Path | None = None) -> pd.DataFrame:
-    """Load and validate the primary videos.csv dataset."""
-    target_path = Path(videos_file) if videos_file is not None else resolve_data_paths().videos_file
-    if not target_path.exists():
+
+VideoErrorRecord = RegistroErroVideo
+
+
+def carregar_videos(arquivo_videos: Path | None = None) -> pd.DataFrame:
+    """Carrega e valida o conjunto de videos principais em videos.csv."""
+    caminho_alvo = (
+        Path(arquivo_videos)
+        if arquivo_videos is not None
+        else resolver_caminhos_dados().arquivo_videos
+    )
+    if not caminho_alvo.exists():
         raise FileNotFoundError(
-            f"\n[ERRO CRÍTICO] Arquivo '{target_path.name}' ausente. A execução foi abortada."
+            f"\n[ERRO CRÍTICO] Arquivo '{caminho_alvo.name}' ausente. A execução foi abortada."
         )
-    if target_path.stat().st_size == 0:
+    if caminho_alvo.stat().st_size == 0:
         raise ValueError("videos.csv precisa conter ao menos um registro de vídeo.")
     try:
-        videos = pd.read_csv(target_path, dtype=str).fillna("")
+        videos = pd.read_csv(caminho_alvo, dtype=str).fillna("")
     except pd.errors.EmptyDataError as exc:
         raise ValueError("videos.csv precisa conter ao menos um registro de vídeo.") from exc
 
     if videos.empty:
         raise ValueError("videos.csv precisa conter ao menos um registro de vídeo.")
-    missing = set(VIDEO_REQUIRED_COLUMNS).difference(videos.columns)
-    if missing:
+    ausentes = set(COLUNAS_OBRIGATORIAS_VIDEO).difference(videos.columns)
+    if ausentes:
         raise ValueError(
-            f"videos.csv não possui as colunas obrigatórias: {', '.join(sorted(missing))}"
+            f"videos.csv não possui as colunas obrigatórias: {', '.join(sorted(ausentes))}"
         )
-    for column in VIDEO_OPTIONAL_COLUMNS:
-        if column not in videos.columns:
-            videos[column] = ""
+    for coluna in COLUNAS_OPCIONAIS_VIDEO:
+        if coluna not in videos.columns:
+            videos[coluna] = ""
     return videos.fillna("")
 
 
-def clean_users(value: str | list[str] | tuple[str, ...] | None) -> list[str]:
-    """Normalize a comma- or newline-delimited user list preserving first-seen order."""
-    if isinstance(value, (list, tuple, set)):
-        raw_text = "\n".join(str(item) for item in value)
-    else:
-        raw_text = str(value or "")
-    candidates = raw_text.replace(",", "\n").splitlines()
-    return list(dict.fromkeys(user.strip() for user in candidates if user.strip()))
+load_videos = carregar_videos
 
 
-def load_reserve_videos(reserve_videos_file: Path | None = None) -> pd.DataFrame:
-    """Load and validate the reserve videos_reserva.csv dataset."""
-    target_path = (
-        Path(reserve_videos_file)
-        if reserve_videos_file is not None
-        else resolve_data_paths().reserve_videos_file
+def carregar_videos_reserva(arquivo_videos_reserva: Path | None = None) -> pd.DataFrame:
+    """Carrega e valida o conjunto de videos reserva em videos_reserva.csv."""
+    caminho_alvo = (
+        Path(arquivo_videos_reserva)
+        if arquivo_videos_reserva is not None
+        else resolver_caminhos_dados().arquivo_videos_reserva
     )
-    if not target_path.exists():
+    if not caminho_alvo.exists():
         raise FileNotFoundError(
-            f"\n[ERRO CRÍTICO] Arquivo '{target_path.name}' ausente. A execução foi abortada."
+            f"\n[ERRO CRÍTICO] Arquivo '{caminho_alvo.name}' ausente. A execução foi abortada."
         )
-    if target_path.stat().st_size == 0:
+    if caminho_alvo.stat().st_size == 0:
         raise ValueError("videos_reserva.csv precisa conter ao menos um registro de vídeo.")
     try:
-        reserve_videos = pd.read_csv(target_path, dtype=str).fillna("")
+        videos_reserva = pd.read_csv(caminho_alvo, dtype=str).fillna("")
     except pd.errors.EmptyDataError as exc:
-        raise ValueError("videos_reserva.csv precisa conter ao menos um registro de vídeo.") from exc
-
-    if reserve_videos.empty:
-        raise ValueError("videos_reserva.csv precisa conter ao menos um registro de vídeo.")
-    missing = set(VIDEO_REQUIRED_COLUMNS).difference(reserve_videos.columns)
-    if missing:
         raise ValueError(
-            f"videos_reserva.csv não possui as colunas obrigatórias: {', '.join(sorted(missing))}"
+            "videos_reserva.csv precisa conter ao menos um registro de vídeo."
+        ) from exc
+
+    if videos_reserva.empty:
+        raise ValueError("videos_reserva.csv precisa conter ao menos um registro de vídeo.")
+    ausentes = set(COLUNAS_OBRIGATORIAS_VIDEO).difference(videos_reserva.columns)
+    if ausentes:
+        raise ValueError(
+            f"videos_reserva.csv não possui as colunas obrigatórias: {', '.join(sorted(ausentes))}"
         )
-    for column in VIDEO_OPTIONAL_COLUMNS:
-        if column not in reserve_videos.columns:
-            reserve_videos[column] = ""
-    return reserve_videos.fillna("")
+    for coluna in COLUNAS_OPCIONAIS_VIDEO:
+        if coluna not in videos_reserva.columns:
+            videos_reserva[coluna] = ""
+    return videos_reserva.fillna("")
 
 
-def validate_required_input_files(
-    videos_file: Path | None = None,
-    reserve_videos_file: Path | None = None,
+load_reserve_videos = carregar_videos_reserva
+
+
+def validar_arquivos_entrada_obrigatorios(
+    arquivo_videos: Path | None = None,
+    arquivo_videos_reserva: Path | None = None,
 ) -> None:
-    """Ensure both primary and reserve video datasets exist and satisfy schema requirements."""
-    load_videos(videos_file)
-    load_reserve_videos(reserve_videos_file)
+    """Garante que os arquivos de videos principais e reserva existem e possuem esquema valido."""
+    carregar_videos(arquivo_videos)
+    carregar_videos_reserva(arquivo_videos_reserva)
 
 
-def save_config(
-    config: dict[str, Any] | StudyConfig,
-    config_file: Path | None = None,
+validate_required_input_files = validar_arquivos_entrada_obrigatorios
+
+
+def dividir_videos_principal_e_reserva(
+    pool_videos: pd.DataFrame,
+    quantidade_principal: int,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Seleciona videos principais de forma balanceada por target e coloca o restante como reserva."""
+    colunas = list(COLUNAS_VIDEO)
+    if pool_videos.empty:
+        vazio = pd.DataFrame(columns=colunas)
+        return vazio.copy(), vazio.copy()
+
+    normalizado = pool_videos.copy()
+    for coluna in COLUNAS_OPCIONAIS_VIDEO:
+        if coluna not in normalizado.columns:
+            normalizado[coluna] = ""
+    normalizado = normalizado[colunas].fillna("").drop_duplicates(subset=["id"], keep="first").reset_index(drop=True)
+
+    #intercala videos entre targets normalizados para balancear a selecao principal
+    baldes_target: dict[str, list[int]] = {}
+    ordem_targets: list[str] = []
+    for indice_video, target_bruto in enumerate(normalizado["target"].astype(str).tolist()):
+        chave_target = target_bruto.strip()
+        if chave_target not in baldes_target:
+            baldes_target[chave_target] = []
+            ordem_targets.append(chave_target)
+        baldes_target[chave_target].append(indice_video)
+
+    ordem_intercalada: list[int] = []
+    while any(baldes_target[chave] for chave in ordem_targets):
+        for chave in ordem_targets:
+            if baldes_target[chave]:
+                ordem_intercalada.append(baldes_target[chave].pop(0))
+
+    limite = max(0, min(int(quantidade_principal), len(ordem_intercalada)))
+    indices_principais = sorted(ordem_intercalada[:limite])
+    conjunto_principais = set(indices_principais)
+    indices_reserva = [idx for idx in range(len(normalizado)) if idx not in conjunto_principais]
+
+    principais = normalizado.iloc[indices_principais].reset_index(drop=True)
+    reservas = normalizado.iloc[indices_reserva].reset_index(drop=True)
+    return principais, reservas
+
+
+split_primary_and_reserve_videos = dividir_videos_principal_e_reserva
+
+
+def salvar_configuracao(
+    configuracao: dict[str, Any] | ConfiguracaoEstudo,
+    arquivo_configuracao: Path | None = None,
 ) -> None:
-    """Persist study configuration JSON to disk."""
-    target_path = Path(config_file) if config_file is not None else resolve_data_paths().config_file
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = config.to_dict() if isinstance(config, StudyConfig) else dict(config)
-    with target_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, ensure_ascii=False, indent=2)
+    """Persiste a configuracao do estudo em JSON no disco."""
+    caminho_alvo = (
+        Path(arquivo_configuracao)
+        if arquivo_configuracao is not None
+        else resolver_caminhos_dados().arquivo_configuracao
+    )
+    caminho_alvo.parent.mkdir(parents=True, exist_ok=True)
+    conteudo = (
+        configuracao.para_dicionario()
+        if isinstance(configuracao, ConfiguracaoEstudo)
+        else dict(configuracao)
+    )
+    with caminho_alvo.open("w", encoding="utf-8") as handle:
+        json.dump(conteudo, handle, ensure_ascii=False, indent=2)
 
 
-def load_config(config_file: Path | None = None) -> dict[str, Any]:
-    """Load and normalize study configuration from configuracao.json."""
-    target_path = Path(config_file) if config_file is not None else resolve_data_paths().config_file
-    if not target_path.exists():
-        default_config = StudyConfig().to_dict()
-        save_config(default_config, target_path)
-        return default_config
+save_config = salvar_configuracao
+
+
+def carregar_configuracao(arquivo_configuracao: Path | None = None) -> dict[str, Any]:
+    """Carrega e normaliza a configuracao do estudo a partir de configuracao.json."""
+    caminho_alvo = (
+        Path(arquivo_configuracao)
+        if arquivo_configuracao is not None
+        else resolver_caminhos_dados().arquivo_configuracao
+    )
+    if not caminho_alvo.exists():
+        configuracao_padrao = ConfiguracaoEstudo().para_dicionario()
+        salvar_configuracao(configuracao_padrao, caminho_alvo)
+        return configuracao_padrao
 
     try:
-        with target_path.open(encoding="utf-8") as handle:
-            raw_config = json.load(handle)
+        with caminho_alvo.open(encoding="utf-8") as handle:
+            config_bruta = json.load(handle)
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError("configuracao.json inválido ou corrompido.") from exc
 
-    if not isinstance(raw_config, dict):
+    if not isinstance(config_bruta, dict):
         raise ValueError("configuracao.json inválido ou corrompido.")
 
-    raw_config["admins"] = clean_users(raw_config.get("admins", []))
-    raw_config["labelers"] = clean_users(raw_config.get("labelers", []))
-    raw_config["videos_per_labeler"] = int(raw_config.get("videos_per_labeler", 10))
-    raw_config["overlap_percent"] = float(raw_config.get("overlap_percent", 0.0))
-    raw_config["tarefa"] = str(raw_config.get("tarefa") or DEFAULT_TASK_NAME).strip() or DEFAULT_TASK_NAME
-    raw_config["pergunta"] = (
-        str(raw_config.get("pergunta") or DEFAULT_TASK_QUESTION).strip()
-        or DEFAULT_TASK_QUESTION
+    administradores = limpar_usuarios(
+        config_bruta.get("administradores", config_bruta.get("admins", []))
     )
-    configured_options = clean_users(raw_config.get("stance_options", []))
-    raw_config["stance_options"] = (
-        configured_options if len(configured_options) >= 2 else list(DEFAULT_TASK_OPTIONS)
+    rotuladores = limpar_usuarios(
+        config_bruta.get("rotuladores", config_bruta.get("labelers", []))
     )
-    fallback_distances = (
-        DEFAULT_LABEL_DISTANCES
-        if raw_config["stance_options"] == list(DEFAULT_TASK_OPTIONS)
+    videos_por_rotulador = int(
+        config_bruta.get(
+            "videos_por_rotulador", config_bruta.get("videos_per_labeler", 10)
+        )
+    )
+    percentual_sobreposicao = float(
+        config_bruta.get(
+            "percentual_sobreposicao", config_bruta.get("overlap_percent", 0.0)
+        )
+    )
+    tarefa = (
+        str(config_bruta.get("tarefa") or NOME_TAREFA_PADRAO).strip()
+        or NOME_TAREFA_PADRAO
+    )
+    pergunta = (
+        str(config_bruta.get("pergunta") or PERGUNTA_TAREFA_PADRAO).strip()
+        or PERGUNTA_TAREFA_PADRAO
+    )
+    opcoes_configuradas = limpar_usuarios(
+        config_bruta.get("opcoes_posicao", config_bruta.get("stance_options", []))
+    )
+    opcoes_posicao = (
+        opcoes_configuradas
+        if len(opcoes_configuradas) >= 2
+        else list(OPCOES_TAREFA_PADRAO)
+    )
+    distancias_fallback = (
+        DISTANCIAS_ROTULOS_PADRAO
+        if opcoes_posicao == list(OPCOES_TAREFA_PADRAO)
         else {}
     )
-    raw_distances = raw_config.get("label_distances")
-    effective_distances = (
-        raw_distances
-        if isinstance(raw_distances, dict) and raw_distances
-        else fallback_distances
+    distancias_brutas = config_bruta.get(
+        "distancias_rotulos", config_bruta.get("label_distances")
     )
-    raw_config["label_distances"] = generate_label_combinations(
-        raw_config["stance_options"], effective_distances
+    distancias_efetivas = (
+        distancias_brutas
+        if isinstance(distancias_brutas, dict) and distancias_brutas
+        else distancias_fallback
     )
-    invite_token = str(raw_config.get("invite_token") or DEFAULT_INVITE_TOKEN).strip()
-    raw_config["invite_token"] = invite_token or DEFAULT_INVITE_TOKEN
-    return raw_config
+    distancias_rotulos = gerar_combinacoes_rotulos(opcoes_posicao, distancias_efetivas)
+    codigo_convite = str(
+        config_bruta.get("codigo_convite")
+        or config_bruta.get("invite_token")
+        or CODIGO_CONVITE_PADRAO
+    ).strip() or CODIGO_CONVITE_PADRAO
+
+    return {
+        "administradores": administradores,
+        "rotuladores": rotuladores,
+        "videos_por_rotulador": videos_por_rotulador,
+        "percentual_sobreposicao": percentual_sobreposicao,
+        "tarefa": tarefa,
+        "pergunta": pergunta,
+        "opcoes_posicao": opcoes_posicao,
+        "distancias_rotulos": distancias_rotulos,
+        "codigo_convite": codigo_convite,
+    }
 
 
+load_config = carregar_configuracao

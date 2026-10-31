@@ -1,36 +1,36 @@
-"""Unit tests for the target-balanced and overlap-aware assignment engine."""
+"""Testes unitarios para o motor de atribuicoes balanceado por target e sobreposicao."""
 
 import pandas as pd
 import pytest
 
 from tokstance.backend.domain.assignments import (
-    assignment_identifier,
-    assignment_version,
-    bind_or_allocate_labeler_slot,
-    make_assignments,
+    gerar_atribuicoes,
+    identificador_atribuicao,
+    versao_atribuicao,
+    vincular_ou_alocar_vaga_rotulador,
 )
-from tokstance.backend.domain.models import ASSIGNMENT_COLUMNS, load_videos
+from tokstance.backend.domain.models import COLUNAS_ATRIBUICAO, carregar_videos
 
 
 @pytest.mark.unit
 def test_make_assignments_empty_labelers_returns_empty_dataframe(study_paths) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": [], "overlap_percent": 50.0}
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": [], "percentual_sobreposicao": 50.0}
 
-    assigned = make_assignments(config, videos, persist=False)
+    assigned = gerar_atribuicoes(config, videos, persistir=False)
 
     assert assigned.empty
-    assert tuple(assigned.columns) == ASSIGNMENT_COLUMNS
+    assert tuple(assigned.columns) == COLUNAS_ATRIBUICAO
 
 
 @pytest.mark.unit
 def test_make_assignments_zero_overlap_partitions_all_videos_without_duplication(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 0.0}
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
 
-    assigned = make_assignments(config, videos, persist=False)
+    assigned = gerar_atribuicoes(config, videos, persistir=False)
     alice_ids = set(assigned[assigned["labeler"] == "alice"]["video_id"])
     bob_ids = set(assigned[assigned["labeler"] == "bob"]["video_id"])
 
@@ -44,10 +44,10 @@ def test_make_assignments_zero_overlap_partitions_all_videos_without_duplication
 def test_make_assignments_fifty_percent_overlap_shares_half_and_splits_remainder(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 50.0}
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
 
-    assigned = make_assignments(config, videos, persist=False)
+    assigned = gerar_atribuicoes(config, videos, persistir=False)
     alice_ids = set(assigned[assigned["labeler"] == "alice"]["video_id"])
     bob_ids = set(assigned[assigned["labeler"] == "bob"]["video_id"])
 
@@ -61,10 +61,10 @@ def test_make_assignments_fifty_percent_overlap_shares_half_and_splits_remainder
 def test_make_assignments_hundred_percent_overlap_assigns_full_corpus_to_every_labeler(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 100.0}
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 100.0}
 
-    assigned = make_assignments(config, videos, persist=False)
+    assigned = gerar_atribuicoes(config, videos, persistir=False)
     alice_ids = list(assigned[assigned["labeler"] == "alice"]["video_id"])
     bob_ids = list(assigned[assigned["labeler"] == "bob"]["video_id"])
 
@@ -82,9 +82,9 @@ def test_make_assignments_groups_each_labeler_queue_into_contiguous_target_block
             {"id": "4", "url": "https://tiktok.com/@a/video/4", "target": "Economia"},
         ]
     )
-    config = {"labelers": ["alice"], "overlap_percent": 100.0}
+    config = {"rotuladores": ["alice"], "percentual_sobreposicao": 100.0}
 
-    assigned = make_assignments(config, videos, persist=False)
+    assigned = gerar_atribuicoes(config, videos, persistir=False)
     normalized_targets = assigned["target"].astype(str).str.strip().tolist()
 
     assert normalized_targets == ["Clima", "Clima", "Economia", "Economia"]
@@ -94,10 +94,10 @@ def test_make_assignments_groups_each_labeler_queue_into_contiguous_target_block
 def test_make_assignments_balances_per_target_allocation_across_labelers(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 0.0}
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
 
-    assigned = make_assignments(config, videos, persist=False)
+    assigned = gerar_atribuicoes(config, videos, persistir=False)
     alice_targets = sorted(
         assigned[assigned["labeler"] == "alice"]["target"].astype(str).str.strip().tolist()
     )
@@ -111,11 +111,11 @@ def test_make_assignments_balances_per_target_allocation_across_labelers(
 
 @pytest.mark.unit
 def test_assignment_version_is_deterministic_for_identical_inputs(study_paths) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 50.0}
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
 
-    first_version = assignment_version(config, videos)
-    second_version = assignment_version(config, videos)
+    first_version = versao_atribuicao(config, videos)
+    second_version = versao_atribuicao(config, videos)
 
     assert first_version == second_version
     assert first_version.startswith("v")
@@ -126,14 +126,20 @@ def test_assignment_version_is_deterministic_for_identical_inputs(study_paths) -
 def test_assignment_version_changes_when_overlap_or_labeler_list_changes(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    base_config = {"labelers": ["alice", "bob"], "overlap_percent": 50.0}
-    updated_overlap_config = {"labelers": ["alice", "bob"], "overlap_percent": 25.0}
-    updated_labelers_config = {"labelers": ["alice", "carol"], "overlap_percent": 50.0}
+    videos = carregar_videos(study_paths.arquivo_videos)
+    base_config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
+    updated_overlap_config = {
+        "rotuladores": ["alice", "bob"],
+        "percentual_sobreposicao": 25.0,
+    }
+    updated_labelers_config = {
+        "rotuladores": ["alice", "carol"],
+        "percentual_sobreposicao": 50.0,
+    }
 
-    base_version = assignment_version(base_config, videos)
-    overlap_version = assignment_version(updated_overlap_config, videos)
-    labelers_version = assignment_version(updated_labelers_config, videos)
+    base_version = versao_atribuicao(base_config, videos)
+    overlap_version = versao_atribuicao(updated_overlap_config, videos)
+    labelers_version = versao_atribuicao(updated_labelers_config, videos)
 
     assert base_version != overlap_version
     assert base_version != labelers_version
@@ -141,7 +147,7 @@ def test_assignment_version_changes_when_overlap_or_labeler_list_changes(
 
 @pytest.mark.unit
 def test_assignment_identifier_formats_version_labeler_and_video_id() -> None:
-    identifier = assignment_identifier("v123456789abc", "alice", "7100000000000000001")
+    identifier = identificador_atribuicao("v123456789abc", "alice", "7100000000000000001")
 
     assert identifier == "v123456789abc:alice:7100000000000000001"
 
@@ -150,21 +156,21 @@ def test_assignment_identifier_formats_version_labeler_and_video_id() -> None:
 def test_bind_or_allocate_labeler_slot_replaces_unclaimed_placeholder_slot(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "slot_2"], "overlap_percent": 50.0}
-    initial_assignments = make_assignments(config, videos, persist=False)
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "vaga_2"], "percentual_sobreposicao": 50.0}
+    initial_assignments = gerar_atribuicoes(config, videos, persistir=False)
 
-    updated_config, updated_assignments, bound_slot = bind_or_allocate_labeler_slot(
+    updated_config, updated_assignments, bound_slot = vincular_ou_alocar_vaga_rotulador(
         "bob",
         config,
         initial_assignments,
         videos,
-        claimed_users={"alice"},
+        usuarios_reivindicados={"alice"},
     )
 
-    assert bound_slot == "slot_2"
-    assert updated_config["labelers"] == ["alice", "bob"]
-    assert "slot_2" not in set(updated_assignments["labeler"])
+    assert bound_slot == "vaga_2"
+    assert updated_config["rotuladores"] == ["alice", "bob"]
+    assert "vaga_2" not in set(updated_assignments["labeler"])
     assert len(updated_assignments[updated_assignments["labeler"] == "bob"]) == 3
 
 
@@ -172,25 +178,23 @@ def test_bind_or_allocate_labeler_slot_replaces_unclaimed_placeholder_slot(
 def test_bind_or_allocate_labeler_slot_allocates_dynamic_queue_when_slots_are_full(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
+    videos = carregar_videos(study_paths.arquivo_videos)
     config = {
-        "labelers": ["alice", "bob"],
-        "overlap_percent": 50.0,
-        "videos_per_labeler": 3,
+        "rotuladores": ["alice", "bob"],
+        "percentual_sobreposicao": 50.0,
+        "videos_por_rotulador": 3,
     }
-    initial_assignments = make_assignments(config, videos, persist=False)
+    initial_assignments = gerar_atribuicoes(config, videos, persistir=False)
 
-    updated_config, updated_assignments, bound_slot = bind_or_allocate_labeler_slot(
+    updated_config, updated_assignments, bound_slot = vincular_ou_alocar_vaga_rotulador(
         "professor_eval",
         config,
         initial_assignments,
         videos,
-        claimed_users={"alice", "bob"},
+        usuarios_reivindicados={"alice", "bob"},
     )
 
     assert bound_slot == "professor_eval"
-    assert "professor_eval" in updated_config["labelers"]
+    assert "professor_eval" in updated_config["rotuladores"]
     assert len(updated_assignments[updated_assignments["labeler"] == "professor_eval"]) == 3
     assert len(updated_assignments[updated_assignments["labeler"] == "alice"]) == 3
-
-

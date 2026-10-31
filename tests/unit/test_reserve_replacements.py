@@ -1,38 +1,45 @@
-"""Unit tests for reserve video replacement and overlap rebalancing rules."""
+"""Testes unitarios para substituicao por videos reserva e rebalanceamento de sobreposicao."""
 
 import pandas as pd
 import pytest
 
-from tokstance.backend.domain.assignments import make_assignments
-from tokstance.backend.domain.models import ERROR_COLUMNS, RESULT_COLUMNS, load_videos
+from tokstance.backend.domain.assignments import gerar_atribuicoes
+from tokstance.backend.domain.models import (
+    COLUNAS_ERRO,
+    COLUNAS_RESULTADO,
+    carregar_videos,
+)
 from tokstance.backend.domain.replacements import (
-    apply_reserve_replacements,
-    ensure_results_schema,
-    load_assignments,
-    read_error_assignments,
-    read_results,
+    aplicar_substituicoes_reserva,
+    carregar_atribuicoes,
+    garantir_esquema_resultados,
+    ler_erros_atribuicoes,
+    ler_resultados,
 )
 
 
 def _write_error_rows(errors_file, rows: list[dict[str, str]]) -> None:
-    pd.DataFrame(rows, columns=list(ERROR_COLUMNS)).to_csv(errors_file, index=False)
+    pd.DataFrame(rows, columns=list(COLUNAS_ERRO)).to_csv(errors_file, index=False)
 
 
 @pytest.mark.unit
 def test_apply_reserve_replacements_replaces_individual_video_with_compatible_target_reserve(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 0.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     failing_row = assignments[
         (assignments["labeler"] == "alice")
         & (assignments["video_id"] == "7100000000000000001")
     ].iloc[0]
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
@@ -48,8 +55,10 @@ def test_apply_reserve_replacements_replaces_individual_video_with_compatible_ta
         ],
     )
 
-    updated = apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
-    persisted_errors = read_error_assignments(study_paths.errors_file)
+    updated = aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
+    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
 
     assert persisted_errors.loc[0, "replacement_video_id"] == "7900000000000000001"
     assert persisted_errors.loc[0, "replacement_status"] == "SUBSTITUIDO_OVERLAP"
@@ -62,15 +71,18 @@ def test_apply_reserve_replacements_replaces_individual_video_with_compatible_ta
 def test_apply_reserve_replacements_does_not_reuse_consumed_reserve_across_distinct_failures(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 0.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     first_clima = assignments[assignments["video_id"] == "7100000000000000001"].iloc[0]
     second_clima = assignments[assignments["video_id"] == "7100000000000000002"].iloc[0]
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
@@ -97,8 +109,10 @@ def test_apply_reserve_replacements_does_not_reuse_consumed_reserve_across_disti
         ],
     )
 
-    apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
-    persisted_errors = read_error_assignments(study_paths.errors_file)
+    aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
+    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
 
     assert persisted_errors.loc[0, "replacement_video_id"] == "7900000000000000001"
     assert persisted_errors.loc[1, "replacement_video_id"] == ""
@@ -117,15 +131,18 @@ def test_apply_reserve_replacements_records_sem_reserva_compativel_when_target_n
                 "target": "Esportes",
             }
         ]
-    ).to_csv(study_paths.reserve_videos_file, index=False)
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice"], "overlap_percent": 0.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    ).to_csv(study_paths.arquivo_videos_reserva, index=False)
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice"], "percentual_sobreposicao": 0.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     failing_row = assignments.iloc[0]
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
@@ -141,8 +158,10 @@ def test_apply_reserve_replacements_records_sem_reserva_compativel_when_target_n
         ],
     )
 
-    apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
-    persisted_errors = read_error_assignments(study_paths.errors_file)
+    aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
+    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
 
     assert persisted_errors.loc[0, "replacement_status"] == "SEM_RESERVA_COMPATIVEL"
 
@@ -159,15 +178,18 @@ def test_apply_reserve_replacements_records_sem_reserva_disponivel_when_all_rese
                 "target": "Clima",
             }
         ]
-    ).to_csv(study_paths.reserve_videos_file, index=False)
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice"], "overlap_percent": 0.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    ).to_csv(study_paths.arquivo_videos_reserva, index=False)
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice"], "percentual_sobreposicao": 0.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     failing_row = assignments.iloc[0]
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
@@ -183,8 +205,10 @@ def test_apply_reserve_replacements_records_sem_reserva_disponivel_when_all_rese
         ],
     )
 
-    apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
-    persisted_errors = read_error_assignments(study_paths.errors_file)
+    aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
+    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
 
     assert persisted_errors.loc[0, "replacement_status"] == "SEM_RESERVA_DISPONIVEL"
 
@@ -193,17 +217,20 @@ def test_apply_reserve_replacements_records_sem_reserva_disponivel_when_all_rese
 def test_apply_reserve_replacements_shares_single_reserve_across_unannotated_overlap_group(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 100.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 100.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     alice_row = assignments[
         (assignments["labeler"] == "alice")
         & (assignments["video_id"] == "7100000000000000001")
     ].iloc[0]
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
@@ -219,7 +246,9 @@ def test_apply_reserve_replacements_shares_single_reserve_across_unannotated_ove
         ],
     )
 
-    updated = apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
+    updated = aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
     alice_videos = set(updated[updated["labeler"] == "alice"]["video_id"])
     bob_videos = set(updated[updated["labeler"] == "bob"]["video_id"])
 
@@ -233,10 +262,13 @@ def test_apply_reserve_replacements_shares_single_reserve_across_unannotated_ove
 def test_apply_reserve_replacements_promotes_completed_individual_video_when_overlap_partially_annotated(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 50.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     alice_overlap = assignments[
         (assignments["labeler"] == "alice")
@@ -275,10 +307,10 @@ def test_apply_reserve_replacements_promotes_completed_individual_video_when_ove
                 "assignment_id": str(alice_individual["assignment_id"]),
             },
         ],
-        columns=list(RESULT_COLUMNS),
-    ).to_csv(study_paths.results_file, index=False)
+        columns=list(COLUNAS_RESULTADO),
+    ).to_csv(study_paths.arquivo_resultados, index=False)
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:02:00",
@@ -294,8 +326,10 @@ def test_apply_reserve_replacements_promotes_completed_individual_video_when_ove
         ],
     )
 
-    updated = apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
-    persisted_errors = read_error_assignments(study_paths.errors_file)
+    updated = aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
+    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
 
     assert (
         persisted_errors.loc[0, "replacement_status"]
@@ -309,10 +343,13 @@ def test_apply_reserve_replacements_promotes_completed_individual_video_when_ove
 def test_apply_reserve_replacements_propagates_promoted_video_to_all_pending_group_members(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob", "carol"], "overlap_percent": 50.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob", "carol"], "percentual_sobreposicao": 50.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     alice_overlap = assignments[
         (assignments["labeler"] == "alice")
@@ -351,10 +388,10 @@ def test_apply_reserve_replacements_propagates_promoted_video_to_all_pending_gro
                 "assignment_id": str(alice_individual["assignment_id"]),
             },
         ],
-        columns=list(RESULT_COLUMNS),
-    ).to_csv(study_paths.results_file, index=False)
+        columns=list(COLUNAS_RESULTADO),
+    ).to_csv(study_paths.arquivo_resultados, index=False)
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:02:00",
@@ -370,7 +407,9 @@ def test_apply_reserve_replacements_propagates_promoted_video_to_all_pending_gro
         ],
     )
 
-    updated = apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
+    updated = aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
     carol_videos = set(updated[updated["labeler"] == "carol"]["video_id"])
 
     assert "7100000000000000002" in carol_videos
@@ -381,10 +420,13 @@ def test_apply_reserve_replacements_propagates_promoted_video_to_all_pending_gro
 def test_apply_reserve_replacements_emits_critico_overlap_inconsistente_when_no_promotion_candidate_exists(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 100.0}
-    assignments = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 100.0}
+    assignments = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     alice_overlap = assignments[
         (assignments["labeler"] == "alice")
@@ -408,10 +450,10 @@ def test_apply_reserve_replacements_emits_critico_overlap_inconsistente_when_no_
                 "assignment_id": str(alice_overlap["assignment_id"]),
             }
         ],
-        columns=list(RESULT_COLUMNS),
-    ).to_csv(study_paths.results_file, index=False)
+        columns=list(COLUNAS_RESULTADO),
+    ).to_csv(study_paths.arquivo_resultados, index=False)
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:02:00",
@@ -427,8 +469,10 @@ def test_apply_reserve_replacements_emits_critico_overlap_inconsistente_when_no_
         ],
     )
 
-    updated = apply_reserve_replacements(assignments, data_dir=study_paths.base_dir)
-    persisted_errors = read_error_assignments(study_paths.errors_file)
+    updated = aplicar_substituicoes_reserva(
+        assignments, diretorio_dados=study_paths.diretorio_base
+    )
+    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
 
     assert (
         persisted_errors.loc[0, "replacement_status"] == "CRITICO_OVERLAP_INCONSISTENTE"
@@ -443,17 +487,20 @@ def test_apply_reserve_replacements_emits_critico_overlap_inconsistente_when_no_
 def test_load_assignments_reuses_persisted_assignments_when_version_matches(
     study_paths,
 ) -> None:
-    videos = load_videos(study_paths.videos_file)
-    config = {"labelers": ["alice", "bob"], "overlap_percent": 50.0}
-    initial = make_assignments(
-        config, videos, persist=True, assignments_file=study_paths.assignments_file
+    videos = carregar_videos(study_paths.arquivo_videos)
+    config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
+    initial = gerar_atribuicoes(
+        config,
+        videos,
+        persistir=True,
+        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
     )
     failing_row = initial[
         (initial["labeler"] == "alice")
         & (initial["video_id"] == "7100000000000000001")
     ].iloc[0]
     _write_error_rows(
-        study_paths.errors_file,
+        study_paths.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
@@ -469,7 +516,9 @@ def test_load_assignments_reuses_persisted_assignments_when_version_matches(
         ],
     )
 
-    loaded = load_assignments(config, videos, data_dir=study_paths.base_dir)
+    loaded = carregar_atribuicoes(
+        config, videos, diretorio_dados=study_paths.diretorio_base
+    )
 
     assert "7900000000000000001" in set(loaded["video_id"])
 
@@ -490,12 +539,10 @@ def test_ensure_results_schema_backfills_missing_video_duration_and_legacy_assig
                 "tempo_analise_segundos": "20.0",
             }
         ]
-    ).to_csv(study_paths.results_file, index=False)
+    ).to_csv(study_paths.arquivo_resultados, index=False)
 
-    ensure_results_schema(data_dir=study_paths.base_dir)
-    migrated = read_results(study_paths.results_file)
+    garantir_esquema_resultados(diretorio_dados=study_paths.diretorio_base)
+    migrated = ler_resultados(study_paths.arquivo_resultados)
 
     assert migrated.loc[0, "video_duration"] == "25.0"
     assert migrated.loc[0, "assignment_id"] == "legacy:alice:7100000000000000001"
-
-

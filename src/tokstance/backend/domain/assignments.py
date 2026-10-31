@@ -1,4 +1,4 @@
-"""Deterministic assignment version hashing and queue allocation engine."""
+"""Motor deterministico de versionamento de atribuicoes e alocacao de filas."""
 
 import hashlib
 import json
@@ -7,200 +7,239 @@ from typing import Any
 
 import pandas as pd
 
-from tokstance.backend.domain.models import ASSIGNMENT_COLUMNS
-from tokstance.config import resolve_data_paths
+from tokstance.backend.domain.models import COLUNAS_ATRIBUICAO
+from tokstance.config import resolver_caminhos_dados
 
 
-def assignment_version(config: dict[str, Any], videos: pd.DataFrame) -> str:
-    """Compute a deterministic 12-hex SHA-256 version identifier for a dataset and round config."""
-    video_signature = videos[["id", "url", "target"]].to_csv(
+def _extrair_rotuladores(configuracao: dict[str, Any]) -> list[str]:
+    brutos = configuracao.get("rotuladores", configuracao.get("labelers", []))
+    return [str(item).strip() for item in brutos if str(item).strip()]
+
+
+def _extrair_percentual_sobreposicao(configuracao: dict[str, Any]) -> float:
+    valor = configuracao.get(
+        "percentual_sobreposicao", configuracao.get("overlap_percent", 0.0)
+    )
+    return max(0.0, min(100.0, float(valor or 0.0)))
+
+
+def versao_atribuicao(configuracao: dict[str, Any], videos: pd.DataFrame) -> str:
+    """Calcula um identificador deterministico SHA-256 de 12 caracteres para os videos e configuracao."""
+    assinatura_videos = videos[["id", "url", "target"]].to_csv(
         index=False,
         lineterminator="\n",
     )
-    config_signature = json.dumps(
+    assinatura_config = json.dumps(
         {
-            "labelers": list(config.get("labelers", [])),
-            "overlap_percent": float(config.get("overlap_percent", 0.0)),
+            "labelers": _extrair_rotuladores(configuracao),
+            "overlap_percent": _extrair_percentual_sobreposicao(configuracao),
         },
         ensure_ascii=False,
         sort_keys=True,
     )
-    digest = hashlib.sha256(
-        f"{video_signature}\n{config_signature}".encode("utf-8")
+    resumo = hashlib.sha256(
+        f"{assinatura_videos}\n{assinatura_config}".encode("utf-8")
     ).hexdigest()
-    return f"v{digest[:12]}"
+    return f"v{resumo[:12]}"
 
 
-def assignment_identifier(version: str, labeler: str, video_id: str) -> str:
-    """Build the canonical unique identifier for a single labeler-video assignment."""
-    return f"{version}:{labeler}:{video_id}"
+assignment_version = versao_atribuicao
 
 
-def persist_frame_if_changed(
-    frame: pd.DataFrame,
-    file_path: Path,
-    columns: list[str] | tuple[str, ...],
+def identificador_atribuicao(versao: str, rotulador: str, id_video: str) -> str:
+    """Constroi o identificador unico canonico de uma atribuicao entre rotulador e video."""
+    return f"{versao}:{rotulador}:{id_video}"
+
+
+assignment_identifier = identificador_atribuicao
+
+
+def persistir_dataframe_se_alterado(
+    quadro: pd.DataFrame,
+    caminho_arquivo: Path,
+    colunas: list[str] | tuple[str, ...],
 ) -> None:
-    """Write a DataFrame to CSV only when its serialized content differs from disk."""
-    target_path = Path(file_path)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    content = frame.reindex(columns=list(columns)).to_csv(index=False)
-    if target_path.exists() and target_path.read_text(encoding="utf-8") == content:
+    """Grava um DataFrame em CSV somente quando o conteudo serializado difere do disco."""
+    caminho_alvo = Path(caminho_arquivo)
+    caminho_alvo.parent.mkdir(parents=True, exist_ok=True)
+    conteudo = quadro.reindex(columns=list(colunas)).to_csv(index=False)
+    if caminho_alvo.exists() and caminho_alvo.read_text(encoding="utf-8") == conteudo:
         return
-    target_path.write_text(content, encoding="utf-8")
+    caminho_alvo.write_text(conteudo, encoding="utf-8")
 
 
-def make_assignments(
-    config: dict[str, Any],
+persist_frame_if_changed = persistir_dataframe_se_alterado
+
+
+def gerar_atribuicoes(
+    configuracao: dict[str, Any],
     videos: pd.DataFrame,
-    persist: bool = True,
+    persistir: bool = True,
+    arquivo_atribuicoes: Path | None = None,
+    *,
+    persist: bool | None = None,
     assignments_file: Path | None = None,
 ) -> pd.DataFrame:
-    """Generate target-balanced and contiguous-target annotation queues for all labelers."""
-    labelers = list(config.get("labelers", []))
-    overlap_percent = max(0.0, min(100.0, float(config.get("overlap_percent", 0.0))))
-    version = assignment_version(config, videos)
-    columns = list(ASSIGNMENT_COLUMNS)
-
-    if not labelers or len(videos) == 0:
-        return pd.DataFrame(columns=columns)
-
-    #interleave videos across normalized targets before slicing overlap
-    target_buckets: dict[str, list[int]] = {}
-    target_order: list[str] = []
-    for video_index, raw_target in enumerate(videos["target"].astype(str).tolist()):
-        target_key = raw_target.strip()
-        if target_key not in target_buckets:
-            target_buckets[target_key] = []
-            target_order.append(target_key)
-        target_buckets[target_key].append(video_index)
-
-    balanced_video_order: list[int] = []
-    while any(target_buckets[target_key] for target_key in target_order):
-        for target_key in target_order:
-            if target_buckets[target_key]:
-                balanced_video_order.append(target_buckets[target_key].pop(0))
-
-    overlap_count = int((overlap_percent / 100.0) * len(videos))
-    overlap_indices = balanced_video_order[:overlap_count]
-    individual_indices = balanced_video_order[overlap_count:]
-
-    labeler_target_counts = {
-        labeler: {target_key: 0 for target_key in target_order}
-        for labeler in labelers
-    }
-    labeler_totals = {labeler: 0 for labeler in labelers}
-    individual_assignments: dict[int, str] = {}
-
-    for video_index in individual_indices:
-        target_key = str(videos.iloc[video_index]["target"]).strip()
-        selected_labeler = min(
-            labelers,
-            key=lambda candidate: (
-                labeler_target_counts[candidate][target_key],
-                labeler_totals[candidate],
-                labelers.index(candidate),
-            ),
-        )
-        individual_assignments[video_index] = selected_labeler
-        labeler_target_counts[selected_labeler][target_key] += 1
-        labeler_totals[selected_labeler] += 1
-
-    raw_pairs: list[tuple[str, int]] = []
-    for video_index in overlap_indices:
-        for labeler in labelers:
-            raw_pairs.append((labeler, video_index))
-    raw_pairs.extend(
-        (labeler, video_index)
-        for video_index, labeler in individual_assignments.items()
+    """Gera filas de anotacao balanceadas por target e agrupadas em blocos contiguos."""
+    rotuladores = _extrair_rotuladores(configuracao)
+    percentual_sobreposicao = _extrair_percentual_sobreposicao(configuracao)
+    versao = versao_atribuicao(configuracao, videos)
+    colunas = list(COLUNAS_ATRIBUICAO)
+    deve_persistir = persist if persist is not None else persistir
+    caminho_customizado = (
+        assignments_file if assignments_file is not None else arquivo_atribuicoes
     )
 
-    #group each labeler queue into contiguous target blocks
-    target_rank = {target_key: rank for rank, target_key in enumerate(target_order)}
-    raw_pairs.sort(
+    if not rotuladores or len(videos) == 0:
+        return pd.DataFrame(columns=colunas)
+
+    #intercala videos entre targets normalizados antes de separar a sobreposicao
+    baldes_target: dict[str, list[int]] = {}
+    ordem_targets: list[str] = []
+    for indice_video, target_bruto in enumerate(videos["target"].astype(str).tolist()):
+        chave_target = target_bruto.strip()
+        if chave_target not in baldes_target:
+            baldes_target[chave_target] = []
+            ordem_targets.append(chave_target)
+        baldes_target[chave_target].append(indice_video)
+
+    ordem_balanceada: list[int] = []
+    while any(baldes_target[chave_target] for chave_target in ordem_targets):
+        for chave_target in ordem_targets:
+            if baldes_target[chave_target]:
+                ordem_balanceada.append(baldes_target[chave_target].pop(0))
+
+    quantidade_sobreposicao = int((percentual_sobreposicao / 100.0) * len(videos))
+    indices_sobreposicao = ordem_balanceada[:quantidade_sobreposicao]
+    indices_individuais = ordem_balanceada[quantidade_sobreposicao:]
+
+    contagem_por_target = {
+        rotulador: {chave_target: 0 for chave_target in ordem_targets}
+        for rotulador in rotuladores
+    }
+    totais_rotulador = {rotulador: 0 for rotulador in rotuladores}
+    atribuicoes_individuais: dict[int, str] = {}
+
+    for indice_video in indices_individuais:
+        chave_target = str(videos.iloc[indice_video]["target"]).strip()
+        rotulador_escolhido = min(
+            rotuladores,
+            key=lambda candidato: (
+                contagem_por_target[candidato][chave_target],
+                totais_rotulador[candidato],
+                rotuladores.index(candidato),
+            ),
+        )
+        atribuicoes_individuais[indice_video] = rotulador_escolhido
+        contagem_por_target[rotulador_escolhido][chave_target] += 1
+        totais_rotulador[rotulador_escolhido] += 1
+
+    pares_brutos: list[tuple[str, int]] = []
+    for indice_video in indices_sobreposicao:
+        for rotulador in rotuladores:
+            pares_brutos.append((rotulador, indice_video))
+    pares_brutos.extend(
+        (rotulador, indice_video)
+        for indice_video, rotulador in atribuicoes_individuais.items()
+    )
+
+    #agrupa a fila de cada rotulador em blocos contiguos de target
+    classificacao_target = {
+        chave_target: posicao for posicao, chave_target in enumerate(ordem_targets)
+    }
+    pares_brutos.sort(
         key=lambda item: (
-            labelers.index(item[0]),
-            target_rank[str(videos.iloc[item[1]]["target"]).strip()],
+            rotuladores.index(item[0]),
+            classificacao_target[str(videos.iloc[item[1]]["target"]).strip()],
             item[1],
         )
     )
 
-    rows = [
+    linhas = [
         {
-            "assignment_version": version,
-            "assignment_id": assignment_identifier(
-                version, labeler, str(videos.iloc[video_index]["id"])
+            "assignment_version": versao,
+            "assignment_id": identificador_atribuicao(
+                versao, rotulador, str(videos.iloc[indice_video]["id"])
             ),
-            "labeler": labeler,
-            "video_id": str(videos.iloc[video_index]["id"]),
-            "url": videos.iloc[video_index]["url"],
-            "target": videos.iloc[video_index]["target"],
-            "video_description": videos.iloc[video_index].get("video_description", ""),
-            "voice_to_text": videos.iloc[video_index].get("voice_to_text", ""),
-            "video_duration": videos.iloc[video_index].get("video_duration", ""),
+            "labeler": rotulador,
+            "video_id": str(videos.iloc[indice_video]["id"]),
+            "url": videos.iloc[indice_video]["url"],
+            "target": videos.iloc[indice_video]["target"],
+            "video_description": videos.iloc[indice_video].get("video_description", ""),
+            "voice_to_text": videos.iloc[indice_video].get("voice_to_text", ""),
+            "video_duration": videos.iloc[indice_video].get("video_duration", ""),
         }
-        for labeler, video_index in raw_pairs
+        for rotulador, indice_video in pares_brutos
     ]
-    result = pd.DataFrame(rows, columns=columns)
-    result = result.drop_duplicates(subset=["labeler", "video_id"], keep="last").reset_index(
-        drop=True
-    )
-    if persist:
-        target_file = (
-            Path(assignments_file)
-            if assignments_file is not None
-            else resolve_data_paths().assignments_file
+    resultado = pd.DataFrame(linhas, columns=colunas)
+    resultado = resultado.drop_duplicates(
+        subset=["labeler", "video_id"], keep="last"
+    ).reset_index(drop=True)
+    if deve_persistir:
+        arquivo_alvo = (
+            Path(caminho_customizado)
+            if caminho_customizado is not None
+            else resolver_caminhos_dados().arquivo_atribuicoes
         )
-        persist_frame_if_changed(result, target_file, columns)
-    return result
+        persistir_dataframe_se_alterado(resultado, arquivo_alvo, colunas)
+    return resultado
 
 
-def build_evaluation_queue_for_labeler(
-    username: str,
-    version: str,
+make_assignments = gerar_atribuicoes
+
+
+def construir_fila_avaliacao_rotulador(
+    nome_usuario: str,
+    versao: str,
     videos: pd.DataFrame,
+    maximo_videos: int | None = None,
+    *,
     max_videos: int | None = None,
 ) -> pd.DataFrame:
-    """Create a target-balanced, contiguous-target queue for a newly registered labeler."""
-    columns = list(ASSIGNMENT_COLUMNS)
-    if videos.empty or not str(username).strip():
-        return pd.DataFrame(columns=columns)
+    """Cria uma fila balanceada por target e agrupada em blocos para um novo rotulador."""
+    colunas = list(COLUNAS_ATRIBUICAO)
+    if videos.empty or not str(nome_usuario).strip():
+        return pd.DataFrame(columns=colunas)
 
-    target_buckets: dict[str, list[int]] = {}
-    target_order: list[str] = []
-    for video_index, raw_target in enumerate(videos["target"].astype(str).tolist()):
-        target_key = raw_target.strip()
-        if target_key not in target_buckets:
-            target_buckets[target_key] = []
-            target_order.append(target_key)
-        target_buckets[target_key].append(video_index)
+    limite_Solicitado = max_videos if max_videos is not None else maximo_videos
 
-    interleaved_indices: list[int] = []
-    while any(target_buckets[target_key] for target_key in target_order):
-        for target_key in target_order:
-            if target_buckets[target_key]:
-                interleaved_indices.append(target_buckets[target_key].pop(0))
+    baldes_target: dict[str, list[int]] = {}
+    ordem_targets: list[str] = []
+    for indice_video, target_bruto in enumerate(videos["target"].astype(str).tolist()):
+        chave_target = target_bruto.strip()
+        if chave_target not in baldes_target:
+            baldes_target[chave_target] = []
+            ordem_targets.append(chave_target)
+        baldes_target[chave_target].append(indice_video)
 
-    limit = len(interleaved_indices)
-    if max_videos is not None and int(max_videos) > 0:
-        limit = min(limit, int(max_videos))
-    selected_indices = interleaved_indices[:limit]
+    indices_intercalados: list[int] = []
+    while any(baldes_target[chave_target] for chave_target in ordem_targets):
+        for chave_target in ordem_targets:
+            if baldes_target[chave_target]:
+                indices_intercalados.append(baldes_target[chave_target].pop(0))
 
-    target_rank = {target_key: rank for rank, target_key in enumerate(target_order)}
-    selected_indices.sort(
+    limite = len(indices_intercalados)
+    if limite_Solicitado is not None and int(limite_Solicitado) > 0:
+        limite = min(limite, int(limite_Solicitado))
+    indices_selecionados = indices_intercalados[:limite]
+
+    classificacao_target = {
+        chave_target: posicao for posicao, chave_target in enumerate(ordem_targets)
+    }
+    indices_selecionados.sort(
         key=lambda idx: (
-            target_rank[str(videos.iloc[idx]["target"]).strip()],
+            classificacao_target[str(videos.iloc[idx]["target"]).strip()],
             idx,
         )
     )
 
-    rows = [
+    linhas = [
         {
-            "assignment_version": version,
-            "assignment_id": assignment_identifier(
-                version, username, str(videos.iloc[idx]["id"])
+            "assignment_version": versao,
+            "assignment_id": identificador_atribuicao(
+                versao, nome_usuario, str(videos.iloc[idx]["id"])
             ),
-            "labeler": username,
+            "labeler": nome_usuario,
             "video_id": str(videos.iloc[idx]["id"]),
             "url": videos.iloc[idx]["url"],
             "target": videos.iloc[idx]["target"],
@@ -208,85 +247,115 @@ def build_evaluation_queue_for_labeler(
             "voice_to_text": videos.iloc[idx].get("voice_to_text", ""),
             "video_duration": videos.iloc[idx].get("video_duration", ""),
         }
-        for idx in selected_indices
+        for idx in indices_selecionados
     ]
-    return pd.DataFrame(rows, columns=columns)
+    return pd.DataFrame(linhas, columns=colunas)
 
 
-def bind_or_allocate_labeler_slot(
-    username: str,
-    config: dict[str, Any],
-    assignments: pd.DataFrame,
+build_evaluation_queue_for_labeler = construir_fila_avaliacao_rotulador
+
+
+def vincular_ou_alocar_vaga_rotulador(
+    nome_usuario: str,
+    configuracao: dict[str, Any],
+    atribuicoes: pd.DataFrame,
     videos: pd.DataFrame,
+    usuarios_reivindicados: set[str] | None = None,
+    rotuladores_concluidos: set[str] | None = None,
+    *,
     claimed_users: set[str] | None = None,
     completed_labelers: set[str] | None = None,
 ) -> tuple[dict[str, Any], pd.DataFrame, str]:
-    """Bind a new labeler to an unclaimed slot or allocate a dynamic queue in the active round."""
-    normalized_user = str(username).strip()
-    updated_config = dict(config)
-    labelers = list(updated_config.get("labelers", []))
-    claimed = set(claimed_users or set())
-    annotated = set(completed_labelers or set())
-    columns = list(ASSIGNMENT_COLUMNS)
+    """Vincula um novo rotulador a uma vaga disponivel ou aloca uma fila dinamica na rodada ativa."""
+    usuario_normalizado = str(nome_usuario).strip()
+    config_atualizada = dict(configuracao)
+    rotuladores = _extrair_rotuladores(config_atualizada)
+    reivindicados = set(
+        (claimed_users if claimed_users is not None else usuarios_reivindicados)
+        or set()
+    )
+    anotados = set(
+        (
+            completed_labelers
+            if completed_labelers is not None
+            else rotuladores_concluidos
+        )
+        or set()
+    )
+    colunas = list(COLUNAS_ATRIBUICAO)
 
-    if assignments.empty:
-        if normalized_user not in labelers:
-            labelers.append(normalized_user)
-            updated_config["labelers"] = labelers
-        generated = make_assignments(updated_config, videos, persist=False)
-        return updated_config, generated, normalized_user
+    if atribuicoes.empty:
+        if usuario_normalizado not in rotuladores:
+            rotuladores.append(usuario_normalizado)
+            config_atualizada["rotuladores"] = rotuladores
+        geradas = gerar_atribuicoes(config_atualizada, videos, persistir=False)
+        return config_atualizada, geradas, usuario_normalizado
 
-    active_version = str(assignments["assignment_version"].iloc[-1])
+    versao_ativa = str(atribuicoes["assignment_version"].iloc[-1])
 
-    #reuse existing queue if labeler is already present in assignments
-    if normalized_user in set(assignments["labeler"].astype(str)):
-        if normalized_user not in labelers:
-            labelers.append(normalized_user)
-            updated_config["labelers"] = labelers
-        return updated_config, assignments.reindex(columns=columns), normalized_user
+    #reaproveita a fila existente caso o rotulador ja esteja presente nas atribuicoes
+    if usuario_normalizado in set(atribuicoes["labeler"].astype(str)):
+        if usuario_normalizado not in rotuladores:
+            rotuladores.append(usuario_normalizado)
+            config_atualizada["rotuladores"] = rotuladores
+        return config_atualizada, atribuicoes.reindex(columns=colunas), usuario_normalizado
 
-    #bind to first unclaimed and unannotated configured slot when available
-    unclaimed_slot = None
-    for candidate in labelers:
-        if candidate not in claimed and candidate not in annotated:
-            if candidate.startswith(("slot_", "rotulador_", " vaga_")):
-                unclaimed_slot = candidate
+    #vincula a primeira vaga configurada ainda nao reivindicada e sem anotacoes
+    vaga_disponivel = None
+    for candidato in rotuladores:
+        if candidato not in reivindicados and candidato not in anotados:
+            if candidato.startswith(("vaga_", "slot_", "rotulador_")):
+                vaga_disponivel = candidato
                 break
 
-    if unclaimed_slot is not None:
-        updated_config["labelers"] = [
-            normalized_user if item == unclaimed_slot else item for item in labelers
+    if vaga_disponivel is not None:
+        novos_rotuladores = [
+            usuario_normalizado if item == vaga_disponivel else item
+            for item in rotuladores
         ]
-        updated_assignments = assignments.copy()
-        slot_mask = updated_assignments["labeler"].astype(str).eq(unclaimed_slot)
-        updated_assignments.loc[slot_mask, "labeler"] = normalized_user
-        updated_assignments.loc[slot_mask, "assignment_id"] = updated_assignments.loc[
-            slot_mask
-        ].apply(
-            lambda row: assignment_identifier(
-                str(row["assignment_version"]),
-                normalized_user,
-                str(row["video_id"]),
-            ),
-            axis=1,
+        config_atualizada["rotuladores"] = novos_rotuladores
+        atribuicoes_atualizadas = atribuicoes.copy()
+        mascara_vaga = atribuicoes_atualizadas["labeler"].astype(str).eq(vaga_disponivel)
+        atribuicoes_atualizadas.loc[mascara_vaga, "labeler"] = usuario_normalizado
+        atribuicoes_atualizadas.loc[mascara_vaga, "assignment_id"] = (
+            atribuicoes_atualizadas.loc[mascara_vaga].apply(
+                lambda linha: identificador_atribuicao(
+                    str(linha["assignment_version"]),
+                    usuario_normalizado,
+                    str(linha["video_id"]),
+                ),
+                axis=1,
+            )
         )
-        return updated_config, updated_assignments.reindex(columns=columns), unclaimed_slot
+        return (
+            config_atualizada,
+            atribuicoes_atualizadas.reindex(columns=colunas),
+            vaga_disponivel,
+        )
 
-    #allocate an immediate evaluation queue when all initial slots are already occupied
-    if normalized_user not in labelers:
-        labelers.append(normalized_user)
-        updated_config["labelers"] = labelers
+    #aloca uma fila de avaliacao extra quando todas as vagas iniciais ja estao ocupadas
+    if usuario_normalizado not in rotuladores:
+        rotuladores.append(usuario_normalizado)
+        config_atualizada["rotuladores"] = rotuladores
 
-    max_videos = int(updated_config.get("videos_per_labeler", len(videos)) or len(videos))
-    extra_queue = build_evaluation_queue_for_labeler(
-        normalized_user,
-        active_version,
-        videos,
-        max_videos=max_videos,
+    maximo_videos = int(
+        config_atualizada.get(
+            "videos_por_rotulador",
+            config_atualizada.get("videos_per_labeler", len(videos)),
+        )
+        or len(videos)
     )
-    combined = pd.concat([assignments, extra_queue], ignore_index=True)
-    combined = combined.drop_duplicates(
+    fila_extra = construir_fila_avaliacao_rotulador(
+        usuario_normalizado,
+        versao_ativa,
+        videos,
+        maximo_videos=maximo_videos,
+    )
+    combinadas = pd.concat([atribuicoes, fila_extra], ignore_index=True)
+    combinadas = combinadas.drop_duplicates(
         subset=["assignment_version", "labeler", "video_id"], keep="last"
     ).reset_index(drop=True)
-    return updated_config, combined.reindex(columns=columns), normalized_user
+    return config_atualizada, combinadas.reindex(columns=colunas), usuario_normalizado
 
+
+bind_or_allocate_labeler_slot = vincular_ou_alocar_vaga_rotulador

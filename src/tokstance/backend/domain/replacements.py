@@ -1,4 +1,4 @@
-"""Reserve video replacement and overlap rebalancing state machine."""
+"""Maquina de estados de substituicao por videos reserva e rebalanceamento de sobreposicao."""
 
 import csv
 from pathlib import Path
@@ -6,460 +6,539 @@ from pathlib import Path
 import pandas as pd
 
 from tokstance.backend.domain.assignments import (
-    assignment_identifier,
-    make_assignments,
-    persist_frame_if_changed,
+    gerar_atribuicoes,
+    identificador_atribuicao,
+    persistir_dataframe_se_alterado,
 )
 from tokstance.backend.domain.models import (
-    ERROR_COLUMNS,
-    RESULT_COLUMNS,
-    load_reserve_videos,
-    load_videos,
+    COLUNAS_ERRO,
+    COLUNAS_RESULTADO,
+    carregar_videos,
+    carregar_videos_reserva,
 )
-from tokstance.config import resolve_data_paths
+from tokstance.config import resolver_caminhos_dados
 
 
-def read_results(results_file: Path | None = None) -> pd.DataFrame:
-    """Load and normalize completed stance annotations from resultados_anotacao.csv."""
-    columns = list(RESULT_COLUMNS)
-    target_path = (
-        Path(results_file)
-        if results_file is not None
-        else resolve_data_paths().results_file
+def ler_resultados(
+    arquivo_resultados: Path | None = None,
+    *,
+    results_file: Path | None = None,
+) -> pd.DataFrame:
+    """Carrega e normaliza as anotacoes concluidas a partir de resultados_anotacao.csv."""
+    colunas = list(COLUNAS_RESULTADO)
+    caminho_informado = (
+        results_file if results_file is not None else arquivo_resultados
     )
-    if not target_path.exists() or target_path.stat().st_size == 0:
-        return pd.DataFrame(columns=columns)
+    caminho_alvo = (
+        Path(caminho_informado)
+        if caminho_informado is not None
+        else resolver_caminhos_dados().arquivo_resultados
+    )
+    if not caminho_alvo.exists() or caminho_alvo.stat().st_size == 0:
+        return pd.DataFrame(columns=colunas)
 
     try:
-        df = pd.read_csv(target_path, dtype=str)
+        df = pd.read_csv(caminho_alvo, dtype=str)
         if df.empty:
-            return pd.DataFrame(columns=columns)
-        if set(columns).issubset(set(df.columns)):
-            df = df[columns].fillna("")
-            missing_ids = df["assignment_id"].astype(str).str.strip().eq("")
-            df.loc[missing_ids, "assignment_id"] = df.loc[missing_ids].apply(
-                lambda row: f"legacy:{row['labeler']}:{row['video_id']}",
+            return pd.DataFrame(columns=colunas)
+        if set(colunas).issubset(set(df.columns)):
+            df = df[colunas].fillna("")
+            ids_ausentes = df["assignment_id"].astype(str).str.strip().eq("")
+            df.loc[ids_ausentes, "assignment_id"] = df.loc[ids_ausentes].apply(
+                lambda linha: f"legacy:{linha['labeler']}:{linha['video_id']}",
                 axis=1,
             )
             return df.drop_duplicates(subset=["assignment_id"], keep="last")
-        if set(columns[:-2]).issubset(set(df.columns)):
+        if set(colunas[:-2]).issubset(set(df.columns)):
             df["video_duration"] = ""
             df["assignment_id"] = df.apply(
-                lambda row: f"legacy:{row['labeler']}:{row['video_id']}",
+                lambda linha: f"legacy:{linha['labeler']}:{linha['video_id']}",
                 axis=1,
             )
-            return df[columns].fillna("").drop_duplicates(
+            return df[colunas].fillna("").drop_duplicates(
                 subset=["assignment_id"], keep="last"
             )
     except (pd.errors.EmptyDataError, pd.errors.ParserError):
         pass
 
     try:
-        df = pd.read_csv(target_path, header=None, dtype=str)
+        df = pd.read_csv(caminho_alvo, header=None, dtype=str)
         if df.empty:
-            return pd.DataFrame(columns=columns)
-        if df.shape[1] >= len(columns) - 2:
-            fixed = df.iloc[:, : len(columns) - 2].copy()
-            fixed["video_duration"] = ""
-            fixed["assignment_id"] = fixed.apply(
-                lambda row: f"legacy:{row['labeler']}:{row['video_id']}",
+            return pd.DataFrame(columns=colunas)
+        if df.shape[1] >= len(colunas) - 2:
+            corrigido = df.iloc[:, : len(colunas) - 2].copy()
+            corrigido["video_duration"] = ""
+            corrigido["assignment_id"] = corrigido.apply(
+                lambda linha: f"legacy:{linha['labeler']}:{linha['video_id']}",
                 axis=1,
             )
-            fixed.columns = columns
-            return fixed.fillna("").drop_duplicates(
+            corrigido.columns = colunas
+            return corrigido.fillna("").drop_duplicates(
                 subset=["assignment_id"], keep="last"
             )
     except (pd.errors.EmptyDataError, pd.errors.ParserError):
         pass
 
-    return pd.DataFrame(columns=columns)
+    return pd.DataFrame(columns=colunas)
 
 
-def read_error_assignments(errors_file: Path | None = None) -> pd.DataFrame:
-    """Load and normalize reported video error rows from erros_videos.csv."""
-    columns = list(ERROR_COLUMNS)
-    target_path = (
-        Path(errors_file)
-        if errors_file is not None
-        else resolve_data_paths().errors_file
-    )
-    if not target_path.exists() or target_path.stat().st_size == 0:
-        return pd.DataFrame(columns=columns)
-
-    with target_path.open(encoding="utf-8", newline="") as handle:
-        rows = list(csv.reader(handle))
-    if not rows:
-        return pd.DataFrame(columns=columns)
-
-    if rows[0][:4] == columns[:4]:
-        columns_in_file = rows.pop(0)
-    else:
-        columns_in_file = columns[:5]
-
-    normalized = []
-    for row in rows:
-        if len(row) < 4:
-            continue
-        timestamp, video_id, url, labeler = row[:4]
-        assignment_id = (
-            row[4].strip()
-            if len(row) >= 5 and row[4].strip()
-            else f"legacy:{labeler}:{video_id}"
-        )
-        values = dict(zip(columns_in_file, row))
-        values["assignment_id"] = assignment_id
-        normalized.append({column: values.get(column, "") for column in columns})
-    return pd.DataFrame(normalized, columns=columns)
+read_results = ler_resultados
 
 
-def compute_available_reserves(
-    reserve_videos: pd.DataFrame,
-    assignments: pd.DataFrame,
-    errors: pd.DataFrame,
+def ler_erros_atribuicoes(
+    arquivo_erros: Path | None = None,
+    *,
+    errors_file: Path | None = None,
 ) -> pd.DataFrame:
-    """Filter reserve videos that have not yet been assigned or consumed by errors."""
-    unique_reserves = reserve_videos.drop_duplicates(subset=["id"], keep="first")
-    reserve_ids = set(unique_reserves["id"].astype(str))
-    used_ids = set(
-        assignments[assignments["video_id"].astype(str).isin(reserve_ids)][
+    """Carrega e normaliza os registros de erro de video em erros_videos.csv."""
+    colunas = list(COLUNAS_ERRO)
+    caminho_informado = errors_file if errors_file is not None else arquivo_erros
+    caminho_alvo = (
+        Path(caminho_informado)
+        if caminho_informado is not None
+        else resolver_caminhos_dados().arquivo_erros
+    )
+    if not caminho_alvo.exists() or caminho_alvo.stat().st_size == 0:
+        return pd.DataFrame(columns=colunas)
+
+    with caminho_alvo.open(encoding="utf-8", newline="") as handle:
+        linhas = list(csv.reader(handle))
+    if not linhas:
+        return pd.DataFrame(columns=colunas)
+
+    if linhas[0][:4] == colunas[:4]:
+        colunas_no_arquivo = linhas.pop(0)
+    else:
+        colunas_no_arquivo = colunas[:5]
+
+    normalizadas = []
+    for linha in linhas:
+        if len(linha) < 4:
+            continue
+        timestamp, video_id, url, rotulador = linha[:4]
+        assignment_id = (
+            linha[4].strip()
+            if len(linha) >= 5 and linha[4].strip()
+            else f"legacy:{rotulador}:{video_id}"
+        )
+        valores = dict(zip(colunas_no_arquivo, linha))
+        valores["assignment_id"] = assignment_id
+        normalizadas.append({coluna: valores.get(coluna, "") for coluna in colunas})
+    return pd.DataFrame(normalizadas, columns=colunas)
+
+
+read_error_assignments = ler_erros_atribuicoes
+
+
+def calcular_reservas_disponiveis(
+    videos_reserva: pd.DataFrame,
+    atribuicoes: pd.DataFrame,
+    erros: pd.DataFrame,
+) -> pd.DataFrame:
+    """Filtra os videos reserva que ainda nao foram atribuidos nem consumidos por erros."""
+    reservas_unicas = videos_reserva.drop_duplicates(subset=["id"], keep="first")
+    ids_reserva = set(reservas_unicas["id"].astype(str))
+    ids_usados = set(
+        atribuicoes[atribuicoes["video_id"].astype(str).isin(ids_reserva)][
             "video_id"
         ].astype(str)
     )
-    used_ids.update(
-        errors[errors["video_id"].astype(str).isin(reserve_ids)]["video_id"].astype(str)
+    ids_usados.update(
+        erros[erros["video_id"].astype(str).isin(ids_reserva)]["video_id"].astype(str)
     )
-    return unique_reserves[~unique_reserves["id"].astype(str).isin(used_ids)]
+    return reservas_unicas[~reservas_unicas["id"].astype(str).isin(ids_usados)]
 
 
-def apply_reserve_replacements(
-    assignments: pd.DataFrame,
+compute_available_reserves = calcular_reservas_disponiveis
+
+
+def aplicar_substituicoes_reserva(
+    atribuicoes: pd.DataFrame,
+    diretorio_dados: Path | None = None,
+    *,
     data_dir: Path | None = None,
 ) -> pd.DataFrame:
-    """Replace reported broken videos with compatible reserve videos."""
-    paths = resolve_data_paths(data_dir)
-    if assignments.empty or not paths.errors_file.exists():
-        return assignments
+    """Substitui videos reportados com erro por videos reserva compativeis."""
+    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
+    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    if atribuicoes.empty or not caminhos.arquivo_erros.exists():
+        return atribuicoes
 
-    errors = read_error_assignments(paths.errors_file)
-    reserve_videos = load_reserve_videos(paths.reserve_videos_file).drop_duplicates(
-        subset=["id"], keep="first"
+    erros = ler_erros_atribuicoes(caminhos.arquivo_erros)
+    videos_reserva = carregar_videos_reserva(
+        caminhos.arquivo_videos_reserva
+    ).drop_duplicates(subset=["id"], keep="first")
+    if erros.empty:
+        return atribuicoes
+    if videos_reserva.empty:
+        erros_pendentes = (
+            erros["replacement_assignment_id"].astype(str).str.strip().eq("")
+        )
+        erros.loc[erros_pendentes, "replacement_status"] = "SEM_RESERVA_DISPONIVEL"
+        persistir_dataframe_se_alterado(
+            erros, caminhos.arquivo_erros, list(erros.columns)
+        )
+        return atribuicoes
+
+    reservas_disponiveis = calcular_reservas_disponiveis(
+        videos_reserva, atribuicoes, erros
     )
-    if errors.empty:
-        return assignments
-    if reserve_videos.empty:
-        pending_errors = errors["replacement_assignment_id"].astype(str).str.strip().eq("")
-        errors.loc[pending_errors, "replacement_status"] = "SEM_RESERVA_DISPONIVEL"
-        persist_frame_if_changed(errors, paths.errors_file, list(errors.columns))
-        return assignments
-
-    available_reserves = compute_available_reserves(reserve_videos, assignments, errors)
-    results = read_results(paths.results_file)
-    completed_assignment_ids = set(
-        results.get("assignment_id", pd.Series(dtype=str)).astype(str).str.strip()
+    resultados = ler_resultados(caminhos.arquivo_resultados)
+    ids_atribuicao_concluidos = set(
+        resultados.get("assignment_id", pd.Series(dtype=str)).astype(str).str.strip()
     )
-    assignments_changed = False
-    errors_changed = False
+    atribuicoes_alteradas = False
+    erros_alterados = False
 
-    for error_index, error in errors.iterrows():
-        if str(error.get("replacement_assignment_id", "")).strip():
+    for indice_erro, erro in erros.iterrows():
+        if str(erro.get("replacement_assignment_id", "")).strip():
             continue
-        assignment_id = str(error.get("assignment_id", "")).strip()
-        original_video_id = str(error.get("video_id", "")).strip()
-        prior_replacement = errors[
-            errors["video_id"].astype(str).eq(original_video_id)
-            & errors["replacement_assignment_id"].astype(str).ne("")
+        assignment_id = str(erro.get("assignment_id", "")).strip()
+        id_video_original = str(erro.get("video_id", "")).strip()
+        substituicao_anterior = erros[
+            erros["video_id"].astype(str).eq(id_video_original)
+            & erros["replacement_assignment_id"].astype(str).ne("")
         ]
-        existing_reserve_id = ""
-        prior_status = ""
-        if not prior_replacement.empty:
-            original_video_id = str(prior_replacement.iloc[0]["video_id"]).strip()
-            existing_reserve_id = str(
-                prior_replacement.iloc[0]["replacement_video_id"]
+        id_reserva_existente = ""
+        status_anterior = ""
+        if not substituicao_anterior.empty:
+            id_video_original = str(substituicao_anterior.iloc[0]["video_id"]).strip()
+            id_reserva_existente = str(
+                substituicao_anterior.iloc[0]["replacement_video_id"]
             ).strip()
-            prior_status = str(prior_replacement.iloc[0]["replacement_status"]).strip()
+            status_anterior = str(
+                substituicao_anterior.iloc[0]["replacement_status"]
+            ).strip()
 
-        matching_rows = assignments.index[
-            assignments["assignment_id"].astype(str).eq(assignment_id)
+        linhas_correspondentes = atribuicoes.index[
+            atribuicoes["assignment_id"].astype(str).eq(assignment_id)
         ]
-        if matching_rows.empty:
-            matching_rows = assignments.index[
-                assignments["labeler"].astype(str).eq(str(error.get("labeler", "")))
-                & assignments["video_id"].astype(str).eq(str(error.get("video_id", "")))
+        if linhas_correspondentes.empty:
+            linhas_correspondentes = atribuicoes.index[
+                atribuicoes["labeler"].astype(str).eq(str(erro.get("labeler", "")))
+                & atribuicoes["video_id"].astype(str).eq(str(erro.get("video_id", "")))
             ]
-        if matching_rows.empty and existing_reserve_id:
-            matching_rows = assignments.index[
-                assignments["labeler"].astype(str).eq(str(error.get("labeler", "")))
-                & assignments["video_id"].astype(str).eq(existing_reserve_id)
+        if linhas_correspondentes.empty and id_reserva_existente:
+            linhas_correspondentes = atribuicoes.index[
+                atribuicoes["labeler"].astype(str).eq(str(erro.get("labeler", "")))
+                & atribuicoes["video_id"].astype(str).eq(id_reserva_existente)
             ]
-        if matching_rows.empty:
+        if linhas_correspondentes.empty:
             continue
 
-        source_index = matching_rows[0]
-        if prior_status == "SUBSTITUIDO_OVERLAP_REBALANCEADO":
-            errors.at[error_index, "replacement_video_id"] = existing_reserve_id
-            errors.at[error_index, "replacement_url"] = str(
-                assignments.at[source_index, "url"]
+        indice_origem = linhas_correspondentes[0]
+        if status_anterior == "SUBSTITUIDO_OVERLAP_REBALANCEADO":
+            erros.at[indice_erro, "replacement_video_id"] = id_reserva_existente
+            erros.at[indice_erro, "replacement_url"] = str(
+                atribuicoes.at[indice_origem, "url"]
             )
-            errors.at[error_index, "replacement_assignment_id"] = str(
-                assignments.at[source_index, "assignment_id"]
+            erros.at[indice_erro, "replacement_assignment_id"] = str(
+                atribuicoes.at[indice_origem, "assignment_id"]
             )
-            errors.at[error_index, "replacement_status"] = prior_status
-            errors_changed = True
+            erros.at[indice_erro, "replacement_status"] = status_anterior
+            erros_alterados = True
             continue
 
-        #resolve all assignment rows belonging to the same overlap group
-        group_rows = assignments.index[
-            assignments["video_id"].astype(str).eq(original_video_id)
+        #resolve todas as linhas de atribuicao pertencentes ao mesmo grupo de sobreposicao
+        linhas_grupo = atribuicoes.index[
+            atribuicoes["video_id"].astype(str).eq(id_video_original)
         ]
-        replacement_rows = (
-            errors[
-                errors["video_id"].astype(str).eq(original_video_id)
-                & errors["replacement_assignment_id"].astype(str).ne("")
+        linhas_substituidas = (
+            erros[
+                erros["video_id"].astype(str).eq(id_video_original)
+                & erros["replacement_assignment_id"].astype(str).ne("")
             ]["replacement_assignment_id"]
             .astype(str)
             .tolist()
         )
-        if replacement_rows:
-            group_rows = group_rows.union(
-                assignments.index[
-                    assignments["assignment_id"].astype(str).isin(replacement_rows)
+        if linhas_substituidas:
+            linhas_grupo = linhas_grupo.union(
+                atribuicoes.index[
+                    atribuicoes["assignment_id"].astype(str).isin(linhas_substituidas)
                 ]
             )
-        if existing_reserve_id:
-            group_rows = group_rows.union(
-                assignments.index[
-                    assignments["video_id"].astype(str).eq(existing_reserve_id)
+        if id_reserva_existente:
+            linhas_grupo = linhas_grupo.union(
+                atribuicoes.index[
+                    atribuicoes["video_id"].astype(str).eq(id_reserva_existente)
                 ]
             )
-        group_rows = group_rows.sort_values()
-        group_has_completed = any(
-            str(assignments.at[index, "assignment_id"]).strip()
-            in completed_assignment_ids
-            for index in group_rows
+        linhas_grupo = linhas_grupo.sort_values()
+        grupo_possui_concluido = any(
+            str(atribuicoes.at[indice, "assignment_id"]).strip()
+            in ids_atribuicao_concluidos
+            for indice in linhas_grupo
         )
-        source_target = str(assignments.at[source_index, "target"]).strip()
-        if group_rows.empty:
-            group_rows = matching_rows
+        target_origem = str(atribuicoes.at[indice_origem, "target"]).strip()
+        if linhas_grupo.empty:
+            linhas_grupo = linhas_correspondentes
 
-        compatible_reserves = reserve_videos[
-            reserve_videos["target"].astype(str).str.strip().eq(source_target)
+        reservas_compativeis = videos_reserva[
+            videos_reserva["target"].astype(str).str.strip().eq(target_origem)
         ]
-        if existing_reserve_id:
-            compatible_reserves = compatible_reserves[
-                compatible_reserves["id"].astype(str).eq(existing_reserve_id)
+        if id_reserva_existente:
+            reservas_compativeis = reservas_compativeis[
+                reservas_compativeis["id"].astype(str).eq(id_reserva_existente)
             ]
         else:
-            compatible_reserves = compatible_reserves[
-                compatible_reserves["id"]
+            reservas_compativeis = reservas_compativeis[
+                reservas_compativeis["id"]
                 .astype(str)
-                .isin(available_reserves["id"].astype(str))
+                .isin(reservas_disponiveis["id"].astype(str))
             ]
 
-        #promote an already annotated individual video when overlap group has partial progress
-        if group_has_completed and not existing_reserve_id:
-            video_counts = assignments.groupby(assignments["video_id"].astype(str))[
-                "assignment_id"
-            ].transform("size")
-            completed_video_ids = assignments.loc[
-                assignments["assignment_id"].astype(str).isin(completed_assignment_ids),
+        #promove um video individual ja anotado quando o grupo de sobreposicao possui progresso parcial
+        if grupo_possui_concluido and not id_reserva_existente:
+            contagem_videos = atribuicoes.groupby(
+                atribuicoes["video_id"].astype(str)
+            )["assignment_id"].transform("size")
+            ids_videos_concluidos = atribuicoes.loc[
+                atribuicoes["assignment_id"].astype(str).isin(ids_atribuicao_concluidos),
                 "video_id",
             ].astype(str)
-            candidate_rows = assignments.index[
-                video_counts.eq(1)
-                & assignments["video_id"].astype(str).ne(original_video_id)
-                & assignments["video_id"].astype(str).isin(completed_video_ids)
-                & assignments["target"].astype(str).str.strip().eq(source_target)
-                & assignments["labeler"].astype(str).ne(str(error.get("labeler", "")))
+            linhas_candidatas = atribuicoes.index[
+                contagem_videos.eq(1)
+                & atribuicoes["video_id"].astype(str).ne(id_video_original)
+                & atribuicoes["video_id"].astype(str).isin(ids_videos_concluidos)
+                & atribuicoes["target"].astype(str).str.strip().eq(target_origem)
+                & atribuicoes["labeler"].astype(str).ne(str(erro.get("labeler", "")))
             ]
-            if not candidate_rows.empty:
-                candidate_index = candidate_rows[0]
-                candidate_video_id = str(assignments.at[candidate_index, "video_id"])
-                candidate = assignments.loc[candidate_index].copy()
-                source_labeler = str(assignments.at[source_index, "labeler"])
-                source_version = str(
-                    assignments.at[source_index, "assignment_version"]
+            if not linhas_candidatas.empty:
+                indice_candidato = linhas_candidatas[0]
+                id_video_candidato = str(
+                    atribuicoes.at[indice_candidato, "video_id"]
                 )
-                source_replacement_id = assignment_identifier(
-                    source_version, source_labeler, candidate_video_id
+                candidato = atribuicoes.loc[indice_candidato].copy()
+                rotulador_origem = str(atribuicoes.at[indice_origem, "labeler"])
+                versao_origem = str(
+                    atribuicoes.at[indice_origem, "assignment_version"]
                 )
-                rows_to_promote = [
-                    index
-                    for index in group_rows
-                    if str(assignments.at[index, "assignment_id"]).strip()
-                    not in completed_assignment_ids
+                id_substituicao_origem = identificador_atribuicao(
+                    versao_origem, rotulador_origem, id_video_candidato
+                )
+                linhas_para_promover = [
+                    indice
+                    for indice in linhas_grupo
+                    if str(atribuicoes.at[indice, "assignment_id"]).strip()
+                    not in ids_atribuicao_concluidos
                 ]
-                if source_index not in rows_to_promote:
-                    rows_to_promote.append(source_index)
-                for promotion_index in rows_to_promote:
-                    promotion_labeler = str(
-                        assignments.at[promotion_index, "labeler"]
+                if indice_origem not in linhas_para_promover:
+                    linhas_para_promover.append(indice_origem)
+                for indice_promocao in linhas_para_promover:
+                    rotulador_promocao = str(
+                        atribuicoes.at[indice_promocao, "labeler"]
                     )
-                    promotion_version = str(
-                        assignments.at[promotion_index, "assignment_version"]
+                    versao_promocao = str(
+                        atribuicoes.at[indice_promocao, "assignment_version"]
                     )
-                    assignments.at[promotion_index, "video_id"] = candidate_video_id
-                    for column in (
+                    atribuicoes.at[indice_promocao, "video_id"] = id_video_candidato
+                    for coluna in (
                         "url",
                         "target",
                         "video_description",
                         "voice_to_text",
                         "video_duration",
                     ):
-                        assignments.at[promotion_index, column] = candidate[column]
-                    assignments.at[promotion_index, "assignment_id"] = (
-                        assignment_identifier(
-                            promotion_version, promotion_labeler, candidate_video_id
+                        atribuicoes.at[indice_promocao, coluna] = candidato[coluna]
+                    atribuicoes.at[indice_promocao, "assignment_id"] = (
+                        identificador_atribuicao(
+                            versao_promocao, rotulador_promocao, id_video_candidato
                         )
                     )
-                errors.at[error_index, "replacement_video_id"] = candidate_video_id
-                errors.at[error_index, "replacement_url"] = str(candidate["url"])
-                errors.at[error_index, "replacement_assignment_id"] = (
-                    source_replacement_id
+                erros.at[indice_erro, "replacement_video_id"] = id_video_candidato
+                erros.at[indice_erro, "replacement_url"] = str(candidato["url"])
+                erros.at[indice_erro, "replacement_assignment_id"] = (
+                    id_substituicao_origem
                 )
-                errors.at[error_index, "replacement_status"] = (
+                erros.at[indice_erro, "replacement_status"] = (
                     "SUBSTITUIDO_OVERLAP_REBALANCEADO"
                 )
-                assignments_changed = True
-                errors_changed = True
+                atribuicoes_alteradas = True
+                erros_alterados = True
                 continue
 
-        if compatible_reserves.empty:
-            if group_has_completed:
-                errors.at[error_index, "replacement_status"] = (
+        if reservas_compativeis.empty:
+            if grupo_possui_concluido:
+                erros.at[indice_erro, "replacement_status"] = (
                     "CRITICO_OVERLAP_INCONSISTENTE"
                 )
             else:
-                errors.at[error_index, "replacement_status"] = (
+                erros.at[indice_erro, "replacement_status"] = (
                     "SEM_RESERVA_DISPONIVEL"
-                    if available_reserves.empty
+                    if reservas_disponiveis.empty
                     else "SEM_RESERVA_COMPATIVEL"
                 )
-            errors_changed = True
+            erros_alterados = True
             continue
 
-        reserve = compatible_reserves.iloc[0]
-        reserve_id = str(reserve["id"])
-        rows_to_replace = matching_rows if group_has_completed else group_rows
-        for replacement_index in rows_to_replace:
-            labeler = str(assignments.at[replacement_index, "labeler"])
-            version = str(assignments.at[replacement_index, "assignment_version"])
-            replacement_assignment_id = assignment_identifier(
-                version, labeler, reserve_id
+        reserva = reservas_compativeis.iloc[0]
+        id_reserva = str(reserva["id"])
+        linhas_para_substituir = (
+            linhas_correspondentes if grupo_possui_concluido else linhas_grupo
+        )
+        for indice_substituicao in linhas_para_substituir:
+            rotulador = str(atribuicoes.at[indice_substituicao, "labeler"])
+            versao = str(atribuicoes.at[indice_substituicao, "assignment_version"])
+            id_atribuicao_substituta = identificador_atribuicao(
+                versao, rotulador, id_reserva
             )
             if (
-                str(assignments.at[replacement_index, "assignment_id"]).strip()
-                in completed_assignment_ids
+                str(atribuicoes.at[indice_substituicao, "assignment_id"]).strip()
+                in ids_atribuicao_concluidos
             ):
                 continue
-            assignments.at[replacement_index, "video_id"] = reserve_id
-            for column in (
+            atribuicoes.at[indice_substituicao, "video_id"] = id_reserva
+            for coluna in (
                 "url",
                 "target",
                 "video_description",
                 "voice_to_text",
                 "video_duration",
             ):
-                assignments.at[replacement_index, column] = reserve.get(column, "")
-            assignments.at[replacement_index, "assignment_id"] = (
-                replacement_assignment_id
+                atribuicoes.at[indice_substituicao, coluna] = reserva.get(coluna, "")
+            atribuicoes.at[indice_substituicao, "assignment_id"] = (
+                id_atribuicao_substituta
             )
-            assignments_changed = True
+            atribuicoes_alteradas = True
 
-        labeler = str(assignments.at[source_index, "labeler"])
-        version = str(assignments.at[source_index, "assignment_version"])
-        replacement_assignment_id = assignment_identifier(version, labeler, reserve_id)
-        errors.at[error_index, "replacement_video_id"] = reserve_id
-        errors.at[error_index, "replacement_url"] = str(reserve["url"])
-        errors.at[error_index, "replacement_assignment_id"] = replacement_assignment_id
-        errors.at[error_index, "replacement_status"] = (
+        rotulador = str(atribuicoes.at[indice_origem, "labeler"])
+        versao = str(atribuicoes.at[indice_origem, "assignment_version"])
+        id_atribuicao_substituta = identificador_atribuicao(
+            versao, rotulador, id_reserva
+        )
+        erros.at[indice_erro, "replacement_video_id"] = id_reserva
+        erros.at[indice_erro, "replacement_url"] = str(reserva["url"])
+        erros.at[indice_erro, "replacement_assignment_id"] = id_atribuicao_substituta
+        erros.at[indice_erro, "replacement_status"] = (
             "CRITICO_OVERLAP_INCONSISTENTE"
-            if group_has_completed
+            if grupo_possui_concluido
             else "SUBSTITUIDO_OVERLAP"
         )
-        if not group_has_completed and not existing_reserve_id:
-            available_reserves = available_reserves[
-                available_reserves["id"].astype(str).ne(reserve_id)
+        if not grupo_possui_concluido and not id_reserva_existente:
+            reservas_disponiveis = reservas_disponiveis[
+                reservas_disponiveis["id"].astype(str).ne(id_reserva)
             ]
-        errors_changed = True
+        erros_alterados = True
 
-    if assignments_changed:
-        persist_frame_if_changed(
-            assignments, paths.assignments_file, list(assignments.columns)
+    if atribuicoes_alteradas:
+        persistir_dataframe_se_alterado(
+            atribuicoes, caminhos.arquivo_atribuicoes, list(atribuicoes.columns)
         )
-    if errors_changed:
-        persist_frame_if_changed(errors, paths.errors_file, list(errors.columns))
-    return assignments
+    if erros_alterados:
+        persistir_dataframe_se_alterado(
+            erros, caminhos.arquivo_erros, list(erros.columns)
+        )
+    return atribuicoes
 
 
-def load_assignments(
-    config: dict,
+apply_reserve_replacements = aplicar_substituicoes_reserva
+
+
+def carregar_atribuicoes(
+    configuracao: dict,
     videos: pd.DataFrame,
+    diretorio_dados: Path | None = None,
+    *,
     data_dir: Path | None = None,
 ) -> pd.DataFrame:
-    """Load persisted assignments for the active version and apply reserve replacements."""
-    paths = resolve_data_paths(data_dir)
-    base_assignments = make_assignments(
-        config, videos, persist=False, assignments_file=paths.assignments_file
+    """Carrega as atribuicoes persistidas da versao ativa e aplica substituicoes por reserva."""
+    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
+    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    atribuicoes_base = gerar_atribuicoes(
+        configuracao,
+        videos,
+        persistir=False,
+        arquivo_atribuicoes=caminhos.arquivo_atribuicoes,
     )
-    assignments = base_assignments
-    if paths.assignments_file.exists() and not base_assignments.empty:
+    atribuicoes = atribuicoes_base
+    if caminhos.arquivo_atribuicoes.exists() and not atribuicoes_base.empty:
         try:
-            persisted = pd.read_csv(paths.assignments_file, dtype=str).fillna("")
-            has_schema = set(base_assignments.columns).issubset(persisted.columns)
-            same_version = set(persisted.get("assignment_version", [])) == {
-                base_assignments.iloc[0]["assignment_version"]
+            persistidas = pd.read_csv(caminhos.arquivo_atribuicoes, dtype=str).fillna("")
+            possui_esquema = set(atribuicoes_base.columns).issubset(persistidas.columns)
+            mesma_versao = set(persistidas.get("assignment_version", [])) == {
+                atribuicoes_base.iloc[0]["assignment_version"]
             }
-            if has_schema and same_version and len(persisted) >= len(base_assignments):
-                assignments = persisted[base_assignments.columns].copy()
+            if (
+                possui_esquema
+                and mesma_versao
+                and len(persistidas) >= len(atribuicoes_base)
+            ):
+                atribuicoes = persistidas[atribuicoes_base.columns].copy()
         except (pd.errors.EmptyDataError, pd.errors.ParserError):
             pass
 
-    if not assignments.empty and not assignments.equals(base_assignments):
-        persist_frame_if_changed(
-            assignments, paths.assignments_file, list(base_assignments.columns)
+    if not atribuicoes.empty and not atribuicoes.equals(atribuicoes_base):
+        persistir_dataframe_se_alterado(
+            atribuicoes,
+            caminhos.arquivo_atribuicoes,
+            list(atribuicoes_base.columns),
         )
-    elif not paths.assignments_file.exists():
-        persist_frame_if_changed(
-            base_assignments, paths.assignments_file, list(base_assignments.columns)
+    elif not caminhos.arquivo_atribuicoes.exists():
+        persistir_dataframe_se_alterado(
+            atribuicoes_base,
+            caminhos.arquivo_atribuicoes,
+            list(atribuicoes_base.columns),
         )
-    return apply_reserve_replacements(assignments, data_dir=paths.base_dir)
+    return aplicar_substituicoes_reserva(
+        atribuicoes, diretorio_dados=caminhos.diretorio_base
+    )
 
 
-def ensure_errors_schema(data_dir: Path | None = None) -> None:
-    """Normalize erros_videos.csv on disk to the canonical schema."""
-    paths = resolve_data_paths(data_dir)
-    if not paths.errors_file.exists() or paths.errors_file.stat().st_size == 0:
+load_assignments = carregar_atribuicoes
+
+
+def garantir_esquema_erros(
+    diretorio_dados: Path | None = None,
+    *,
+    data_dir: Path | None = None,
+) -> None:
+    """Normaliza erros_videos.csv em disco para o esquema canonico."""
+    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
+    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    if not caminhos.arquivo_erros.exists() or caminhos.arquivo_erros.stat().st_size == 0:
         return
-    errors = read_error_assignments(paths.errors_file)
-    persist_frame_if_changed(errors, paths.errors_file, list(errors.columns))
+    erros = ler_erros_atribuicoes(caminhos.arquivo_erros)
+    persistir_dataframe_se_alterado(erros, caminhos.arquivo_erros, list(erros.columns))
 
 
-def ensure_results_schema(data_dir: Path | None = None) -> None:
-    """Normalize resultados_anotacao.csv on disk and backfill missing durations or IDs."""
-    paths = resolve_data_paths(data_dir)
-    columns = list(RESULT_COLUMNS)
-    if not paths.results_file.exists() or paths.results_file.stat().st_size == 0:
+ensure_errors_schema = garantir_esquema_erros
+
+
+def garantir_esquema_resultados(
+    diretorio_dados: Path | None = None,
+    *,
+    data_dir: Path | None = None,
+) -> None:
+    """Normaliza resultados_anotacao.csv em disco e preenche duracoes ou IDs ausentes."""
+    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
+    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    colunas = list(COLUNAS_RESULTADO)
+    if (
+        not caminhos.arquivo_resultados.exists()
+        or caminhos.arquivo_resultados.stat().st_size == 0
+    ):
         return
     try:
-        df = pd.read_csv(paths.results_file, dtype=str).fillna("")
+        df = pd.read_csv(caminhos.arquivo_resultados, dtype=str).fillna("")
     except (pd.errors.EmptyDataError, pd.errors.ParserError):
         return
-    videos = load_videos(paths.videos_file).set_index("id")
+    videos = carregar_videos(caminhos.arquivo_videos).set_index("id")
     if "video_duration" not in df.columns:
         df["video_duration"] = ""
     if "assignment_id" not in df.columns:
         df["assignment_id"] = df.apply(
-            lambda row: f"legacy:{row['labeler']}:{row['video_id']}",
+            lambda linha: f"legacy:{linha['labeler']}:{linha['video_id']}",
             axis=1,
         )
-    for index, row in df.iterrows():
-        if not str(row.get("video_duration", "")).strip():
-            video_key = str(row.get("video_id", ""))
-            if video_key in videos.index:
-                df.at[index, "video_duration"] = str(
-                    videos.loc[video_key, "video_duration"]
+    for indice, linha in df.iterrows():
+        if not str(linha.get("video_duration", "")).strip():
+            chave_video = str(linha.get("video_id", ""))
+            if chave_video in videos.index:
+                df.at[indice, "video_duration"] = str(
+                    videos.loc[chave_video, "video_duration"]
                 )
-    df = df.reindex(columns=[column for column in columns if column in df.columns])
-    df.to_csv(paths.results_file, index=False)
+    df = df.reindex(columns=[coluna for coluna in colunas if coluna in df.columns])
+    df.to_csv(caminhos.arquivo_resultados, index=False)
 
 
+ensure_results_schema = garantir_esquema_resultados

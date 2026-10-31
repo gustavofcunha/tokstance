@@ -1,274 +1,339 @@
-"""Configurable pairwise label distance and ordinal Krippendorff alpha calculation."""
+"""Calculo configuravel de distancia par-a-par entre rotulos e alfa de Krippendorff ordinal."""
 
 from typing import Any
 
 import pandas as pd
 
-from tokstance.backend.domain.models import load_config
+from tokstance.backend.domain.models import carregar_configuracao
 from tokstance.config import (
-    FAST_ANNOTATION_TOLERANCE_SECONDS,
-    format_brt_timestamp,
+    TOLERANCIA_ANOTACAO_RAPIDA_SEGUNDOS,
+    formatar_data_hora_brt,
 )
 
 
-def parse_distance_lookup(
+def interpretar_mapa_distancias(
+    mapa_distancias: dict[str, Any] | dict[frozenset[str], float] | None = None,
+    *,
     distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
 ) -> dict[frozenset[str], float]:
-    """Normalize a configured pairwise distance dictionary into symmetric frozenset keys."""
-    source = distance_map
-    if source is None:
-        source = load_config().get("label_distances", {})
-    lookup: dict[frozenset[str], float] = {}
-    if not isinstance(source, dict):
-        return lookup
+    """Normaliza um dicionario de distancias par-a-par em chaves simetricas frozenset."""
+    origem = distance_map if distance_map is not None else mapa_distancias
+    if origem is None:
+        config_atual = carregar_configuracao()
+        origem = config_atual.get(
+            "distancias_rotulos", config_atual.get("label_distances", {})
+        )
+    tabela: dict[frozenset[str], float] = {}
+    if not isinstance(origem, dict):
+        return tabela
 
-    for raw_key, raw_weight in source.items():
+    for chave_bruta, peso_bruto in origem.items():
         try:
-            weight = float(raw_weight)
+            peso = float(peso_bruto)
         except (TypeError, ValueError):
             continue
-        if isinstance(raw_key, frozenset):
-            if len(raw_key) == 2:
-                lookup[frozenset(str(item).strip() for item in raw_key)] = weight
+        if isinstance(chave_bruta, frozenset):
+            if len(chave_bruta) == 2:
+                tabela[frozenset(str(item).strip() for item in chave_bruta)] = peso
             continue
-        parts = [part.strip() for part in str(raw_key).split("|", maxsplit=1)]
-        if len(parts) == 2 and parts[0] and parts[1] and parts[0] != parts[1]:
-            lookup[frozenset(parts)] = weight
-    return lookup
+        partes = [parte.strip() for parte in str(chave_bruta).split("|", maxsplit=1)]
+        if len(partes) == 2 and partes[0] and partes[1] and partes[0] != partes[1]:
+            tabela[frozenset(partes)] = peso
+    return tabela
 
 
-def label_distance(
-    left: str,
-    right: str,
+parse_distance_lookup = interpretar_mapa_distancias
+
+
+def distancia_rotulos(
+    esquerda: str,
+    direita: str,
+    mapa_distancias: dict[str, Any] | dict[frozenset[str], float] | None = None,
+    *,
     distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
 ) -> float:
-    """Return the configured penalty distance between two task labels."""
-    left_norm = str(left).strip()
-    right_norm = str(right).strip()
-    if left_norm == right_norm:
+    """Retorna a distancia de penalidade configurada entre dois rotulos da tarefa."""
+    esquerda_norm = str(esquerda).strip()
+    direita_norm = str(direita).strip()
+    if esquerda_norm == direita_norm:
         return 0.0
-    lookup = parse_distance_lookup(distance_map)
-    return lookup.get(frozenset((left_norm, right_norm)), 1.0)
+    mapa_efetivo = distance_map if distance_map is not None else mapa_distancias
+    tabela = interpretar_mapa_distancias(mapa_efetivo)
+    return tabela.get(frozenset((esquerda_norm, direita_norm)), 1.0)
 
 
-def calculate_agreement(
-    results: pd.DataFrame,
+label_distance = distancia_rotulos
+
+
+def calcular_concordancia(
+    resultados: pd.DataFrame,
+    configuracao: dict[str, Any] | None = None,
+    opcoes_permitidas: list[str] | tuple[str, ...] | None = None,
+    mapa_distancias: dict[str, Any] | dict[frozenset[str], float] | None = None,
+    *,
     config: dict[str, Any] | None = None,
     allowed_options: list[str] | tuple[str, ...] | None = None,
     distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
 ) -> dict[str, Any]:
-    """Compute distance-weighted Krippendorff alpha and per-labeler disagreement penalties."""
-    if results.empty or "stance" not in results.columns:
+    """Calcula a concordancia ponderada por distancia e as penalidades acumuladas por rotulador."""
+    momento_atual = formatar_data_hora_brt()
+    if resultados.empty or "stance" not in resultados.columns:
         return {
             "metrica": "Alfa de Krippendorff (ordinal)",
             "alfa": None,
             "videos_com_multiplas_anotacoes": 0,
             "anotacoes_consideradas": 0,
             "videos_com_discordancia": [],
-            "labelers_com_maior_discordancia": [],
-            "updated_at": format_brt_timestamp(),
+            "rotuladores_com_maior_discordancia": [],
+            "atualizado_em": momento_atual,
         }
 
-    active_config = config if isinstance(config, dict) else load_config()
-    effective_options = (
-        list(allowed_options)
-        if allowed_options is not None
-        else list(active_config.get("stance_options", []))
+    config_informada = config if config is not None else configuracao
+    config_ativa = (
+        config_informada
+        if isinstance(config_informada, dict)
+        else carregar_configuracao()
     )
-    effective_distances = parse_distance_lookup(
-        distance_map
-        if distance_map is not None
-        else active_config.get("label_distances", {})
+    opcoes_informadas = (
+        allowed_options if allowed_options is not None else opcoes_permitidas
+    )
+    opcoes_efetivas = (
+        list(opcoes_informadas)
+        if opcoes_informadas is not None
+        else list(
+            config_ativa.get(
+                "opcoes_posicao", config_ativa.get("stance_options", [])
+            )
+        )
+    )
+    mapa_informado = distance_map if distance_map is not None else mapa_distancias
+    distancias_efetivas = interpretar_mapa_distancias(
+        mapa_informado
+        if mapa_informado is not None
+        else config_ativa.get(
+            "distancias_rotulos", config_ativa.get("label_distances", {})
+        )
     )
 
-    valid_mask = results["stance"].astype(str).str.strip().ne("")
-    if effective_options:
-        valid_mask = valid_mask & results["stance"].isin(effective_options)
-    labels_by_video = (
-        results[valid_mask]
-        .groupby("video_id")["stance"]
-        .apply(list)
+    mascara_valida = resultados["stance"].astype(str).str.strip().ne("")
+    if opcoes_efetivas:
+        mascara_valida = mascara_valida & resultados["stance"].isin(opcoes_efetivas)
+    rotulos_por_video = (
+        resultados[mascara_valida].groupby("video_id")["stance"].apply(list)
     )
-    usable = labels_by_video[labels_by_video.map(len) >= 2]
+    utilizaveis = rotulos_por_video[rotulos_por_video.map(len) >= 2]
 
-    if usable.empty:
+    if utilizaveis.empty:
         return {
             "metrica": "Alfa de Krippendorff (ordinal)",
             "alfa": None,
             "videos_com_multiplas_anotacoes": 0,
             "anotacoes_consideradas": 0,
             "videos_com_discordancia": [],
-            "labelers_com_maior_discordancia": [],
-            "updated_at": format_brt_timestamp(),
+            "rotuladores_com_maior_discordancia": [],
+            "atualizado_em": momento_atual,
         }
 
     #statistical correction for pairwise observed and expected disagreement
-    observed_disagreement = 0.0
-    pair_count = 0
-    disagreement_videos: list[dict[str, Any]] = []
-    for video_id, labels in usable.items():
-        distances = [
-            label_distance(labels[left_idx], labels[right_idx], effective_distances)
-            for left_idx in range(len(labels))
-            for right_idx in range(left_idx + 1, len(labels))
+    discordancia_observada = 0.0
+    total_pares = 0
+    videos_com_discordancia: list[dict[str, Any]] = []
+    for id_video, rotulos in utilizaveis.items():
+        distancias = [
+            distancia_rotulos(
+                rotulos[idx_esq], rotulos[idx_dir], distancias_efetivas
+            )
+            for idx_esq in range(len(rotulos))
+            for idx_dir in range(idx_esq + 1, len(rotulos))
         ]
-        observed_disagreement += sum(distances)
-        pair_count += len(distances)
-        if any(distance > 0 for distance in distances):
-            disagreement_videos.append(
+        discordancia_observada += sum(distancias)
+        total_pares += len(distancias)
+        if any(distancia > 0 for distancia in distancias):
+            videos_com_discordancia.append(
                 {
-                    "video_id": str(video_id),
-                    "anotacoes": labels,
-                    "discordancia_ordinal": round(sum(distances) / len(distances), 4),
+                    "video_id": str(id_video),
+                    "anotacoes": rotulos,
+                    "discordancia_ordinal": round(
+                        sum(distancias) / len(distancias), 4
+                    ),
                 }
             )
 
-    all_labels = [label for labels in usable for label in labels]
-    expected_disagreement = sum(
-        label_distance(all_labels[left_idx], all_labels[right_idx], effective_distances)
-        for left_idx in range(len(all_labels))
-        for right_idx in range(left_idx + 1, len(all_labels))
+    todos_rotulos = [rotulo for rotulos in utilizaveis for rotulo in rotulos]
+    discordancia_esperada = sum(
+        distancia_rotulos(
+            todos_rotulos[idx_esq], todos_rotulos[idx_dir], distancias_efetivas
+        )
+        for idx_esq in range(len(todos_rotulos))
+        for idx_dir in range(idx_esq + 1, len(todos_rotulos))
     )
-    expected_pairs = len(all_labels) * (len(all_labels) - 1) / 2
-    if pair_count == 0:
-        alpha = None
-    elif expected_disagreement == 0:
-        alpha = 1.0 if observed_disagreement == 0 else None
+    pares_esperados = len(todos_rotulos) * (len(todos_rotulos) - 1) / 2
+    if total_pares == 0:
+        alfa = None
+    elif discordancia_esperada == 0:
+        alfa = 1.0 if discordancia_observada == 0 else None
     else:
-        alpha = 1.0 - (observed_disagreement / pair_count) / (
-            expected_disagreement / expected_pairs
+        alfa = 1.0 - (discordancia_observada / total_pares) / (
+            discordancia_esperada / pares_esperados
         )
 
-    disagreement_videos.sort(
+    videos_com_discordancia.sort(
         key=lambda item: item["discordancia_ordinal"], reverse=True
     )
 
-    labeler_disagreements: dict[str, float] = {}
-    valid_results = results[results["video_id"].isin(usable.index)]
-    for _, video_results in valid_results.groupby("video_id"):
-        labels = video_results["stance"].tolist()
-        for row in video_results.itertuples():
-            other_labels = [label for label in labels if label != row.stance]
-            if other_labels:
-                score = sum(
-                    label_distance(row.stance, label, effective_distances)
-                    for label in other_labels
-                ) / len(other_labels)
-                labeler_disagreements[row.labeler] = (
-                    labeler_disagreements.get(row.labeler, 0.0) + score
+    discordancias_por_rotulador: dict[str, float] = {}
+    resultados_validos = resultados[resultados["video_id"].isin(utilizaveis.index)]
+    for _, resultados_video in resultados_validos.groupby("video_id"):
+        rotulos = resultados_video["stance"].tolist()
+        for linha in resultados_video.itertuples():
+            outros_rotulos = [
+                rotulo for rotulo in rotulos if rotulo != linha.stance
+            ]
+            if outros_rotulos:
+                pontuacao = sum(
+                    distancia_rotulos(linha.stance, rotulo, distancias_efetivas)
+                    for rotulo in outros_rotulos
+                ) / len(outros_rotulos)
+                discordancias_por_rotulador[linha.labeler] = (
+                    discordancias_por_rotulador.get(linha.labeler, 0.0) + pontuacao
                 )
 
-    labelers = [
-        {"labeler": labeler, "penalidade": round(score, 2)}
-        for labeler, score in labeler_disagreements.items()
+    ranking_rotuladores = [
+        {
+            "rotulador": rotulador,
+            "penalidade": round(pontuacao, 2),
+        }
+        for rotulador, pontuacao in discordancias_por_rotulador.items()
     ]
-    labelers.sort(key=lambda item: item["penalidade"], reverse=True)
+    ranking_rotuladores.sort(key=lambda item: item["penalidade"], reverse=True)
     return {
         "metrica": "Concordância ponderada por distância",
-        "alfa": round(alpha, 6) if alpha is not None else None,
-        "videos_com_multiplas_anotacoes": int(len(usable)),
-        "anotacoes_consideradas": int(len(all_labels)),
-        "videos_com_discordancia": disagreement_videos,
-        "labelers_com_maior_discordancia": labelers,
-        "updated_at": format_brt_timestamp(),
+        "alfa": round(alfa, 6) if alfa is not None else None,
+        "videos_com_multiplas_anotacoes": int(len(utilizaveis)),
+        "anotacoes_consideradas": int(len(todos_rotulos)),
+        "videos_com_discordancia": videos_com_discordancia,
+        "rotuladores_com_maior_discordancia": ranking_rotuladores,
+        "atualizado_em": momento_atual,
     }
 
 
-def find_fast_annotations(
-    results: pd.DataFrame,
+calculate_agreement = calcular_concordancia
+
+
+def encontrar_anotacoes_rapidas(
+    resultados: pd.DataFrame,
     videos: pd.DataFrame,
-    tolerance_seconds: float = FAST_ANNOTATION_TOLERANCE_SECONDS,
+    tolerancia_segundos: float = TOLERANCIA_ANOTACAO_RAPIDA_SEGUNDOS,
+    *,
+    tolerance_seconds: float | None = None,
 ) -> list[dict[str, Any]]:
-    """Detect annotations completed faster than video duration minus tolerance."""
-    if results.empty or videos.empty:
+    """Detecta anotacoes concluidas mais rapido do que a duracao do video menos a tolerancia."""
+    if resultados.empty or videos.empty:
         return []
-    durations = videos.set_index(videos["id"].astype(str))["video_duration"].to_dict()
-    alerts: list[dict[str, Any]] = []
-    for row in results.itertuples():
-        raw_duration = getattr(row, "video_duration", "") or durations.get(
-            str(row.video_id), ""
+    tolerancia = (
+        float(tolerance_seconds)
+        if tolerance_seconds is not None
+        else float(tolerancia_segundos)
+    )
+    duracoes = videos.set_index(videos["id"].astype(str))["video_duration"].to_dict()
+    alertas: list[dict[str, Any]] = []
+    for linha in resultados.itertuples():
+        duracao_bruta = getattr(linha, "video_duration", "") or duracoes.get(
+            str(linha.video_id), ""
         )
         try:
-            duration = float(raw_duration)
-            analysis_time = float(row.tempo_analise_segundos)
+            duracao = float(duracao_bruta)
+            tempo_analise = float(linha.tempo_analise_segundos)
         except (TypeError, ValueError):
             continue
-        if analysis_time < duration - float(tolerance_seconds):
-            alerts.append(
+        if tempo_analise < duracao - tolerancia:
+            alertas.append(
                 {
-                    "video_id": str(row.video_id),
-                    "labeler": str(row.labeler),
-                    "video_duration": round(duration, 2),
-                    "tempo_analise_segundos": round(analysis_time, 2),
-                    "diferenca_segundos": round(duration - analysis_time, 2),
+                    "video_id": str(linha.video_id),
+                    "rotulador": str(linha.labeler),
+                    "video_duration": round(duracao, 2),
+                    "tempo_analise_segundos": round(tempo_analise, 2),
+                    "diferenca_segundos": round(duracao - tempo_analise, 2),
                 }
             )
-    return sorted(alerts, key=lambda item: item["diferenca_segundos"], reverse=True)
+    return sorted(alertas, key=lambda item: item["diferenca_segundos"], reverse=True)
 
 
-def assignment_versions(
-    assignments: pd.DataFrame,
-    results: pd.DataFrame,
-    errors: pd.DataFrame,
+find_fast_annotations = encontrar_anotacoes_rapidas
+
+
+def versoes_atribuicao(
+    atribuicoes: pd.DataFrame,
+    resultados: pd.DataFrame,
+    erros: pd.DataFrame,
 ) -> list[str]:
-    """List the active assignment version followed by historical versions in reverse order."""
-    versions: list[str] = []
-    current_version: str | None = None
-    if not assignments.empty and "assignment_version" in assignments.columns:
-        versions.extend(
-            assignments["assignment_version"].dropna().astype(str).tolist()
+    """Lista a versao ativa de atribuicao seguida pelas versoes historicas em ordem reversa."""
+    versoes: list[str] = []
+    versao_atual: str | None = None
+    if not atribuicoes.empty and "assignment_version" in atribuicoes.columns:
+        versoes.extend(
+            atribuicoes["assignment_version"].dropna().astype(str).tolist()
         )
-        current_version = versions[0] if versions else None
-    for frame in (results, errors):
-        if not frame.empty and "assignment_id" in frame.columns:
-            versions.extend(
-                frame["assignment_id"]
+        versao_atual = versoes[0] if versoes else None
+    for quadro in (resultados, erros):
+        if not quadro.empty and "assignment_id" in quadro.columns:
+            versoes.extend(
+                quadro["assignment_id"]
                 .astype(str)
                 .str.split(":", n=1)
                 .str[0]
                 .tolist()
             )
-    available = {
-        version for version in versions if version and version != "legacy"
+    disponiveis = {
+        versao for versao in versoes if versao and versao != "legacy"
     }
-    if current_version:
-        available.discard(current_version)
-    return ([current_version] if current_version else []) + sorted(
-        available, reverse=True
+    if versao_atual:
+        disponiveis.discard(versao_atual)
+    return ([versao_atual] if versao_atual else []) + sorted(
+        disponiveis, reverse=True
     )
 
 
-def filter_by_assignment_version(
-    frame: pd.DataFrame,
-    version: str | None,
+assignment_versions = versoes_atribuicao
+
+
+def filtrar_por_versao_atribuicao(
+    quadro: pd.DataFrame,
+    versao: str | None,
 ) -> pd.DataFrame:
-    """Filter results or error rows belonging to a specific assignment version prefix."""
-    if frame.empty or not version or "assignment_id" not in frame.columns:
-        return frame.copy()
-    return frame[
-        frame["assignment_id"].astype(str).str.startswith(f"{version}:")
+    """Filtra linhas de resultados ou erros pertencentes ao prefixo de uma versao de atribuicao."""
+    if quadro.empty or not versao or "assignment_id" not in quadro.columns:
+        return quadro.copy()
+    return quadro[
+        quadro["assignment_id"].astype(str).str.startswith(f"{versao}:")
     ].copy()
 
 
-def assignment_table_for_version(
-    assignments: pd.DataFrame,
-    results: pd.DataFrame,
-    errors: pd.DataFrame,
-    version: str | None,
+filter_by_assignment_version = filtrar_por_versao_atribuicao
+
+
+def tabela_atribuicoes_por_versao(
+    atribuicoes: pd.DataFrame,
+    resultados: pd.DataFrame,
+    erros: pd.DataFrame,
+    versao: str | None,
 ) -> pd.DataFrame:
-    """Return active assignment rows or reconstruct historical rows for an older version."""
+    """Retorna as atribuicoes ativas ou reconstroi as linhas historicas de uma versao anterior."""
     if (
-        version
-        and not assignments.empty
-        and version in set(assignments["assignment_version"].astype(str))
+        versao
+        and not atribuicoes.empty
+        and versao in set(atribuicoes["assignment_version"].astype(str))
     ):
-        return assignments[
-            assignments["assignment_version"].astype(str).eq(version)
+        return atribuicoes[
+            atribuicoes["assignment_version"].astype(str).eq(versao)
         ].copy()
     return pd.concat(
         [
-            filter_by_assignment_version(results, version),
-            filter_by_assignment_version(errors, version),
+            filtrar_por_versao_atribuicao(resultados, versao),
+            filtrar_por_versao_atribuicao(erros, versao),
         ],
         ignore_index=True,
     )
+
+
+assignment_table_for_version = tabela_atribuicoes_por_versao
