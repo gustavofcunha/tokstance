@@ -1,9 +1,12 @@
 """Core domain models, dataclasses, and tabular schema definitions."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-from tokstance.config import DEFAULT_INVITE_TOKEN
+import pandas as pd
+
+from tokstance.config import DEFAULT_INVITE_TOKEN, resolve_data_paths
 
 VIDEO_REQUIRED_COLUMNS = ("id", "url", "target")
 VIDEO_OPTIONAL_COLUMNS = ("video_description", "voice_to_text", "video_duration")
@@ -128,3 +131,31 @@ class VideoErrorRecord:
     replacement_url: str = ""
     replacement_assignment_id: str = ""
     replacement_status: str = ""
+
+
+def load_videos(videos_file: Path | None = None) -> pd.DataFrame:
+    """Load and validate the primary videos.csv dataset."""
+    target_path = Path(videos_file) if videos_file is not None else resolve_data_paths().videos_file
+    if not target_path.exists():
+        raise FileNotFoundError(
+            f"\n[ERRO CRÍTICO] Arquivo '{target_path.name}' ausente. A execução foi abortada."
+        )
+    if target_path.stat().st_size == 0:
+        raise ValueError("videos.csv precisa conter ao menos um registro de vídeo.")
+    try:
+        videos = pd.read_csv(target_path, dtype=str).fillna("")
+    except pd.errors.EmptyDataError as exc:
+        raise ValueError("videos.csv precisa conter ao menos um registro de vídeo.") from exc
+
+    if videos.empty:
+        raise ValueError("videos.csv precisa conter ao menos um registro de vídeo.")
+    missing = set(VIDEO_REQUIRED_COLUMNS).difference(videos.columns)
+    if missing:
+        raise ValueError(
+            f"videos.csv não possui as colunas obrigatórias: {', '.join(sorted(missing))}"
+        )
+    for column in VIDEO_OPTIONAL_COLUMNS:
+        if column not in videos.columns:
+            videos[column] = ""
+    return videos.fillna("")
+
