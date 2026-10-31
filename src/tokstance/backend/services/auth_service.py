@@ -243,14 +243,24 @@ class ServicoAutenticacao:
             anot_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
                 tid, rotulador=nome_usuario
             )
+            erros_df = self.repo_estudo.carregar_erros_videos_tarefa_df(tid)
             ids_anotados = (
                 set(anot_df["assignment_id"].astype(str))
                 if not anot_df.empty
                 else set()
             )
+            ids_erros_sem_reserva: set[str] = set()
+            if not erros_df.empty:
+                erros_rot = erros_df[
+                    erros_df["labeler"].astype(str).eq(nome_usuario)
+                    & erros_df["replacement_assignment_id"].astype(str).str.strip().eq("")
+                ]
+                ids_erros_sem_reserva = set(erros_rot["assignment_id"].astype(str))
+
+            ids_processados = ids_anotados | ids_erros_sem_reserva
             total_fila = len(fila_df)
             concluidos = (
-                int(fila_df["assignment_id"].astype(str).isin(ids_anotados).sum())
+                int(fila_df["assignment_id"].astype(str).isin(ids_processados).sum())
                 if not fila_df.empty
                 else 0
             )

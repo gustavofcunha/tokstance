@@ -105,7 +105,12 @@ class ServicoAdministracao:
             else 0.0
         )
 
-        anotacoes_rapidas = encontrar_anotacoes_rapidas(anotacoes, principais)
+        todos_videos = (
+            pd.concat([principais, reservas], ignore_index=True)
+            if not reservas.empty
+            else principais
+        )
+        anotacoes_rapidas = encontrar_anotacoes_rapidas(anotacoes, todos_videos)
         configuracao = self.repo_estudo.obter_configuracao_tarefa(int(tarefa_id))
         concordancia = calcular_concordancia(anotacoes, configuracao)
 
