@@ -3,7 +3,12 @@
 import pandas as pd
 import pytest
 
-from tokstance.backend.domain.assignments import make_assignments
+from tokstance.backend.domain.assignments import (
+    assignment_identifier,
+    assignment_version,
+    bind_or_allocate_labeler_slot,
+    make_assignments,
+)
 from tokstance.backend.domain.models import ASSIGNMENT_COLUMNS, load_videos
 
 
@@ -102,4 +107,90 @@ def test_make_assignments_balances_per_target_allocation_across_labelers(
 
     assert alice_targets == ["Clima", "Economia"]
     assert bob_targets == ["Clima", "Economia"]
+
+
+@pytest.mark.unit
+def test_assignment_version_is_deterministic_for_identical_inputs(study_paths) -> None:
+    videos = load_videos(study_paths.videos_file)
+    config = {"labelers": ["alice", "bob"], "overlap_percent": 50.0}
+
+    first_version = assignment_version(config, videos)
+    second_version = assignment_version(config, videos)
+
+    assert first_version == second_version
+    assert first_version.startswith("v")
+    assert len(first_version) == 13
+
+
+@pytest.mark.unit
+def test_assignment_version_changes_when_overlap_or_labeler_list_changes(
+    study_paths,
+) -> None:
+    videos = load_videos(study_paths.videos_file)
+    base_config = {"labelers": ["alice", "bob"], "overlap_percent": 50.0}
+    updated_overlap_config = {"labelers": ["alice", "bob"], "overlap_percent": 25.0}
+    updated_labelers_config = {"labelers": ["alice", "carol"], "overlap_percent": 50.0}
+
+    base_version = assignment_version(base_config, videos)
+    overlap_version = assignment_version(updated_overlap_config, videos)
+    labelers_version = assignment_version(updated_labelers_config, videos)
+
+    assert base_version != overlap_version
+    assert base_version != labelers_version
+
+
+@pytest.mark.unit
+def test_assignment_identifier_formats_version_labeler_and_video_id() -> None:
+    identifier = assignment_identifier("v123456789abc", "alice", "7100000000000000001")
+
+    assert identifier == "v123456789abc:alice:7100000000000000001"
+
+
+@pytest.mark.unit
+def test_bind_or_allocate_labeler_slot_replaces_unclaimed_placeholder_slot(
+    study_paths,
+) -> None:
+    videos = load_videos(study_paths.videos_file)
+    config = {"labelers": ["alice", "slot_2"], "overlap_percent": 50.0}
+    initial_assignments = make_assignments(config, videos, persist=False)
+
+    updated_config, updated_assignments, bound_slot = bind_or_allocate_labeler_slot(
+        "bob",
+        config,
+        initial_assignments,
+        videos,
+        claimed_users={"alice"},
+    )
+
+    assert bound_slot == "slot_2"
+    assert updated_config["labelers"] == ["alice", "bob"]
+    assert "slot_2" not in set(updated_assignments["labeler"])
+    assert len(updated_assignments[updated_assignments["labeler"] == "bob"]) == 3
+
+
+@pytest.mark.unit
+def test_bind_or_allocate_labeler_slot_allocates_dynamic_queue_when_slots_are_full(
+    study_paths,
+) -> None:
+    videos = load_videos(study_paths.videos_file)
+    config = {
+        "labelers": ["alice", "bob"],
+        "overlap_percent": 50.0,
+        "videos_per_labeler": 3,
+    }
+    initial_assignments = make_assignments(config, videos, persist=False)
+
+    updated_config, updated_assignments, bound_slot = bind_or_allocate_labeler_slot(
+        "professor_eval",
+        config,
+        initial_assignments,
+        videos,
+        claimed_users={"alice", "bob"},
+    )
+
+    assert bound_slot == "professor_eval"
+    assert "professor_eval" in updated_config["labelers"]
+    assert len(updated_assignments[updated_assignments["labeler"] == "professor_eval"]) == 3
+    assert len(updated_assignments[updated_assignments["labeler"] == "alice"]) == 3
+
 
