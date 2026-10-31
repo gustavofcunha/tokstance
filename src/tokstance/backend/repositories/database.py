@@ -151,7 +151,7 @@ class BancoDadosSQLite:
         inicializar: bool = True,
     ) -> None:
         if caminho_banco is None:
-            caminho_efetivo = resolver_caminhos_dados().arquivo_banco
+            caminho_efetivo = resolver_caminhos_dados().arquivo_banco_dados
         else:
             caminho_efetivo = Path(caminho_banco)
         self.caminho_banco = caminho_efetivo
@@ -221,3 +221,4 @@ class BancoDadosSQLite:
             """
         )
         return [str(linha["name"]) for linha in linhas]
+
