@@ -13,67 +13,69 @@ from tokstance.backend.domain.models import COLUNAS_ATRIBUICAO, carregar_videos
 
 
 @pytest.mark.unit
-def test_make_assignments_empty_labelers_returns_empty_dataframe(study_paths) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+def test_gerar_atribuicoes_sem_rotuladores_retorna_dataframe_vazio(
+    caminhos_estudo,
+) -> None:
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": [], "percentual_sobreposicao": 50.0}
 
-    assigned = gerar_atribuicoes(config, videos, persistir=False)
+    atribuidos = gerar_atribuicoes(config, videos, persistir=False)
 
-    assert assigned.empty
-    assert tuple(assigned.columns) == COLUNAS_ATRIBUICAO
+    assert atribuidos.empty
+    assert tuple(atribuidos.columns) == COLUNAS_ATRIBUICAO
 
 
 @pytest.mark.unit
-def test_make_assignments_zero_overlap_partitions_all_videos_without_duplication(
-    study_paths,
+def test_gerar_atribuicoes_sobreposicao_zero_particiona_todos_os_videos_sem_duplicar(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
 
-    assigned = gerar_atribuicoes(config, videos, persistir=False)
-    alice_ids = set(assigned[assigned["labeler"] == "alice"]["video_id"])
-    bob_ids = set(assigned[assigned["labeler"] == "bob"]["video_id"])
+    atribuidos = gerar_atribuicoes(config, videos, persistir=False)
+    ids_alice = set(atribuidos[atribuidos["labeler"] == "alice"]["video_id"])
+    ids_bob = set(atribuidos[atribuidos["labeler"] == "bob"]["video_id"])
 
-    assert len(alice_ids) == 2
-    assert len(bob_ids) == 2
-    assert alice_ids.isdisjoint(bob_ids)
-    assert alice_ids.union(bob_ids) == set(videos["id"])
+    assert len(ids_alice) == 2
+    assert len(ids_bob) == 2
+    assert ids_alice.isdisjoint(ids_bob)
+    assert ids_alice.union(ids_bob) == set(videos["id"])
 
 
 @pytest.mark.unit
-def test_make_assignments_fifty_percent_overlap_shares_half_and_splits_remainder(
-    study_paths,
+def test_gerar_atribuicoes_cinquenta_porcento_sobreposicao_compartilha_metade_e_divide_restante(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
 
-    assigned = gerar_atribuicoes(config, videos, persistir=False)
-    alice_ids = set(assigned[assigned["labeler"] == "alice"]["video_id"])
-    bob_ids = set(assigned[assigned["labeler"] == "bob"]["video_id"])
+    atribuidos = gerar_atribuicoes(config, videos, persistir=False)
+    ids_alice = set(atribuidos[atribuidos["labeler"] == "alice"]["video_id"])
+    ids_bob = set(atribuidos[atribuidos["labeler"] == "bob"]["video_id"])
 
-    assert len(alice_ids) == 3
-    assert len(bob_ids) == 3
-    assert len(alice_ids.intersection(bob_ids)) == 2
-    assert alice_ids.union(bob_ids) == set(videos["id"])
+    assert len(ids_alice) == 3
+    assert len(ids_bob) == 3
+    assert len(ids_alice.intersection(ids_bob)) == 2
+    assert ids_alice.union(ids_bob) == set(videos["id"])
 
 
 @pytest.mark.unit
-def test_make_assignments_hundred_percent_overlap_assigns_full_corpus_to_every_labeler(
-    study_paths,
+def test_gerar_atribuicoes_cem_porcento_sobreposicao_atribui_todos_os_videos_a_cada_rotulador(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 100.0}
 
-    assigned = gerar_atribuicoes(config, videos, persistir=False)
-    alice_ids = list(assigned[assigned["labeler"] == "alice"]["video_id"])
-    bob_ids = list(assigned[assigned["labeler"] == "bob"]["video_id"])
+    atribuidos = gerar_atribuicoes(config, videos, persistir=False)
+    ids_alice = list(atribuidos[atribuidos["labeler"] == "alice"]["video_id"])
+    ids_bob = list(atribuidos[atribuidos["labeler"] == "bob"]["video_id"])
 
-    assert len(alice_ids) == 4
-    assert alice_ids == bob_ids
+    assert len(ids_alice) == 4
+    assert ids_alice == ids_bob
 
 
 @pytest.mark.unit
-def test_make_assignments_groups_each_labeler_queue_into_contiguous_target_blocks() -> None:
+def test_gerar_atribuicoes_agrupa_fila_de_cada_rotulador_em_blocos_contiguos_de_target() -> None:
     videos = pd.DataFrame(
         [
             {"id": "1", "url": "https://tiktok.com/@a/video/1", "target": "Clima"},
@@ -84,117 +86,143 @@ def test_make_assignments_groups_each_labeler_queue_into_contiguous_target_block
     )
     config = {"rotuladores": ["alice"], "percentual_sobreposicao": 100.0}
 
-    assigned = gerar_atribuicoes(config, videos, persistir=False)
-    normalized_targets = assigned["target"].astype(str).str.strip().tolist()
+    atribuidos = gerar_atribuicoes(config, videos, persistir=False)
+    targets_normalizados = atribuidos["target"].astype(str).str.strip().tolist()
 
-    assert normalized_targets == ["Clima", "Clima", "Economia", "Economia"]
+    assert targets_normalizados == ["Clima", "Clima", "Economia", "Economia"]
 
 
 @pytest.mark.unit
-def test_make_assignments_balances_per_target_allocation_across_labelers(
-    study_paths,
+def test_gerar_atribuicoes_equilibra_alocacao_por_target_entre_rotuladores(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
 
-    assigned = gerar_atribuicoes(config, videos, persistir=False)
-    alice_targets = sorted(
-        assigned[assigned["labeler"] == "alice"]["target"].astype(str).str.strip().tolist()
+    atribuidos = gerar_atribuicoes(config, videos, persistir=False)
+    targets_alice = sorted(
+        atribuidos[atribuidos["labeler"] == "alice"]["target"]
+        .astype(str)
+        .str.strip()
+        .tolist()
     )
-    bob_targets = sorted(
-        assigned[assigned["labeler"] == "bob"]["target"].astype(str).str.strip().tolist()
+    targets_bob = sorted(
+        atribuidos[atribuidos["labeler"] == "bob"]["target"]
+        .astype(str)
+        .str.strip()
+        .tolist()
     )
 
-    assert alice_targets == ["Clima", "Economia"]
-    assert bob_targets == ["Clima", "Economia"]
+    assert targets_alice == ["Clima", "Economia"]
+    assert targets_bob == ["Clima", "Economia"]
 
 
 @pytest.mark.unit
-def test_assignment_version_is_deterministic_for_identical_inputs(study_paths) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+def test_versao_atribuicao_e_deterministica_para_entradas_identicas(
+    caminhos_estudo,
+) -> None:
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
 
-    first_version = versao_atribuicao(config, videos)
-    second_version = versao_atribuicao(config, videos)
+    primeira_versao = versao_atribuicao(config, videos)
+    segunda_versao = versao_atribuicao(config, videos)
 
-    assert first_version == second_version
-    assert first_version.startswith("v")
-    assert len(first_version) == 13
+    assert primeira_versao == segunda_versao
+    assert primeira_versao.startswith("v")
+    assert len(primeira_versao) == 13
 
 
 @pytest.mark.unit
-def test_assignment_version_changes_when_overlap_or_labeler_list_changes(
-    study_paths,
+def test_versao_atribuicao_muda_quando_sobreposicao_ou_rotuladores_mudam(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
-    base_config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
-    updated_overlap_config = {
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
+    config_base = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
+    config_sobreposicao = {
         "rotuladores": ["alice", "bob"],
         "percentual_sobreposicao": 25.0,
     }
-    updated_labelers_config = {
+    config_rotuladores = {
         "rotuladores": ["alice", "carol"],
         "percentual_sobreposicao": 50.0,
     }
 
-    base_version = versao_atribuicao(base_config, videos)
-    overlap_version = versao_atribuicao(updated_overlap_config, videos)
-    labelers_version = versao_atribuicao(updated_labelers_config, videos)
+    versao_base = versao_atribuicao(config_base, videos)
+    versao_sobreposicao = versao_atribuicao(config_sobreposicao, videos)
+    versao_rotuladores = versao_atribuicao(config_rotuladores, videos)
 
-    assert base_version != overlap_version
-    assert base_version != labelers_version
-
-
-@pytest.mark.unit
-def test_assignment_identifier_formats_version_labeler_and_video_id() -> None:
-    identifier = identificador_atribuicao("v123456789abc", "alice", "7100000000000000001")
-
-    assert identifier == "v123456789abc:alice:7100000000000000001"
+    assert versao_base != versao_sobreposicao
+    assert versao_base != versao_rotuladores
 
 
 @pytest.mark.unit
-def test_bind_or_allocate_labeler_slot_replaces_unclaimed_placeholder_slot(
-    study_paths,
-) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
-    config = {"rotuladores": ["alice", "vaga_2"], "percentual_sobreposicao": 50.0}
-    initial_assignments = gerar_atribuicoes(config, videos, persistir=False)
-
-    updated_config, updated_assignments, bound_slot = vincular_ou_alocar_vaga_rotulador(
-        "bob",
-        config,
-        initial_assignments,
-        videos,
-        usuarios_reivindicados={"alice"},
+def test_identificador_atribuicao_formata_versao_rotulador_e_id_video() -> None:
+    identificador = identificador_atribuicao(
+        "v123456789abc", "alice", "7100000000000000001"
     )
 
-    assert bound_slot == "vaga_2"
-    assert updated_config["rotuladores"] == ["alice", "bob"]
-    assert "vaga_2" not in set(updated_assignments["labeler"])
-    assert len(updated_assignments[updated_assignments["labeler"] == "bob"]) == 3
+    assert identificador == "v123456789abc:alice:7100000000000000001"
 
 
 @pytest.mark.unit
-def test_bind_or_allocate_labeler_slot_allocates_dynamic_queue_when_slots_are_full(
-    study_paths,
+def test_vincular_ou_alocar_vaga_rotulador_substitui_vaga_disponivel(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
+    config = {"rotuladores": ["alice", "vaga_2"], "percentual_sobreposicao": 50.0}
+    atribuicoes_iniciais = gerar_atribuicoes(config, videos, persistir=False)
+
+    config_atualizada, atribuicoes_atualizadas, vaga_vinculada = (
+        vincular_ou_alocar_vaga_rotulador(
+            "bob",
+            config,
+            atribuicoes_iniciais,
+            videos,
+            usuarios_reivindicados={"alice"},
+        )
+    )
+
+    assert vaga_vinculada == "vaga_2"
+    assert config_atualizada["rotuladores"] == ["alice", "bob"]
+    assert "vaga_2" not in set(atribuicoes_atualizadas["labeler"])
+    assert (
+        len(atribuicoes_atualizadas[atribuicoes_atualizadas["labeler"] == "bob"]) == 3
+    )
+
+
+@pytest.mark.unit
+def test_vincular_ou_alocar_vaga_rotulador_aloca_fila_dinamica_quando_vagas_cheias(
+    caminhos_estudo,
+) -> None:
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {
         "rotuladores": ["alice", "bob"],
         "percentual_sobreposicao": 50.0,
         "videos_por_rotulador": 3,
     }
-    initial_assignments = gerar_atribuicoes(config, videos, persistir=False)
+    atribuicoes_iniciais = gerar_atribuicoes(config, videos, persistir=False)
 
-    updated_config, updated_assignments, bound_slot = vincular_ou_alocar_vaga_rotulador(
-        "professor_eval",
-        config,
-        initial_assignments,
-        videos,
-        usuarios_reivindicados={"alice", "bob"},
+    config_atualizada, atribuicoes_atualizadas, vaga_vinculada = (
+        vincular_ou_alocar_vaga_rotulador(
+            "professor_avaliacao",
+            config,
+            atribuicoes_iniciais,
+            videos,
+            usuarios_reivindicados={"alice", "bob"},
+        )
     )
 
-    assert bound_slot == "professor_eval"
-    assert "professor_eval" in updated_config["rotuladores"]
-    assert len(updated_assignments[updated_assignments["labeler"] == "professor_eval"]) == 3
-    assert len(updated_assignments[updated_assignments["labeler"] == "alice"]) == 3
+    assert vaga_vinculada == "professor_avaliacao"
+    assert "professor_avaliacao" in config_atualizada["rotuladores"]
+    assert (
+        len(
+            atribuicoes_atualizadas[
+                atribuicoes_atualizadas["labeler"] == "professor_avaliacao"
+            ]
+        )
+        == 3
+    )
+    assert (
+        len(atribuicoes_atualizadas[atribuicoes_atualizadas["labeler"] == "alice"])
+        == 3
+    )

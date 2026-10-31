@@ -18,35 +18,35 @@ from tokstance.backend.domain.replacements import (
 )
 
 
-def _write_error_rows(errors_file, rows: list[dict[str, str]]) -> None:
-    pd.DataFrame(rows, columns=list(COLUNAS_ERRO)).to_csv(errors_file, index=False)
+def _gravar_linhas_erro(arquivo_erros, linhas: list[dict[str, str]]) -> None:
+    pd.DataFrame(linhas, columns=list(COLUNAS_ERRO)).to_csv(arquivo_erros, index=False)
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_replaces_individual_video_with_compatible_target_reserve(
-    study_paths,
+def test_aplicar_substituicoes_reserva_substitui_video_individual_por_reserva_compativel(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    failing_row = assignments[
-        (assignments["labeler"] == "alice")
-        & (assignments["video_id"] == "7100000000000000001")
+    linha_falha = atribuicoes[
+        (atribuicoes["labeler"] == "alice")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
-                "video_id": str(failing_row["video_id"]),
-                "url": str(failing_row["url"]),
+                "video_id": str(linha_falha["video_id"]),
+                "url": str(linha_falha["url"]),
                 "labeler": "alice",
-                "assignment_id": str(failing_row["assignment_id"]),
+                "assignment_id": str(linha_falha["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -55,41 +55,45 @@ def test_apply_reserve_replacements_replaces_individual_video_with_compatible_ta
         ],
     )
 
-    updated = aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+    atualizadas = aplicar_substituicoes_reserva(
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
+    erros_persistidos = ler_erros_atribuicoes(caminhos_estudo.arquivo_erros)
 
-    assert persisted_errors.loc[0, "replacement_video_id"] == "7900000000000000001"
-    assert persisted_errors.loc[0, "replacement_status"] == "SUBSTITUIDO_OVERLAP"
+    assert erros_persistidos.loc[0, "replacement_video_id"] == "7900000000000000001"
+    assert erros_persistidos.loc[0, "replacement_status"] == "SUBSTITUIDO_OVERLAP"
     assert "7900000000000000001" in set(
-        updated[updated["labeler"] == "alice"]["video_id"]
+        atualizadas[atualizadas["labeler"] == "alice"]["video_id"]
     )
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_does_not_reuse_consumed_reserve_across_distinct_failures(
-    study_paths,
+def test_aplicar_substituicoes_reserva_nao_reutiliza_reserva_consumida_em_falhas_distintas(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 0.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    first_clima = assignments[assignments["video_id"] == "7100000000000000001"].iloc[0]
-    second_clima = assignments[assignments["video_id"] == "7100000000000000002"].iloc[0]
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    primeiro_clima = atribuicoes[
+        atribuicoes["video_id"] == "7100000000000000001"
+    ].iloc[0]
+    segundo_clima = atribuicoes[
+        atribuicoes["video_id"] == "7100000000000000002"
+    ].iloc[0]
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
-                "video_id": str(first_clima["video_id"]),
-                "url": str(first_clima["url"]),
-                "labeler": str(first_clima["labeler"]),
-                "assignment_id": str(first_clima["assignment_id"]),
+                "video_id": str(primeiro_clima["video_id"]),
+                "url": str(primeiro_clima["url"]),
+                "labeler": str(primeiro_clima["labeler"]),
+                "assignment_id": str(primeiro_clima["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -97,10 +101,10 @@ def test_apply_reserve_replacements_does_not_reuse_consumed_reserve_across_disti
             },
             {
                 "timestamp": "2026-10-31 12:01:00",
-                "video_id": str(second_clima["video_id"]),
-                "url": str(second_clima["url"]),
-                "labeler": str(second_clima["labeler"]),
-                "assignment_id": str(second_clima["assignment_id"]),
+                "video_id": str(segundo_clima["video_id"]),
+                "url": str(segundo_clima["url"]),
+                "labeler": str(segundo_clima["labeler"]),
+                "assignment_id": str(segundo_clima["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -110,18 +114,18 @@ def test_apply_reserve_replacements_does_not_reuse_consumed_reserve_across_disti
     )
 
     aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
+    erros_persistidos = ler_erros_atribuicoes(caminhos_estudo.arquivo_erros)
 
-    assert persisted_errors.loc[0, "replacement_video_id"] == "7900000000000000001"
-    assert persisted_errors.loc[1, "replacement_video_id"] == ""
-    assert persisted_errors.loc[1, "replacement_status"] == "SEM_RESERVA_COMPATIVEL"
+    assert erros_persistidos.loc[0, "replacement_video_id"] == "7900000000000000001"
+    assert erros_persistidos.loc[1, "replacement_video_id"] == ""
+    assert erros_persistidos.loc[1, "replacement_status"] == "SEM_RESERVA_COMPATIVEL"
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_records_sem_reserva_compativel_when_target_not_in_reserves(
-    study_paths,
+def test_aplicar_substituicoes_reserva_registra_sem_reserva_compativel_quando_target_ausente(
+    caminhos_estudo,
 ) -> None:
     pd.DataFrame(
         [
@@ -131,25 +135,25 @@ def test_apply_reserve_replacements_records_sem_reserva_compativel_when_target_n
                 "target": "Esportes",
             }
         ]
-    ).to_csv(study_paths.arquivo_videos_reserva, index=False)
-    videos = carregar_videos(study_paths.arquivo_videos)
+    ).to_csv(caminhos_estudo.arquivo_videos_reserva, index=False)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice"], "percentual_sobreposicao": 0.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    failing_row = assignments.iloc[0]
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    linha_falha = atribuicoes.iloc[0]
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
-                "video_id": str(failing_row["video_id"]),
-                "url": str(failing_row["url"]),
+                "video_id": str(linha_falha["video_id"]),
+                "url": str(linha_falha["url"]),
                 "labeler": "alice",
-                "assignment_id": str(failing_row["assignment_id"]),
+                "assignment_id": str(linha_falha["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -159,16 +163,16 @@ def test_apply_reserve_replacements_records_sem_reserva_compativel_when_target_n
     )
 
     aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
+    erros_persistidos = ler_erros_atribuicoes(caminhos_estudo.arquivo_erros)
 
-    assert persisted_errors.loc[0, "replacement_status"] == "SEM_RESERVA_COMPATIVEL"
+    assert erros_persistidos.loc[0, "replacement_status"] == "SEM_RESERVA_COMPATIVEL"
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_records_sem_reserva_disponivel_when_all_reserves_are_exhausted(
-    study_paths,
+def test_aplicar_substituicoes_reserva_registra_sem_reserva_disponivel_quando_reservas_esgotadas(
+    caminhos_estudo,
 ) -> None:
     pd.DataFrame(
         [
@@ -178,25 +182,25 @@ def test_apply_reserve_replacements_records_sem_reserva_disponivel_when_all_rese
                 "target": "Clima",
             }
         ]
-    ).to_csv(study_paths.arquivo_videos_reserva, index=False)
-    videos = carregar_videos(study_paths.arquivo_videos)
+    ).to_csv(caminhos_estudo.arquivo_videos_reserva, index=False)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice"], "percentual_sobreposicao": 0.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    failing_row = assignments.iloc[0]
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    linha_falha = atribuicoes.iloc[0]
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
-                "video_id": str(failing_row["video_id"]),
-                "url": str(failing_row["url"]),
+                "video_id": str(linha_falha["video_id"]),
+                "url": str(linha_falha["url"]),
                 "labeler": "alice",
-                "assignment_id": str(failing_row["assignment_id"]),
+                "assignment_id": str(linha_falha["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -206,38 +210,38 @@ def test_apply_reserve_replacements_records_sem_reserva_disponivel_when_all_rese
     )
 
     aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
+    erros_persistidos = ler_erros_atribuicoes(caminhos_estudo.arquivo_erros)
 
-    assert persisted_errors.loc[0, "replacement_status"] == "SEM_RESERVA_DISPONIVEL"
+    assert erros_persistidos.loc[0, "replacement_status"] == "SEM_RESERVA_DISPONIVEL"
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_shares_single_reserve_across_unannotated_overlap_group(
-    study_paths,
+def test_aplicar_substituicoes_reserva_compartilha_mesma_reserva_em_grupo_sobreposicao_nao_anotado(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 100.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    alice_row = assignments[
-        (assignments["labeler"] == "alice")
-        & (assignments["video_id"] == "7100000000000000001")
+    linha_alice = atribuicoes[
+        (atribuicoes["labeler"] == "alice")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
-                "video_id": str(alice_row["video_id"]),
-                "url": str(alice_row["url"]),
+                "video_id": str(linha_alice["video_id"]),
+                "url": str(linha_alice["url"]),
                 "labeler": "alice",
-                "assignment_id": str(alice_row["assignment_id"]),
+                "assignment_id": str(linha_alice["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -246,54 +250,54 @@ def test_apply_reserve_replacements_shares_single_reserve_across_unannotated_ove
         ],
     )
 
-    updated = aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+    atualizadas = aplicar_substituicoes_reserva(
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    alice_videos = set(updated[updated["labeler"] == "alice"]["video_id"])
-    bob_videos = set(updated[updated["labeler"] == "bob"]["video_id"])
+    videos_alice = set(atualizadas[atualizadas["labeler"] == "alice"]["video_id"])
+    videos_bob = set(atualizadas[atualizadas["labeler"] == "bob"]["video_id"])
 
-    assert "7900000000000000001" in alice_videos
-    assert "7900000000000000001" in bob_videos
-    assert "7100000000000000001" not in alice_videos
-    assert "7100000000000000001" not in bob_videos
+    assert "7900000000000000001" in videos_alice
+    assert "7900000000000000001" in videos_bob
+    assert "7100000000000000001" not in videos_alice
+    assert "7100000000000000001" not in videos_bob
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_promotes_completed_individual_video_when_overlap_partially_annotated(
-    study_paths,
+def test_aplicar_substituicoes_reserva_promove_video_individual_concluido_em_sobreposicao_parcial(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    alice_overlap = assignments[
-        (assignments["labeler"] == "alice")
-        & (assignments["video_id"] == "7100000000000000001")
+    alice_sobreposicao = atribuicoes[
+        (atribuicoes["labeler"] == "alice")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
-    bob_overlap = assignments[
-        (assignments["labeler"] == "bob")
-        & (assignments["video_id"] == "7100000000000000001")
+    bob_sobreposicao = atribuicoes[
+        (atribuicoes["labeler"] == "bob")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
-    alice_individual = assignments[
-        (assignments["labeler"] == "alice")
-        & (assignments["video_id"] == "7100000000000000002")
+    alice_individual = atribuicoes[
+        (atribuicoes["labeler"] == "alice")
+        & (atribuicoes["video_id"] == "7100000000000000002")
     ].iloc[0]
     pd.DataFrame(
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
                 "labeler": "alice",
-                "video_id": str(alice_overlap["video_id"]),
-                "url": str(alice_overlap["url"]),
-                "target": str(alice_overlap["target"]),
+                "video_id": str(alice_sobreposicao["video_id"]),
+                "url": str(alice_sobreposicao["url"]),
+                "target": str(alice_sobreposicao["target"]),
                 "stance": "Contra",
                 "tempo_analise_segundos": "21.0",
                 "video_duration": "25.0",
-                "assignment_id": str(alice_overlap["assignment_id"]),
+                "assignment_id": str(alice_sobreposicao["assignment_id"]),
             },
             {
                 "timestamp": "2026-10-31 12:01:00",
@@ -308,16 +312,16 @@ def test_apply_reserve_replacements_promotes_completed_individual_video_when_ove
             },
         ],
         columns=list(COLUNAS_RESULTADO),
-    ).to_csv(study_paths.arquivo_resultados, index=False)
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    ).to_csv(caminhos_estudo.arquivo_resultados, index=False)
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:02:00",
-                "video_id": str(bob_overlap["video_id"]),
-                "url": str(bob_overlap["url"]),
+                "video_id": str(bob_sobreposicao["video_id"]),
+                "url": str(bob_sobreposicao["url"]),
                 "labeler": "bob",
-                "assignment_id": str(bob_overlap["assignment_id"]),
+                "assignment_id": str(bob_sobreposicao["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -326,55 +330,57 @@ def test_apply_reserve_replacements_promotes_completed_individual_video_when_ove
         ],
     )
 
-    updated = aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+    atualizadas = aplicar_substituicoes_reserva(
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
+    erros_persistidos = ler_erros_atribuicoes(caminhos_estudo.arquivo_erros)
 
     assert (
-        persisted_errors.loc[0, "replacement_status"]
+        erros_persistidos.loc[0, "replacement_status"]
         == "SUBSTITUIDO_OVERLAP_REBALANCEADO"
     )
-    assert persisted_errors.loc[0, "replacement_video_id"] == "7100000000000000002"
-    assert "7100000000000000002" in set(updated[updated["labeler"] == "bob"]["video_id"])
+    assert erros_persistidos.loc[0, "replacement_video_id"] == "7100000000000000002"
+    assert "7100000000000000002" in set(
+        atualizadas[atualizadas["labeler"] == "bob"]["video_id"]
+    )
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_propagates_promoted_video_to_all_pending_group_members(
-    study_paths,
+def test_aplicar_substituicoes_reserva_propaga_video_promovido_a_todos_membros_pendentes(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob", "carol"], "percentual_sobreposicao": 50.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    alice_overlap = assignments[
-        (assignments["labeler"] == "alice")
-        & (assignments["video_id"] == "7100000000000000001")
+    alice_sobreposicao = atribuicoes[
+        (atribuicoes["labeler"] == "alice")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
-    bob_overlap = assignments[
-        (assignments["labeler"] == "bob")
-        & (assignments["video_id"] == "7100000000000000001")
+    bob_sobreposicao = atribuicoes[
+        (atribuicoes["labeler"] == "bob")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
-    alice_individual = assignments[
-        (assignments["labeler"] == "alice")
-        & (assignments["video_id"] == "7100000000000000002")
+    alice_individual = atribuicoes[
+        (atribuicoes["labeler"] == "alice")
+        & (atribuicoes["video_id"] == "7100000000000000002")
     ].iloc[0]
     pd.DataFrame(
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
                 "labeler": "alice",
-                "video_id": str(alice_overlap["video_id"]),
-                "url": str(alice_overlap["url"]),
-                "target": str(alice_overlap["target"]),
+                "video_id": str(alice_sobreposicao["video_id"]),
+                "url": str(alice_sobreposicao["url"]),
+                "target": str(alice_sobreposicao["target"]),
                 "stance": "Contra",
                 "tempo_analise_segundos": "21.0",
                 "video_duration": "25.0",
-                "assignment_id": str(alice_overlap["assignment_id"]),
+                "assignment_id": str(alice_sobreposicao["assignment_id"]),
             },
             {
                 "timestamp": "2026-10-31 12:01:00",
@@ -389,16 +395,16 @@ def test_apply_reserve_replacements_propagates_promoted_video_to_all_pending_gro
             },
         ],
         columns=list(COLUNAS_RESULTADO),
-    ).to_csv(study_paths.arquivo_resultados, index=False)
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    ).to_csv(caminhos_estudo.arquivo_resultados, index=False)
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:02:00",
-                "video_id": str(bob_overlap["video_id"]),
-                "url": str(bob_overlap["url"]),
+                "video_id": str(bob_sobreposicao["video_id"]),
+                "url": str(bob_sobreposicao["url"]),
                 "labeler": "bob",
-                "assignment_id": str(bob_overlap["assignment_id"]),
+                "assignment_id": str(bob_sobreposicao["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -407,60 +413,60 @@ def test_apply_reserve_replacements_propagates_promoted_video_to_all_pending_gro
         ],
     )
 
-    updated = aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+    atualizadas = aplicar_substituicoes_reserva(
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    carol_videos = set(updated[updated["labeler"] == "carol"]["video_id"])
+    videos_carol = set(atualizadas[atualizadas["labeler"] == "carol"]["video_id"])
 
-    assert "7100000000000000002" in carol_videos
-    assert "7100000000000000001" not in carol_videos
+    assert "7100000000000000002" in videos_carol
+    assert "7100000000000000001" not in videos_carol
 
 
 @pytest.mark.unit
-def test_apply_reserve_replacements_emits_critico_overlap_inconsistente_when_no_promotion_candidate_exists(
-    study_paths,
+def test_aplicar_substituicoes_reserva_emite_critico_overlap_inconsistente_sem_candidato_promocao(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 100.0}
-    assignments = gerar_atribuicoes(
+    atribuicoes = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    alice_overlap = assignments[
-        (assignments["labeler"] == "alice")
-        & (assignments["video_id"] == "7100000000000000001")
+    alice_sobreposicao = atribuicoes[
+        (atribuicoes["labeler"] == "alice")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
-    bob_overlap = assignments[
-        (assignments["labeler"] == "bob")
-        & (assignments["video_id"] == "7100000000000000001")
+    bob_sobreposicao = atribuicoes[
+        (atribuicoes["labeler"] == "bob")
+        & (atribuicoes["video_id"] == "7100000000000000001")
     ].iloc[0]
     pd.DataFrame(
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
                 "labeler": "alice",
-                "video_id": str(alice_overlap["video_id"]),
-                "url": str(alice_overlap["url"]),
-                "target": str(alice_overlap["target"]),
+                "video_id": str(alice_sobreposicao["video_id"]),
+                "url": str(alice_sobreposicao["url"]),
+                "target": str(alice_sobreposicao["target"]),
                 "stance": "Contra",
                 "tempo_analise_segundos": "22.0",
                 "video_duration": "25.0",
-                "assignment_id": str(alice_overlap["assignment_id"]),
+                "assignment_id": str(alice_sobreposicao["assignment_id"]),
             }
         ],
         columns=list(COLUNAS_RESULTADO),
-    ).to_csv(study_paths.arquivo_resultados, index=False)
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    ).to_csv(caminhos_estudo.arquivo_resultados, index=False)
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:02:00",
-                "video_id": str(bob_overlap["video_id"]),
-                "url": str(bob_overlap["url"]),
+                "video_id": str(bob_sobreposicao["video_id"]),
+                "url": str(bob_sobreposicao["url"]),
                 "labeler": "bob",
-                "assignment_id": str(bob_overlap["assignment_id"]),
+                "assignment_id": str(bob_sobreposicao["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -469,45 +475,47 @@ def test_apply_reserve_replacements_emits_critico_overlap_inconsistente_when_no_
         ],
     )
 
-    updated = aplicar_substituicoes_reserva(
-        assignments, diretorio_dados=study_paths.diretorio_base
+    atualizadas = aplicar_substituicoes_reserva(
+        atribuicoes, diretorio_dados=caminhos_estudo.diretorio_base
     )
-    persisted_errors = ler_erros_atribuicoes(study_paths.arquivo_erros)
+    erros_persistidos = ler_erros_atribuicoes(caminhos_estudo.arquivo_erros)
 
     assert (
-        persisted_errors.loc[0, "replacement_status"] == "CRITICO_OVERLAP_INCONSISTENTE"
+        erros_persistidos.loc[0, "replacement_status"] == "CRITICO_OVERLAP_INCONSISTENTE"
     )
     assert "7100000000000000001" in set(
-        updated[updated["labeler"] == "alice"]["video_id"]
+        atualizadas[atualizadas["labeler"] == "alice"]["video_id"]
     )
-    assert "7900000000000000001" in set(updated[updated["labeler"] == "bob"]["video_id"])
+    assert "7900000000000000001" in set(
+        atualizadas[atualizadas["labeler"] == "bob"]["video_id"]
+    )
 
 
 @pytest.mark.unit
-def test_load_assignments_reuses_persisted_assignments_when_version_matches(
-    study_paths,
+def test_carregar_atribuicoes_reaproveita_atribuicoes_persistidas_da_mesma_versao(
+    caminhos_estudo,
 ) -> None:
-    videos = carregar_videos(study_paths.arquivo_videos)
+    videos = carregar_videos(caminhos_estudo.arquivo_videos)
     config = {"rotuladores": ["alice", "bob"], "percentual_sobreposicao": 50.0}
-    initial = gerar_atribuicoes(
+    iniciais = gerar_atribuicoes(
         config,
         videos,
         persistir=True,
-        arquivo_atribuicoes=study_paths.arquivo_atribuicoes,
+        arquivo_atribuicoes=caminhos_estudo.arquivo_atribuicoes,
     )
-    failing_row = initial[
-        (initial["labeler"] == "alice")
-        & (initial["video_id"] == "7100000000000000001")
+    linha_falha = iniciais[
+        (iniciais["labeler"] == "alice")
+        & (iniciais["video_id"] == "7100000000000000001")
     ].iloc[0]
-    _write_error_rows(
-        study_paths.arquivo_erros,
+    _gravar_linhas_erro(
+        caminhos_estudo.arquivo_erros,
         [
             {
                 "timestamp": "2026-10-31 12:00:00",
-                "video_id": str(failing_row["video_id"]),
-                "url": str(failing_row["url"]),
+                "video_id": str(linha_falha["video_id"]),
+                "url": str(linha_falha["url"]),
                 "labeler": "alice",
-                "assignment_id": str(failing_row["assignment_id"]),
+                "assignment_id": str(linha_falha["assignment_id"]),
                 "replacement_video_id": "",
                 "replacement_url": "",
                 "replacement_assignment_id": "",
@@ -516,16 +524,16 @@ def test_load_assignments_reuses_persisted_assignments_when_version_matches(
         ],
     )
 
-    loaded = carregar_atribuicoes(
-        config, videos, diretorio_dados=study_paths.diretorio_base
+    carregadas = carregar_atribuicoes(
+        config, videos, diretorio_dados=caminhos_estudo.diretorio_base
     )
 
-    assert "7900000000000000001" in set(loaded["video_id"])
+    assert "7900000000000000001" in set(carregadas["video_id"])
 
 
 @pytest.mark.unit
-def test_ensure_results_schema_backfills_missing_video_duration_and_legacy_assignment_id(
-    study_paths,
+def test_garantir_esquema_resultados_preenche_duracao_e_id_legado_ausentes(
+    caminhos_estudo,
 ) -> None:
     pd.DataFrame(
         [
@@ -539,10 +547,10 @@ def test_ensure_results_schema_backfills_missing_video_duration_and_legacy_assig
                 "tempo_analise_segundos": "20.0",
             }
         ]
-    ).to_csv(study_paths.arquivo_resultados, index=False)
+    ).to_csv(caminhos_estudo.arquivo_resultados, index=False)
 
-    garantir_esquema_resultados(diretorio_dados=study_paths.diretorio_base)
-    migrated = ler_resultados(study_paths.arquivo_resultados)
+    garantir_esquema_resultados(diretorio_dados=caminhos_estudo.diretorio_base)
+    migrados = ler_resultados(caminhos_estudo.arquivo_resultados)
 
-    assert migrated.loc[0, "video_duration"] == "25.0"
-    assert migrated.loc[0, "assignment_id"] == "legacy:alice:7100000000000000001"
+    assert migrados.loc[0, "video_duration"] == "25.0"
+    assert migrados.loc[0, "assignment_id"] == "legacy:alice:7100000000000000001"

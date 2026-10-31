@@ -18,15 +18,15 @@ from tokstance.backend.domain.models import (
 
 
 @pytest.mark.unit
-def test_label_distance_returns_zero_for_identical_labels() -> None:
-    custom_distances = {"Baixo|Médio": 1.5, "Baixo|Alto": 4.0, "Médio|Alto": 2.0}
+def test_distancia_rotulos_retorna_zero_para_rotulos_identicos() -> None:
+    distancias_customizadas = {"Baixo|Médio": 1.5, "Baixo|Alto": 4.0, "Médio|Alto": 2.0}
 
-    assert distancia_rotulos("Baixo", "Baixo", custom_distances) == 0.0
+    assert distancia_rotulos("Baixo", "Baixo", distancias_customizadas) == 0.0
     assert distancia_rotulos("Contra", "Contra", DISTANCIAS_ROTULOS_PADRAO) == 0.0
 
 
 @pytest.mark.unit
-def test_label_distance_is_symmetric_and_reads_configured_penalties() -> None:
+def test_distancia_rotulos_e_simetrica_e_le_penalidades_configuradas() -> None:
     assert distancia_rotulos("Contra", "A Favor", DISTANCIAS_ROTULOS_PADRAO) == 3.0
     assert distancia_rotulos("A Favor", "Contra", DISTANCIAS_ROTULOS_PADRAO) == 3.0
     assert distancia_rotulos("Contra", "Neutro", DISTANCIAS_ROTULOS_PADRAO) == 1.0
@@ -46,44 +46,45 @@ def test_label_distance_is_symmetric_and_reads_configured_penalties() -> None:
 
 
 @pytest.mark.unit
-def test_generate_label_combinations_builds_all_pairs_for_custom_task_options() -> None:
-    custom_options = ["Leve", "Moderado", "Grave"]
-    configured_penalties = {"Leve|Grave": 5.0, "Leve|Moderado": 1.5}
+def test_gerar_combinacoes_rotulos_cria_todos_os_pares_para_opcoes_customizadas() -> None:
+    opcoes_customizadas = ["Leve", "Moderado", "Grave"]
+    penalidades_configuradas = {"Leve|Grave": 5.0, "Leve|Moderado": 1.5}
 
-    pairs = gerar_combinacoes_rotulos(
-        custom_options,
-        distancias_existentes=configured_penalties,
+    pares = gerar_combinacoes_rotulos(
+        opcoes_customizadas,
+        distancias_existentes=penalidades_configuradas,
         penalidade_padrao=2.0,
     )
 
-    assert pairs == {
+    pares_esperados = {
         "Leve|Moderado": 1.5,
         "Leve|Grave": 5.0,
         "Moderado|Grave": 2.0,
     }
+    assert pares == pares_esperados
 
 
 @pytest.mark.unit
-def test_calculate_agreement_returns_none_alpha_when_no_video_has_multiple_annotations(
-    study_paths,
+def test_calcular_concordancia_retorna_alfa_nulo_sem_multiplas_anotacoes(
+    caminhos_estudo,
 ) -> None:
-    single_annotations = pd.DataFrame(
+    anotacoes_unicas = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Contra"},
             {"video_id": "102", "labeler": "bob", "stance": "A Favor"},
         ]
     )
 
-    summary = calcular_concordancia(single_annotations)
+    resumo = calcular_concordancia(anotacoes_unicas)
 
-    assert summary["alfa"] is None
-    assert summary["videos_com_multiplas_anotacoes"] == 0
-    assert summary["videos_com_discordancia"] == []
+    assert resumo["alfa"] is None
+    assert resumo["videos_com_multiplas_anotacoes"] == 0
+    assert resumo["videos_com_discordancia"] == []
 
 
 @pytest.mark.unit
-def test_calculate_agreement_returns_unit_alpha_for_perfect_consensus_on_custom_task() -> None:
-    custom_config = {
+def test_calcular_concordancia_retorna_alfa_unitario_em_consenso_perfeito_customizado() -> None:
+    config_customizada = {
         "opcoes_posicao": ["Tóxico", "Não Tóxico", "Incerto"],
         "distancias_rotulos": {
             "Tóxico|Não Tóxico": 4.0,
@@ -91,7 +92,7 @@ def test_calculate_agreement_returns_unit_alpha_for_perfect_consensus_on_custom_
             "Não Tóxico|Incerto": 1.5,
         },
     }
-    consensus_annotations = pd.DataFrame(
+    anotacoes_consenso = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Tóxico"},
             {"video_id": "101", "labeler": "bob", "stance": "Tóxico"},
@@ -100,21 +101,21 @@ def test_calculate_agreement_returns_unit_alpha_for_perfect_consensus_on_custom_
         ]
     )
 
-    summary = calcular_concordancia(
-        consensus_annotations, configuracao=custom_config
+    resumo = calcular_concordancia(
+        anotacoes_consenso, configuracao=config_customizada
     )
 
-    assert summary["alfa"] == 1.0
-    assert summary["videos_com_multiplas_anotacoes"] == 2
-    assert summary["anotacoes_consideradas"] == 4
-    assert summary["videos_com_discordancia"] == []
+    assert resumo["alfa"] == 1.0
+    assert resumo["videos_com_multiplas_anotacoes"] == 2
+    assert resumo["anotacoes_consideradas"] == 4
+    assert resumo["videos_com_discordancia"] == []
 
 
 @pytest.mark.unit
-def test_calculate_agreement_uses_configured_penalties_for_disagreement_severity(
-    study_paths,
+def test_calcular_concordancia_usa_penalidades_configuradas_para_severidade_discordancia(
+    caminhos_estudo,
 ) -> None:
-    neutral_shift = pd.DataFrame(
+    desvio_neutro = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Contra"},
             {"video_id": "101", "labeler": "bob", "stance": "Neutro"},
@@ -122,7 +123,7 @@ def test_calculate_agreement_uses_configured_penalties_for_disagreement_severity
             {"video_id": "102", "labeler": "bob", "stance": "A Favor"},
         ]
     )
-    polar_divergence = pd.DataFrame(
+    divergencia_polar = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Contra"},
             {"video_id": "101", "labeler": "bob", "stance": "A Favor"},
@@ -131,19 +132,19 @@ def test_calculate_agreement_uses_configured_penalties_for_disagreement_severity
         ]
     )
 
-    neutral_summary = calcular_concordancia(neutral_shift)
-    polar_summary = calcular_concordancia(polar_divergence)
+    resumo_neutro = calcular_concordancia(desvio_neutro)
+    resumo_polar = calcular_concordancia(divergencia_polar)
 
-    assert neutral_summary["videos_com_discordancia"][0]["discordancia_ordinal"] == 1.0
-    assert polar_summary["videos_com_discordancia"][0]["discordancia_ordinal"] == 3.0
-    assert polar_summary["alfa"] < neutral_summary["alfa"]
+    assert resumo_neutro["videos_com_discordancia"][0]["discordancia_ordinal"] == 1.0
+    assert resumo_polar["videos_com_discordancia"][0]["discordancia_ordinal"] == 3.0
+    assert resumo_polar["alfa"] < resumo_neutro["alfa"]
 
 
 @pytest.mark.unit
-def test_calculate_agreement_ranks_outlier_annotator_highest_in_penalty_list(
-    study_paths,
+def test_calcular_concordancia_classifica_rotulador_divergente_no_topo_das_penalidades(
+    caminhos_estudo,
 ) -> None:
-    results = pd.DataFrame(
+    resultados = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Contra"},
             {"video_id": "101", "labeler": "bob", "stance": "Neutro"},
@@ -153,24 +154,24 @@ def test_calculate_agreement_ranks_outlier_annotator_highest_in_penalty_list(
         ]
     )
 
-    summary = calcular_concordancia(results)
-    penalties = summary["rotuladores_com_maior_discordancia"]
+    resumo = calcular_concordancia(resultados)
+    penalidades = resumo["rotuladores_com_maior_discordancia"]
 
-    assert penalties[0]["rotulador"] == "carol"
-    assert penalties[0]["penalidade"] == 3.0
-    assert penalties[-1]["rotulador"] == "bob"
-    assert penalties[-1]["penalidade"] == 2.0
+    assert penalidades[0]["rotulador"] == "carol"
+    assert penalidades[0]["penalidade"] == 3.0
+    assert penalidades[-1]["rotulador"] == "bob"
+    assert penalidades[-1]["penalidade"] == 2.0
 
 
 @pytest.mark.unit
-def test_find_fast_annotations_flags_submissions_faster_than_duration_minus_tolerance() -> None:
+def test_encontrar_anotacoes_rapidas_sinaliza_envios_abaixo_da_duracao_menos_tolerancia() -> None:
     videos = pd.DataFrame(
         [
             {"id": "101", "video_duration": "25.0"},
             {"id": "102", "video_duration": "30.0"},
         ]
     )
-    results = pd.DataFrame(
+    resultados = pd.DataFrame(
         [
             {
                 "video_id": "101",
@@ -187,21 +188,21 @@ def test_find_fast_annotations_flags_submissions_faster_than_duration_minus_tole
         ]
     )
 
-    alerts = encontrar_anotacoes_rapidas(
-        results, videos, tolerancia_segundos=5.0
+    alertas = encontrar_anotacoes_rapidas(
+        resultados, videos, tolerancia_segundos=5.0
     )
 
-    assert len(alerts) == 2
-    assert alerts[0]["rotulador"] == "bob"
-    assert alerts[0]["diferenca_segundos"] == 22.0
-    assert alerts[1]["rotulador"] == "alice"
-    assert alerts[1]["diferenca_segundos"] == 13.0
+    assert len(alertas) == 2
+    assert alertas[0]["rotulador"] == "bob"
+    assert alertas[0]["diferenca_segundos"] == 22.0
+    assert alertas[1]["rotulador"] == "alice"
+    assert alertas[1]["diferenca_segundos"] == 13.0
 
 
 @pytest.mark.unit
-def test_find_fast_annotations_ignores_submissions_within_tolerance_threshold() -> None:
+def test_encontrar_anotacoes_rapidas_ignora_envios_dentro_da_tolerancia() -> None:
     videos = pd.DataFrame([{"id": "101", "video_duration": "25.0"}])
-    results = pd.DataFrame(
+    resultados = pd.DataFrame(
         [
             {
                 "video_id": "101",
@@ -212,55 +213,55 @@ def test_find_fast_annotations_ignores_submissions_within_tolerance_threshold() 
         ]
     )
 
-    alerts = encontrar_anotacoes_rapidas(
-        results, videos, tolerancia_segundos=5.0
+    alertas = encontrar_anotacoes_rapidas(
+        resultados, videos, tolerancia_segundos=5.0
     )
 
-    assert alerts == []
+    assert alertas == []
 
 
 @pytest.mark.unit
-def test_assignment_versions_lists_active_version_first_and_excludes_legacy_prefix() -> None:
-    assignments = pd.DataFrame([{"assignment_version": "v_active_003"}])
-    results = pd.DataFrame(
+def test_versoes_atribuicao_lista_versao_ativa_primeiro_e_exclui_prefixo_legado() -> None:
+    atribuicoes = pd.DataFrame([{"assignment_version": "v_ativa_003"}])
+    resultados = pd.DataFrame(
         [
-            {"assignment_id": "v_old_001:alice:101"},
+            {"assignment_id": "v_antiga_001:alice:101"},
             {"assignment_id": "legacy:bob:102"},
         ]
     )
-    errors = pd.DataFrame([{"assignment_id": "v_old_002:carol:103"}])
+    erros = pd.DataFrame([{"assignment_id": "v_antiga_002:carol:103"}])
 
-    versions = versoes_atribuicao(assignments, results, errors)
+    versoes = versoes_atribuicao(atribuicoes, resultados, erros)
 
-    assert versions == ["v_active_003", "v_old_002", "v_old_001"]
+    assert versoes == ["v_ativa_003", "v_antiga_002", "v_antiga_001"]
 
 
 @pytest.mark.unit
-def test_filter_by_assignment_version_and_table_reconstruct_historical_round() -> None:
-    assignments = pd.DataFrame(
+def test_filtrar_por_versao_atribuicao_e_tabela_reconstroem_rodada_historica() -> None:
+    atribuicoes = pd.DataFrame(
         [
             {
-                "assignment_version": "v_active_002",
-                "assignment_id": "v_active_002:alice:101",
+                "assignment_version": "v_ativa_002",
+                "assignment_id": "v_ativa_002:alice:101",
                 "labeler": "alice",
                 "video_id": "101",
             }
         ]
     )
-    results = pd.DataFrame(
+    resultados = pd.DataFrame(
         [
-            {"assignment_id": "v_old_001:alice:101", "labeler": "alice", "video_id": "101"},
-            {"assignment_id": "v_active_002:alice:101", "labeler": "alice", "video_id": "101"},
+            {"assignment_id": "v_antiga_001:alice:101", "labeler": "alice", "video_id": "101"},
+            {"assignment_id": "v_ativa_002:alice:101", "labeler": "alice", "video_id": "101"},
         ]
     )
-    errors = pd.DataFrame(
-        [{"assignment_id": "v_old_001:bob:102", "labeler": "bob", "video_id": "102"}]
+    erros = pd.DataFrame(
+        [{"assignment_id": "v_antiga_001:bob:102", "labeler": "bob", "video_id": "102"}]
     )
 
-    filtered_results = filtrar_por_versao_atribuicao(results, "v_old_001")
-    reconstructed = tabela_atribuicoes_por_versao(
-        assignments, results, errors, "v_old_001"
+    resultados_filtrados = filtrar_por_versao_atribuicao(resultados, "v_antiga_001")
+    reconstruida = tabela_atribuicoes_por_versao(
+        atribuicoes, resultados, erros, "v_antiga_001"
     )
 
-    assert len(filtered_results) == 1
-    assert len(reconstructed) == 2
+    assert len(resultados_filtrados) == 1
+    assert len(reconstruida) == 2

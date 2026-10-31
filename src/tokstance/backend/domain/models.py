@@ -19,13 +19,8 @@ POOL_RESERVA = "reserva"
 TIPOS_POOL_VALIDOS = (POOL_PRINCIPAL, POOL_RESERVA)
 
 COLUNAS_OBRIGATORIAS_VIDEO = ("id", "url", "target")
-VIDEO_REQUIRED_COLUMNS = COLUNAS_OBRIGATORIAS_VIDEO
-
 COLUNAS_OPCIONAIS_VIDEO = ("video_description", "voice_to_text", "video_duration")
-VIDEO_OPTIONAL_COLUMNS = COLUNAS_OPCIONAIS_VIDEO
-
 COLUNAS_VIDEO = COLUNAS_OBRIGATORIAS_VIDEO + COLUNAS_OPCIONAIS_VIDEO
-VIDEO_COLUMNS = COLUNAS_VIDEO
 
 COLUNAS_ATRIBUICAO = (
     "assignment_version",
@@ -38,7 +33,6 @@ COLUNAS_ATRIBUICAO = (
     "voice_to_text",
     "video_duration",
 )
-ASSIGNMENT_COLUMNS = COLUNAS_ATRIBUICAO
 
 COLUNAS_RESULTADO = (
     "timestamp",
@@ -51,7 +45,6 @@ COLUNAS_RESULTADO = (
     "video_duration",
     "assignment_id",
 )
-RESULT_COLUMNS = COLUNAS_RESULTADO
 
 COLUNAS_ERRO = (
     "timestamp",
@@ -64,7 +57,6 @@ COLUNAS_ERRO = (
     "replacement_assignment_id",
     "replacement_status",
 )
-ERROR_COLUMNS = COLUNAS_ERRO
 
 COLUNAS_LOG = (
     "timestamp",
@@ -72,21 +64,15 @@ COLUNAS_LOG = (
     "acao",
     "tempo_desde_login_segundos",
 )
-LOG_COLUMNS = COLUNAS_LOG
 
 NOME_TAREFA_PADRAO = "Detecção de Posição"
-DEFAULT_TASK_NAME = NOME_TAREFA_PADRAO
-
 PERGUNTA_TAREFA_PADRAO = "Qual a posição expressa no vídeo em relação ao target?"
-DEFAULT_TASK_QUESTION = PERGUNTA_TAREFA_PADRAO
-
 OPCOES_TAREFA_PADRAO = (
     "Contra",
     "A Favor",
     "Neutro",
     "Vídeo não relacionado ao target",
 )
-DEFAULT_TASK_OPTIONS = OPCOES_TAREFA_PADRAO
 
 DISTANCIAS_ROTULOS_PADRAO: dict[str, float] = {
     "Contra|A Favor": 3.0,
@@ -96,15 +82,11 @@ DISTANCIAS_ROTULOS_PADRAO: dict[str, float] = {
     "A Favor|Vídeo não relacionado ao target": 2.0,
     "Neutro|Vídeo não relacionado ao target": 2.0,
 }
-DEFAULT_LABEL_DISTANCES = DISTANCIAS_ROTULOS_PADRAO
 
 
 def chave_par_rotulos(esquerda: str, direita: str) -> str:
     """Formata a chave canonica para um par de rotulos da tarefa."""
     return f"{str(esquerda).strip()}|{str(direita).strip()}"
-
-
-pair_key = chave_par_rotulos
 
 
 def limpar_usuarios(valor: str | list[str] | tuple[str, ...] | None) -> list[str]:
@@ -117,28 +99,16 @@ def limpar_usuarios(valor: str | list[str] | tuple[str, ...] | None) -> list[str
     return list(dict.fromkeys(usuario.strip() for usuario in candidatos if usuario.strip()))
 
 
-clean_users = limpar_usuarios
-
-
 def gerar_combinacoes_rotulos(
     opcoes: list[str] | tuple[str, ...],
     distancias_existentes: dict[str, Any] | None = None,
     penalidade_padrao: float = 1.0,
-    *,
-    existing_distances: dict[str, Any] | None = None,
-    default_penalty: float | None = None,
 ) -> dict[str, float]:
     """Gera todas as combinacoes par-a-par de rotulos e seus pesos de penalidade."""
     opcoes_normalizadas = limpar_usuarios(list(opcoes))
-    mapa_distancias = (
-        existing_distances if existing_distances is not None else distancias_existentes
-    )
-    peso_padrao = (
-        float(default_penalty) if default_penalty is not None else float(penalidade_padrao)
-    )
     tabela_pesos: dict[frozenset[str], float] = {}
-    if isinstance(mapa_distancias, dict):
-        for par_bruto, peso_bruto in mapa_distancias.items():
+    if isinstance(distancias_existentes, dict):
+        for par_bruto, peso_bruto in distancias_existentes.items():
             partes = [parte.strip() for parte in str(par_bruto).split("|", maxsplit=1)]
             if len(partes) == 2 and partes[0] and partes[1] and partes[0] != partes[1]:
                 try:
@@ -149,12 +119,9 @@ def gerar_combinacoes_rotulos(
     geradas: dict[str, float] = {}
     for esquerda, direita in combinations(opcoes_normalizadas, 2):
         chave = chave_par_rotulos(esquerda, direita)
-        peso = tabela_pesos.get(frozenset((esquerda, direita)), peso_padrao)
+        peso = tabela_pesos.get(frozenset((esquerda, direita)), float(penalidade_padrao))
         geradas[chave] = float(peso)
     return geradas
-
-
-generate_label_combinations = gerar_combinacoes_rotulos
 
 
 @dataclass(frozen=True)
@@ -168,9 +135,6 @@ class RegistroVideo:
     voice_to_text: str = ""
     video_duration: str = ""
     tipo_pool: str = POOL_PRINCIPAL
-
-
-VideoRecord = RegistroVideo
 
 
 @dataclass
@@ -191,34 +155,6 @@ class ConfiguracaoEstudo:
     )
     codigo_convite: str = CODIGO_CONVITE_PADRAO
 
-    @property
-    def admins(self) -> list[str]:
-        return self.administradores
-
-    @property
-    def labelers(self) -> list[str]:
-        return self.rotuladores
-
-    @property
-    def videos_per_labeler(self) -> int:
-        return self.videos_por_rotulador
-
-    @property
-    def overlap_percent(self) -> float:
-        return self.percentual_sobreposicao
-
-    @property
-    def stance_options(self) -> list[str]:
-        return self.opcoes_posicao
-
-    @property
-    def label_distances(self) -> dict[str, float]:
-        return self.distancias_rotulos
-
-    @property
-    def invite_token(self) -> str:
-        return self.codigo_convite
-
     def para_dicionario(self) -> dict[str, Any]:
         """Serializa a configuracao do estudo em dicionario compativel com JSON."""
         distancias = gerar_combinacoes_rotulos(
@@ -236,13 +172,6 @@ class ConfiguracaoEstudo:
             "codigo_convite": str(self.codigo_convite),
         }
 
-    def to_dict(self) -> dict[str, Any]:
-        """Alias de compatibilidade para serializacao em dicionario."""
-        return self.para_dicionario()
-
-
-StudyConfig = ConfiguracaoEstudo
-
 
 @dataclass(frozen=True)
 class ContaUsuario:
@@ -253,29 +182,6 @@ class ContaUsuario:
     papel: str = PAPEL_ROTULADOR
     vaga_atribuida: str = ""
     criado_em: str = ""
-
-    @property
-    def username(self) -> str:
-        return self.nome_usuario
-
-    @property
-    def password_hash(self) -> str:
-        return self.senha_hash
-
-    @property
-    def role(self) -> str:
-        return self.papel
-
-    @property
-    def assigned_slot(self) -> str:
-        return self.vaga_atribuida
-
-    @property
-    def created_at(self) -> str:
-        return self.criado_em
-
-
-UserAccount = ContaUsuario
 
 
 @dataclass(frozen=True)
@@ -292,17 +198,6 @@ class RegistroAnotacao:
     video_duration: str
     assignment_id: str
 
-    @property
-    def labeler(self) -> str:
-        return self.rotulador
-
-    @property
-    def stance(self) -> str:
-        return self.posicao
-
-
-AnnotationRecord = RegistroAnotacao
-
 
 @dataclass(frozen=True)
 class RegistroErroVideo:
@@ -317,13 +212,6 @@ class RegistroErroVideo:
     replacement_url: str = ""
     replacement_assignment_id: str = ""
     replacement_status: str = ""
-
-    @property
-    def labeler(self) -> str:
-        return self.rotulador
-
-
-VideoErrorRecord = RegistroErroVideo
 
 
 def carregar_videos(arquivo_videos: Path | None = None) -> pd.DataFrame:
@@ -355,9 +243,6 @@ def carregar_videos(arquivo_videos: Path | None = None) -> pd.DataFrame:
         if coluna not in videos.columns:
             videos[coluna] = ""
     return videos.fillna("")
-
-
-load_videos = carregar_videos
 
 
 def carregar_videos_reserva(arquivo_videos_reserva: Path | None = None) -> pd.DataFrame:
@@ -393,9 +278,6 @@ def carregar_videos_reserva(arquivo_videos_reserva: Path | None = None) -> pd.Da
     return videos_reserva.fillna("")
 
 
-load_reserve_videos = carregar_videos_reserva
-
-
 def validar_arquivos_entrada_obrigatorios(
     arquivo_videos: Path | None = None,
     arquivo_videos_reserva: Path | None = None,
@@ -403,9 +285,6 @@ def validar_arquivos_entrada_obrigatorios(
     """Garante que os arquivos de videos principais e reserva existem e possuem esquema valido."""
     carregar_videos(arquivo_videos)
     carregar_videos_reserva(arquivo_videos_reserva)
-
-
-validate_required_input_files = validar_arquivos_entrada_obrigatorios
 
 
 def dividir_videos_principal_e_reserva(
@@ -422,7 +301,12 @@ def dividir_videos_principal_e_reserva(
     for coluna in COLUNAS_OPCIONAIS_VIDEO:
         if coluna not in normalizado.columns:
             normalizado[coluna] = ""
-    normalizado = normalizado[colunas].fillna("").drop_duplicates(subset=["id"], keep="first").reset_index(drop=True)
+    normalizado = (
+        normalizado[colunas]
+        .fillna("")
+        .drop_duplicates(subset=["id"], keep="first")
+        .reset_index(drop=True)
+    )
 
     #intercala videos entre targets normalizados para balancear a selecao principal
     baldes_target: dict[str, list[int]] = {}
@@ -443,14 +327,13 @@ def dividir_videos_principal_e_reserva(
     limite = max(0, min(int(quantidade_principal), len(ordem_intercalada)))
     indices_principais = sorted(ordem_intercalada[:limite])
     conjunto_principais = set(indices_principais)
-    indices_reserva = [idx for idx in range(len(normalizado)) if idx not in conjunto_principais]
+    indices_reserva = [
+        idx for idx in range(len(normalizado)) if idx not in conjunto_principais
+    ]
 
     principais = normalizado.iloc[indices_principais].reset_index(drop=True)
     reservas = normalizado.iloc[indices_reserva].reset_index(drop=True)
     return principais, reservas
-
-
-split_primary_and_reserve_videos = dividir_videos_principal_e_reserva
 
 
 def salvar_configuracao(
@@ -471,9 +354,6 @@ def salvar_configuracao(
     )
     with caminho_alvo.open("w", encoding="utf-8") as handle:
         json.dump(conteudo, handle, ensure_ascii=False, indent=2)
-
-
-save_config = salvar_configuracao
 
 
 def carregar_configuracao(arquivo_configuracao: Path | None = None) -> dict[str, Any]:
@@ -497,22 +377,10 @@ def carregar_configuracao(arquivo_configuracao: Path | None = None) -> dict[str,
     if not isinstance(config_bruta, dict):
         raise ValueError("configuracao.json inválido ou corrompido.")
 
-    administradores = limpar_usuarios(
-        config_bruta.get("administradores", config_bruta.get("admins", []))
-    )
-    rotuladores = limpar_usuarios(
-        config_bruta.get("rotuladores", config_bruta.get("labelers", []))
-    )
-    videos_por_rotulador = int(
-        config_bruta.get(
-            "videos_por_rotulador", config_bruta.get("videos_per_labeler", 10)
-        )
-    )
-    percentual_sobreposicao = float(
-        config_bruta.get(
-            "percentual_sobreposicao", config_bruta.get("overlap_percent", 0.0)
-        )
-    )
+    administradores = limpar_usuarios(config_bruta.get("administradores", []))
+    rotuladores = limpar_usuarios(config_bruta.get("rotuladores", []))
+    videos_por_rotulador = int(config_bruta.get("videos_por_rotulador", 10))
+    percentual_sobreposicao = float(config_bruta.get("percentual_sobreposicao", 0.0))
     tarefa = (
         str(config_bruta.get("tarefa") or NOME_TAREFA_PADRAO).strip()
         or NOME_TAREFA_PADRAO
@@ -521,9 +389,7 @@ def carregar_configuracao(arquivo_configuracao: Path | None = None) -> dict[str,
         str(config_bruta.get("pergunta") or PERGUNTA_TAREFA_PADRAO).strip()
         or PERGUNTA_TAREFA_PADRAO
     )
-    opcoes_configuradas = limpar_usuarios(
-        config_bruta.get("opcoes_posicao", config_bruta.get("stance_options", []))
-    )
+    opcoes_configuradas = limpar_usuarios(config_bruta.get("opcoes_posicao", []))
     opcoes_posicao = (
         opcoes_configuradas
         if len(opcoes_configuradas) >= 2
@@ -534,20 +400,17 @@ def carregar_configuracao(arquivo_configuracao: Path | None = None) -> dict[str,
         if opcoes_posicao == list(OPCOES_TAREFA_PADRAO)
         else {}
     )
-    distancias_brutas = config_bruta.get(
-        "distancias_rotulos", config_bruta.get("label_distances")
-    )
+    distancias_brutas = config_bruta.get("distancias_rotulos")
     distancias_efetivas = (
         distancias_brutas
         if isinstance(distancias_brutas, dict) and distancias_brutas
         else distancias_fallback
     )
     distancias_rotulos = gerar_combinacoes_rotulos(opcoes_posicao, distancias_efetivas)
-    codigo_convite = str(
-        config_bruta.get("codigo_convite")
-        or config_bruta.get("invite_token")
+    codigo_convite = (
+        str(config_bruta.get("codigo_convite") or CODIGO_CONVITE_PADRAO).strip()
         or CODIGO_CONVITE_PADRAO
-    ).strip() or CODIGO_CONVITE_PADRAO
+    )
 
     return {
         "administradores": administradores,
@@ -560,6 +423,3 @@ def carregar_configuracao(arquivo_configuracao: Path | None = None) -> dict[str,
         "distancias_rotulos": distancias_rotulos,
         "codigo_convite": codigo_convite,
     }
-
-
-load_config = carregar_configuracao

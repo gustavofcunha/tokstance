@@ -96,3 +96,4 @@ def validar_opcoes_tarefa(
             raise ValueError("As opções de resposta não podem conter o caractere '|'.")
         validas.append(opcao_limpa)
     return validas
+

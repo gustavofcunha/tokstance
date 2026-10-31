@@ -13,16 +13,11 @@ from tokstance.config import (
 
 def interpretar_mapa_distancias(
     mapa_distancias: dict[str, Any] | dict[frozenset[str], float] | None = None,
-    *,
-    distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
 ) -> dict[frozenset[str], float]:
     """Normaliza um dicionario de distancias par-a-par em chaves simetricas frozenset."""
-    origem = distance_map if distance_map is not None else mapa_distancias
+    origem = mapa_distancias
     if origem is None:
-        config_atual = carregar_configuracao()
-        origem = config_atual.get(
-            "distancias_rotulos", config_atual.get("label_distances", {})
-        )
+        origem = carregar_configuracao().get("distancias_rotulos", {})
     tabela: dict[frozenset[str], float] = {}
     if not isinstance(origem, dict):
         return tabela
@@ -42,27 +37,18 @@ def interpretar_mapa_distancias(
     return tabela
 
 
-parse_distance_lookup = interpretar_mapa_distancias
-
-
 def distancia_rotulos(
     esquerda: str,
     direita: str,
     mapa_distancias: dict[str, Any] | dict[frozenset[str], float] | None = None,
-    *,
-    distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
 ) -> float:
     """Retorna a distancia de penalidade configurada entre dois rotulos da tarefa."""
     esquerda_norm = str(esquerda).strip()
     direita_norm = str(direita).strip()
     if esquerda_norm == direita_norm:
         return 0.0
-    mapa_efetivo = distance_map if distance_map is not None else mapa_distancias
-    tabela = interpretar_mapa_distancias(mapa_efetivo)
+    tabela = interpretar_mapa_distancias(mapa_distancias)
     return tabela.get(frozenset((esquerda_norm, direita_norm)), 1.0)
-
-
-label_distance = distancia_rotulos
 
 
 def calcular_concordancia(
@@ -70,10 +56,6 @@ def calcular_concordancia(
     configuracao: dict[str, Any] | None = None,
     opcoes_permitidas: list[str] | tuple[str, ...] | None = None,
     mapa_distancias: dict[str, Any] | dict[frozenset[str], float] | None = None,
-    *,
-    config: dict[str, Any] | None = None,
-    allowed_options: list[str] | tuple[str, ...] | None = None,
-    distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
 ) -> dict[str, Any]:
     """Calcula a concordancia ponderada por distancia e as penalidades acumuladas por rotulador."""
     momento_atual = formatar_data_hora_brt()
@@ -88,31 +70,20 @@ def calcular_concordancia(
             "atualizado_em": momento_atual,
         }
 
-    config_informada = config if config is not None else configuracao
     config_ativa = (
-        config_informada
-        if isinstance(config_informada, dict)
+        configuracao
+        if isinstance(configuracao, dict)
         else carregar_configuracao()
     )
-    opcoes_informadas = (
-        allowed_options if allowed_options is not None else opcoes_permitidas
-    )
     opcoes_efetivas = (
-        list(opcoes_informadas)
-        if opcoes_informadas is not None
-        else list(
-            config_ativa.get(
-                "opcoes_posicao", config_ativa.get("stance_options", [])
-            )
-        )
+        list(opcoes_permitidas)
+        if opcoes_permitidas is not None
+        else list(config_ativa.get("opcoes_posicao", []))
     )
-    mapa_informado = distance_map if distance_map is not None else mapa_distancias
     distancias_efetivas = interpretar_mapa_distancias(
-        mapa_informado
-        if mapa_informado is not None
-        else config_ativa.get(
-            "distancias_rotulos", config_ativa.get("label_distances", {})
-        )
+        mapa_distancias
+        if mapa_distancias is not None
+        else config_ativa.get("distancias_rotulos", {})
     )
 
     mascara_valida = resultados["stance"].astype(str).str.strip().ne("")
@@ -134,7 +105,7 @@ def calcular_concordancia(
             "atualizado_em": momento_atual,
         }
 
-    #statistical correction for pairwise observed and expected disagreement
+    #correcao estatistica para discordancia observada e esperada entre pares
     discordancia_observada = 0.0
     total_pares = 0
     videos_com_discordancia: list[dict[str, Any]] = []
@@ -217,24 +188,15 @@ def calcular_concordancia(
     }
 
 
-calculate_agreement = calcular_concordancia
-
-
 def encontrar_anotacoes_rapidas(
     resultados: pd.DataFrame,
     videos: pd.DataFrame,
     tolerancia_segundos: float = TOLERANCIA_ANOTACAO_RAPIDA_SEGUNDOS,
-    *,
-    tolerance_seconds: float | None = None,
 ) -> list[dict[str, Any]]:
     """Detecta anotacoes concluidas mais rapido do que a duracao do video menos a tolerancia."""
     if resultados.empty or videos.empty:
         return []
-    tolerancia = (
-        float(tolerance_seconds)
-        if tolerance_seconds is not None
-        else float(tolerancia_segundos)
-    )
+    tolerancia = float(tolerancia_segundos)
     duracoes = videos.set_index(videos["id"].astype(str))["video_duration"].to_dict()
     alertas: list[dict[str, Any]] = []
     for linha in resultados.itertuples():
@@ -257,9 +219,6 @@ def encontrar_anotacoes_rapidas(
                 }
             )
     return sorted(alertas, key=lambda item: item["diferenca_segundos"], reverse=True)
-
-
-find_fast_annotations = encontrar_anotacoes_rapidas
 
 
 def versoes_atribuicao(
@@ -294,9 +253,6 @@ def versoes_atribuicao(
     )
 
 
-assignment_versions = versoes_atribuicao
-
-
 def filtrar_por_versao_atribuicao(
     quadro: pd.DataFrame,
     versao: str | None,
@@ -307,9 +263,6 @@ def filtrar_por_versao_atribuicao(
     return quadro[
         quadro["assignment_id"].astype(str).str.startswith(f"{versao}:")
     ].copy()
-
-
-filter_by_assignment_version = filtrar_por_versao_atribuicao
 
 
 def tabela_atribuicoes_por_versao(
@@ -334,6 +287,3 @@ def tabela_atribuicoes_por_versao(
         ],
         ignore_index=True,
     )
-
-
-assignment_table_for_version = tabela_atribuicoes_por_versao

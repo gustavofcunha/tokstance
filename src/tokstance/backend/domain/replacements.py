@@ -19,19 +19,12 @@ from tokstance.backend.domain.models import (
 from tokstance.config import resolver_caminhos_dados
 
 
-def ler_resultados(
-    arquivo_resultados: Path | None = None,
-    *,
-    results_file: Path | None = None,
-) -> pd.DataFrame:
+def ler_resultados(arquivo_resultados: Path | None = None) -> pd.DataFrame:
     """Carrega e normaliza as anotacoes concluidas a partir de resultados_anotacao.csv."""
     colunas = list(COLUNAS_RESULTADO)
-    caminho_informado = (
-        results_file if results_file is not None else arquivo_resultados
-    )
     caminho_alvo = (
-        Path(caminho_informado)
-        if caminho_informado is not None
+        Path(arquivo_resultados)
+        if arquivo_resultados is not None
         else resolver_caminhos_dados().arquivo_resultados
     )
     if not caminho_alvo.exists() or caminho_alvo.stat().st_size == 0:
@@ -82,20 +75,12 @@ def ler_resultados(
     return pd.DataFrame(columns=colunas)
 
 
-read_results = ler_resultados
-
-
-def ler_erros_atribuicoes(
-    arquivo_erros: Path | None = None,
-    *,
-    errors_file: Path | None = None,
-) -> pd.DataFrame:
+def ler_erros_atribuicoes(arquivo_erros: Path | None = None) -> pd.DataFrame:
     """Carrega e normaliza os registros de erro de video em erros_videos.csv."""
     colunas = list(COLUNAS_ERRO)
-    caminho_informado = errors_file if errors_file is not None else arquivo_erros
     caminho_alvo = (
-        Path(caminho_informado)
-        if caminho_informado is not None
+        Path(arquivo_erros)
+        if arquivo_erros is not None
         else resolver_caminhos_dados().arquivo_erros
     )
     if not caminho_alvo.exists() or caminho_alvo.stat().st_size == 0:
@@ -127,9 +112,6 @@ def ler_erros_atribuicoes(
     return pd.DataFrame(normalizadas, columns=colunas)
 
 
-read_error_assignments = ler_erros_atribuicoes
-
-
 def calcular_reservas_disponiveis(
     videos_reserva: pd.DataFrame,
     atribuicoes: pd.DataFrame,
@@ -149,18 +131,12 @@ def calcular_reservas_disponiveis(
     return reservas_unicas[~reservas_unicas["id"].astype(str).isin(ids_usados)]
 
 
-compute_available_reserves = calcular_reservas_disponiveis
-
-
 def aplicar_substituicoes_reserva(
     atribuicoes: pd.DataFrame,
     diretorio_dados: Path | None = None,
-    *,
-    data_dir: Path | None = None,
 ) -> pd.DataFrame:
     """Substitui videos reportados com erro por videos reserva compativeis."""
-    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
-    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    caminhos = resolver_caminhos_dados(diretorio_dados)
     if atribuicoes.empty or not caminhos.arquivo_erros.exists():
         return atribuicoes
 
@@ -431,19 +407,13 @@ def aplicar_substituicoes_reserva(
     return atribuicoes
 
 
-apply_reserve_replacements = aplicar_substituicoes_reserva
-
-
 def carregar_atribuicoes(
     configuracao: dict,
     videos: pd.DataFrame,
     diretorio_dados: Path | None = None,
-    *,
-    data_dir: Path | None = None,
 ) -> pd.DataFrame:
     """Carrega as atribuicoes persistidas da versao ativa e aplica substituicoes por reserva."""
-    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
-    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    caminhos = resolver_caminhos_dados(diretorio_dados)
     atribuicoes_base = gerar_atribuicoes(
         configuracao,
         videos,
@@ -484,34 +454,18 @@ def carregar_atribuicoes(
     )
 
 
-load_assignments = carregar_atribuicoes
-
-
-def garantir_esquema_erros(
-    diretorio_dados: Path | None = None,
-    *,
-    data_dir: Path | None = None,
-) -> None:
+def garantir_esquema_erros(diretorio_dados: Path | None = None) -> None:
     """Normaliza erros_videos.csv em disco para o esquema canonico."""
-    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
-    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    caminhos = resolver_caminhos_dados(diretorio_dados)
     if not caminhos.arquivo_erros.exists() or caminhos.arquivo_erros.stat().st_size == 0:
         return
     erros = ler_erros_atribuicoes(caminhos.arquivo_erros)
     persistir_dataframe_se_alterado(erros, caminhos.arquivo_erros, list(erros.columns))
 
 
-ensure_errors_schema = garantir_esquema_erros
-
-
-def garantir_esquema_resultados(
-    diretorio_dados: Path | None = None,
-    *,
-    data_dir: Path | None = None,
-) -> None:
+def garantir_esquema_resultados(diretorio_dados: Path | None = None) -> None:
     """Normaliza resultados_anotacao.csv em disco e preenche duracoes ou IDs ausentes."""
-    diretorio_alvo = data_dir if data_dir is not None else diretorio_dados
-    caminhos = resolver_caminhos_dados(diretorio_alvo)
+    caminhos = resolver_caminhos_dados(diretorio_dados)
     colunas = list(COLUNAS_RESULTADO)
     if (
         not caminhos.arquivo_resultados.exists()
@@ -539,6 +493,3 @@ def garantir_esquema_resultados(
                 )
     df = df.reindex(columns=[coluna for coluna in colunas if coluna in df.columns])
     df.to_csv(caminhos.arquivo_resultados, index=False)
-
-
-ensure_results_schema = garantir_esquema_resultados

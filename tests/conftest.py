@@ -8,30 +8,24 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from tokstance.config import BRT_TZ, CaminhosDados, resolver_caminhos_dados
+from tokstance.config import CaminhosDados, FUSO_BRT, resolver_caminhos_dados
 
 
 class RelogioDeterministico:
     """Relogio controlavel ancorado no fuso de Brasilia para execucao deterministica de testes."""
 
     def __init__(self, momento_inicial: datetime | None = None) -> None:
-        self._atual = momento_inicial or datetime(2026, 10, 31, 12, 0, 0, tzinfo=BRT_TZ)
+        self._atual = momento_inicial or datetime(
+            2026, 10, 31, 12, 0, 0, tzinfo=FUSO_BRT
+        )
         self._monotonico = 1000.0
 
     def agora(self) -> datetime:
         """Retorna o datetime simulado atual em horario de Brasilia."""
         return self._atual
 
-    def now(self) -> datetime:
-        """Alias de compatibilidade para o datetime simulado atual."""
-        return self._atual
-
     def monotonico(self) -> float:
         """Retorna o timestamp monotonico simulado atual em segundos."""
-        return self._monotonico
-
-    def monotonic(self) -> float:
-        """Alias de compatibilidade para o timestamp monotonico simulado."""
         return self._monotonico
 
     def avancar(self, segundos: float) -> None:
@@ -39,12 +33,6 @@ class RelogioDeterministico:
         self._atual = self._atual + timedelta(seconds=float(segundos))
         self._monotonico += float(segundos)
 
-    def advance(self, seconds: float) -> None:
-        """Alias de compatibilidade para avancar o relogio."""
-        self.avancar(seconds)
-
-
-DeterministicClock = RelogioDeterministico
 
 VIDEOS_SINTETICOS_PADRAO = [
     {
@@ -80,7 +68,6 @@ VIDEOS_SINTETICOS_PADRAO = [
         "video_duration": "22.0",
     },
 ]
-DEFAULT_SYNTHETIC_VIDEOS = VIDEOS_SINTETICOS_PADRAO
 
 RESERVAS_SINTETICAS_PADRAO = [
     {
@@ -100,14 +87,13 @@ RESERVAS_SINTETICAS_PADRAO = [
         "video_duration": "26.0",
     },
 ]
-DEFAULT_SYNTHETIC_RESERVES = RESERVAS_SINTETICAS_PADRAO
 
 
 def gravar_arquivos_estudo_sinteticos(
     diretorio_base: Path,
     videos: list[dict[str, Any]] | None = None,
     reservas: list[dict[str, Any]] | None = None,
-    config_payload: dict[str, Any] | None = None,
+    configuracao: dict[str, Any] | None = None,
 ) -> CaminhosDados:
     """Popula um diretorio isolado com arquivos CSV e JSON sinteticos."""
     diretorio_base.mkdir(parents=True, exist_ok=True)
@@ -118,7 +104,7 @@ def gravar_arquivos_estudo_sinteticos(
     pd.DataFrame(linhas_video).to_csv(caminhos.arquivo_videos, index=False)
     pd.DataFrame(linhas_reserva).to_csv(caminhos.arquivo_videos_reserva, index=False)
 
-    configuracao_efetiva = config_payload or {
+    configuracao_efetiva = configuracao or {
         "administradores": ["admin"],
         "rotuladores": ["alice", "bob"],
         "percentual_sobreposicao": 50,
@@ -131,18 +117,15 @@ def gravar_arquivos_estudo_sinteticos(
     return caminhos
 
 
-write_synthetic_study_files = gravar_arquivos_estudo_sinteticos
-
-
 @pytest.fixture()
-def deterministic_clock() -> RelogioDeterministico:
+def relogio_deterministico() -> RelogioDeterministico:
     """Fornece um relogio controlavel ancorado no horario de Brasilia (UTC-03:00)."""
     return RelogioDeterministico()
 
 
 @pytest.fixture()
-def study_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> CaminhosDados:
+def caminhos_estudo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> CaminhosDados:
     """Fornece um diretorio temporario isolado vinculado a TOKSTANCE_DATA_DIR."""
-    study_dir = tmp_path / "study_data"
-    monkeypatch.setenv("TOKSTANCE_DATA_DIR", str(study_dir))
-    return gravar_arquivos_estudo_sinteticos(study_dir)
+    diretorio_estudo = tmp_path / "dados_estudo"
+    monkeypatch.setenv("TOKSTANCE_DATA_DIR", str(diretorio_estudo))
+    return gravar_arquivos_estudo_sinteticos(diretorio_estudo)

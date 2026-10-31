@@ -12,14 +12,12 @@ from tokstance.config import resolver_caminhos_dados
 
 
 def _extrair_rotuladores(configuracao: dict[str, Any]) -> list[str]:
-    brutos = configuracao.get("rotuladores", configuracao.get("labelers", []))
+    brutos = configuracao.get("rotuladores", [])
     return [str(item).strip() for item in brutos if str(item).strip()]
 
 
 def _extrair_percentual_sobreposicao(configuracao: dict[str, Any]) -> float:
-    valor = configuracao.get(
-        "percentual_sobreposicao", configuracao.get("overlap_percent", 0.0)
-    )
+    valor = configuracao.get("percentual_sobreposicao", 0.0)
     return max(0.0, min(100.0, float(valor or 0.0)))
 
 
@@ -31,8 +29,8 @@ def versao_atribuicao(configuracao: dict[str, Any], videos: pd.DataFrame) -> str
     )
     assinatura_config = json.dumps(
         {
-            "labelers": _extrair_rotuladores(configuracao),
-            "overlap_percent": _extrair_percentual_sobreposicao(configuracao),
+            "rotuladores": _extrair_rotuladores(configuracao),
+            "percentual_sobreposicao": _extrair_percentual_sobreposicao(configuracao),
         },
         ensure_ascii=False,
         sort_keys=True,
@@ -43,15 +41,9 @@ def versao_atribuicao(configuracao: dict[str, Any], videos: pd.DataFrame) -> str
     return f"v{resumo[:12]}"
 
 
-assignment_version = versao_atribuicao
-
-
 def identificador_atribuicao(versao: str, rotulador: str, id_video: str) -> str:
     """Constroi o identificador unico canonico de uma atribuicao entre rotulador e video."""
     return f"{versao}:{rotulador}:{id_video}"
-
-
-assignment_identifier = identificador_atribuicao
 
 
 def persistir_dataframe_se_alterado(
@@ -68,27 +60,17 @@ def persistir_dataframe_se_alterado(
     caminho_alvo.write_text(conteudo, encoding="utf-8")
 
 
-persist_frame_if_changed = persistir_dataframe_se_alterado
-
-
 def gerar_atribuicoes(
     configuracao: dict[str, Any],
     videos: pd.DataFrame,
     persistir: bool = True,
     arquivo_atribuicoes: Path | None = None,
-    *,
-    persist: bool | None = None,
-    assignments_file: Path | None = None,
 ) -> pd.DataFrame:
     """Gera filas de anotacao balanceadas por target e agrupadas em blocos contiguos."""
     rotuladores = _extrair_rotuladores(configuracao)
     percentual_sobreposicao = _extrair_percentual_sobreposicao(configuracao)
     versao = versao_atribuicao(configuracao, videos)
     colunas = list(COLUNAS_ATRIBUICAO)
-    deve_persistir = persist if persist is not None else persistir
-    caminho_customizado = (
-        assignments_file if assignments_file is not None else arquivo_atribuicoes
-    )
 
     if not rotuladores or len(videos) == 0:
         return pd.DataFrame(columns=colunas)
@@ -175,17 +157,14 @@ def gerar_atribuicoes(
     resultado = resultado.drop_duplicates(
         subset=["labeler", "video_id"], keep="last"
     ).reset_index(drop=True)
-    if deve_persistir:
+    if persistir:
         arquivo_alvo = (
-            Path(caminho_customizado)
-            if caminho_customizado is not None
+            Path(arquivo_atribuicoes)
+            if arquivo_atribuicoes is not None
             else resolver_caminhos_dados().arquivo_atribuicoes
         )
         persistir_dataframe_se_alterado(resultado, arquivo_alvo, colunas)
     return resultado
-
-
-make_assignments = gerar_atribuicoes
 
 
 def construir_fila_avaliacao_rotulador(
@@ -193,15 +172,11 @@ def construir_fila_avaliacao_rotulador(
     versao: str,
     videos: pd.DataFrame,
     maximo_videos: int | None = None,
-    *,
-    max_videos: int | None = None,
 ) -> pd.DataFrame:
     """Cria uma fila balanceada por target e agrupada em blocos para um novo rotulador."""
     colunas = list(COLUNAS_ATRIBUICAO)
     if videos.empty or not str(nome_usuario).strip():
         return pd.DataFrame(columns=colunas)
-
-    limite_Solicitado = max_videos if max_videos is not None else maximo_videos
 
     baldes_target: dict[str, list[int]] = {}
     ordem_targets: list[str] = []
@@ -219,8 +194,8 @@ def construir_fila_avaliacao_rotulador(
                 indices_intercalados.append(baldes_target[chave_target].pop(0))
 
     limite = len(indices_intercalados)
-    if limite_Solicitado is not None and int(limite_Solicitado) > 0:
-        limite = min(limite, int(limite_Solicitado))
+    if maximo_videos is not None and int(maximo_videos) > 0:
+        limite = min(limite, int(maximo_videos))
     indices_selecionados = indices_intercalados[:limite]
 
     classificacao_target = {
@@ -252,9 +227,6 @@ def construir_fila_avaliacao_rotulador(
     return pd.DataFrame(linhas, columns=colunas)
 
 
-build_evaluation_queue_for_labeler = construir_fila_avaliacao_rotulador
-
-
 def vincular_ou_alocar_vaga_rotulador(
     nome_usuario: str,
     configuracao: dict[str, Any],
@@ -262,26 +234,13 @@ def vincular_ou_alocar_vaga_rotulador(
     videos: pd.DataFrame,
     usuarios_reivindicados: set[str] | None = None,
     rotuladores_concluidos: set[str] | None = None,
-    *,
-    claimed_users: set[str] | None = None,
-    completed_labelers: set[str] | None = None,
 ) -> tuple[dict[str, Any], pd.DataFrame, str]:
     """Vincula um novo rotulador a uma vaga disponivel ou aloca uma fila dinamica na rodada ativa."""
     usuario_normalizado = str(nome_usuario).strip()
     config_atualizada = dict(configuracao)
     rotuladores = _extrair_rotuladores(config_atualizada)
-    reivindicados = set(
-        (claimed_users if claimed_users is not None else usuarios_reivindicados)
-        or set()
-    )
-    anotados = set(
-        (
-            completed_labelers
-            if completed_labelers is not None
-            else rotuladores_concluidos
-        )
-        or set()
-    )
+    reivindicados = set(usuarios_reivindicados or set())
+    anotados = set(rotuladores_concluidos or set())
     colunas = list(COLUNAS_ATRIBUICAO)
 
     if atribuicoes.empty:
@@ -304,7 +263,7 @@ def vincular_ou_alocar_vaga_rotulador(
     vaga_disponivel = None
     for candidato in rotuladores:
         if candidato not in reivindicados and candidato not in anotados:
-            if candidato.startswith(("vaga_", "slot_", "rotulador_")):
+            if candidato.startswith(("vaga_", "rotulador_")):
                 vaga_disponivel = candidato
                 break
 
@@ -339,11 +298,7 @@ def vincular_ou_alocar_vaga_rotulador(
         config_atualizada["rotuladores"] = rotuladores
 
     maximo_videos = int(
-        config_atualizada.get(
-            "videos_por_rotulador",
-            config_atualizada.get("videos_per_labeler", len(videos)),
-        )
-        or len(videos)
+        config_atualizada.get("videos_por_rotulador", len(videos)) or len(videos)
     )
     fila_extra = construir_fila_avaliacao_rotulador(
         usuario_normalizado,
@@ -356,6 +311,3 @@ def vincular_ou_alocar_vaga_rotulador(
         subset=["assignment_version", "labeler", "video_id"], keep="last"
     ).reset_index(drop=True)
     return config_atualizada, combinadas.reindex(columns=colunas), usuario_normalizado
-
-
-bind_or_allocate_labeler_slot = vincular_ou_alocar_vaga_rotulador
