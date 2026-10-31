@@ -1,12 +1,14 @@
-"""Repositorio relacional de tarefas, divisao de pool de videos e vagas de atribuicao."""
+"""Repositorio relacional de tarefas, divisao de pool de videos, anotacoes, erros, logs e exportacoes."""
 
 import json
+from pathlib import Path
 import re
 import sqlite3
 from typing import Any
 
 import pandas as pd
 
+from tokstance.backend.domain.agreement import calcular_concordancia
 from tokstance.backend.domain.assignments import (
     gerar_atribuicoes,
     versao_atribuicao,
@@ -14,7 +16,10 @@ from tokstance.backend.domain.assignments import (
 )
 from tokstance.backend.domain.models import (
     COLUNAS_ATRIBUICAO,
+    COLUNAS_ERRO,
+    COLUNAS_LOG,
     COLUNAS_OPCIONAIS_VIDEO,
+    COLUNAS_RESULTADO,
     COLUNAS_VIDEO,
     DISTANCIAS_ROTULOS_PADRAO,
     NOME_TAREFA_PADRAO,
@@ -27,6 +32,7 @@ from tokstance.backend.domain.models import (
     TIPOS_POOL_VALIDOS,
     dividir_videos_principal_e_reserva,
     gerar_combinacoes_rotulos,
+    salvar_configuracao,
 )
 from tokstance.backend.repositories.database import BancoDadosSQLite
 from tokstance.backend.repositories.user_repo import RepositorioUsuarios
@@ -37,7 +43,11 @@ from tokstance.backend.security.validators import (
     validar_opcoes_tarefa,
     validar_tamanho_texto,
 )
-from tokstance.config import formatar_data_hora_brt
+from tokstance.config import (
+    CaminhosDados,
+    formatar_data_hora_brt,
+    resolver_caminhos_dados,
+)
 
 
 def _normalizar_dataframe_videos(quadro: pd.DataFrame) -> pd.DataFrame:
@@ -534,3 +544,339 @@ class RepositorioEstudo:
             vaga_atribuida=vaga_vinculada,
             entrou_em=entrou_em,
         )
+
+    def registrar_anotacao(
+        self,
+        tarefa_id: int,
+        assignment_id: str,
+        rotulador: str,
+        video_id: str,
+        url: str,
+        target: str,
+        posicao: str,
+        tempo_analise_segundos: float,
+        video_duration: str = "",
+        usuario_id: int | None = None,
+        timestamp: str | None = None,
+    ) -> dict[str, Any]:
+        """Persiste uma anotacao na tabela anotacoes em fuso horario de Brasilia."""
+        tarefa = self.buscar_tarefa_por_id(int(tarefa_id))
+        if tarefa is None:
+            raise ValueError(f"Tarefa {tarefa_id} não encontrada.")
+
+        posicao_limpa = validar_tamanho_texto(
+            posicao, nome_campo="posicao", tamanho_maximo=120
+        )
+        if posicao_limpa not in tarefa["opcoes_posicao"]:
+            raise ValueError(
+                f"A resposta '{posicao_limpa}' não pertence às opções desta tarefa."
+            )
+
+        rotulador_limpo = validar_nome_usuario(rotulador)
+        if usuario_id is None:
+            usuario = self.repo_usuarios.buscar_por_nome_usuario(rotulador_limpo)
+            usuario_id = int(usuario["usuario_id"]) if usuario is not None else None
+
+        instante = str(timestamp or formatar_data_hora_brt())
+        tempo_seg = round(max(0.0, float(tempo_analise_segundos or 0.0)), 2)
+
+        self.banco.executar(
+            """
+            INSERT OR REPLACE INTO anotacoes (
+                tarefa_id, assignment_id, usuario_id, labeler, video_id,
+                url, target, stance, tempo_analise_segundos, video_duration, timestamp
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """,
+            (
+                int(tarefa_id),
+                str(assignment_id).strip(),
+                usuario_id,
+                rotulador_limpo,
+                str(video_id).strip(),
+                str(url).strip(),
+                str(target),
+                posicao_limpa,
+                tempo_seg,
+                str(video_duration or ""),
+                instante,
+            ),
+        )
+        salva = self.banco.consultar_um(
+            """
+            SELECT * FROM anotacoes
+            WHERE tarefa_id = ? AND assignment_id = ?;
+            """,
+            (int(tarefa_id), str(assignment_id).strip()),
+        )
+        if salva is None:
+            raise RuntimeError("Falha ao persistir anotação.")
+        return salva
+
+    def carregar_anotacoes_tarefa_df(
+        self,
+        tarefa_id: int,
+        rotulador: str | None = None,
+    ) -> pd.DataFrame:
+        """Retorna as anotacoes concluidas da tarefa no formato de resultados_anotacao.csv."""
+        if rotulador is not None:
+            linhas = self.banco.consultar_todos(
+                """
+                SELECT timestamp, labeler, video_id, url, target, stance,
+                       tempo_analise_segundos, video_duration, assignment_id
+                FROM anotacoes
+                WHERE tarefa_id = ? AND labeler = ?
+                ORDER BY anotacao_id ASC;
+                """,
+                (int(tarefa_id), str(rotulador).strip()),
+            )
+        else:
+            linhas = self.banco.consultar_todos(
+                """
+                SELECT timestamp, labeler, video_id, url, target, stance,
+                       tempo_analise_segundos, video_duration, assignment_id
+                FROM anotacoes
+                WHERE tarefa_id = ?
+                ORDER BY anotacao_id ASC;
+                """,
+                (int(tarefa_id),),
+            )
+        colunas = list(COLUNAS_RESULTADO)
+        if not linhas:
+            return pd.DataFrame(columns=colunas)
+        return pd.DataFrame(linhas, columns=colunas).fillna("")
+
+    def registrar_erro_video(
+        self,
+        tarefa_id: int,
+        video_id: str,
+        url: str,
+        rotulador: str,
+        assignment_id: str,
+        replacement_video_id: str = "",
+        replacement_url: str = "",
+        replacement_assignment_id: str = "",
+        replacement_status: str = "",
+        usuario_id: int | None = None,
+        timestamp: str | None = None,
+    ) -> dict[str, Any]:
+        """Persiste um erro de video e sua substituicao por reserva em erros_videos."""
+        rotulador_limpo = validar_nome_usuario(rotulador)
+        if usuario_id is None:
+            usuario = self.repo_usuarios.buscar_por_nome_usuario(rotulador_limpo)
+            usuario_id = int(usuario["usuario_id"]) if usuario is not None else None
+        instante = str(timestamp or formatar_data_hora_brt())
+
+        erro_id = self.banco.executar(
+            """
+            INSERT INTO erros_videos (
+                tarefa_id, timestamp, video_id, url, usuario_id, labeler,
+                assignment_id, replacement_video_id, replacement_url,
+                replacement_assignment_id, replacement_status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """,
+            (
+                int(tarefa_id),
+                instante,
+                str(video_id).strip(),
+                str(url).strip(),
+                usuario_id,
+                rotulador_limpo,
+                str(assignment_id).strip(),
+                str(replacement_video_id or ""),
+                str(replacement_url or ""),
+                str(replacement_assignment_id or ""),
+                str(replacement_status or ""),
+            ),
+        )
+        salvo = self.banco.consultar_um(
+            "SELECT * FROM erros_videos WHERE erro_id = ?;",
+            (erro_id,),
+        )
+        if salvo is None:
+            raise RuntimeError("Falha ao persistir registro de erro de vídeo.")
+        return salvo
+
+    def carregar_erros_videos_tarefa_df(self, tarefa_id: int) -> pd.DataFrame:
+        """Retorna os erros de video da tarefa no formato de erros_videos.csv."""
+        linhas = self.banco.consultar_todos(
+            """
+            SELECT timestamp, video_id, url, labeler, assignment_id,
+                   replacement_video_id, replacement_url,
+                   replacement_assignment_id, replacement_status
+            FROM erros_videos
+            WHERE tarefa_id = ?
+            ORDER BY erro_id ASC;
+            """,
+            (int(tarefa_id),),
+        )
+        colunas = list(COLUNAS_ERRO)
+        if not linhas:
+            return pd.DataFrame(columns=colunas)
+        return pd.DataFrame(linhas, columns=colunas).fillna("")
+
+    def salvar_erros_videos_tarefa_df(
+        self,
+        tarefa_id: int,
+        erros_df: pd.DataFrame,
+    ) -> None:
+        """Substitui de forma atomica os registros de erros_videos da tarefa pelo DataFrame."""
+        colunas = list(COLUNAS_ERRO)
+        quadro = (
+            erros_df.reindex(columns=colunas).fillna("")
+            if erros_df is not None and not erros_df.empty
+            else pd.DataFrame(columns=colunas)
+        )
+        usuarios_mapa = {
+            str(u["nome_usuario"]): int(u["usuario_id"])
+            for u in self.repo_usuarios.listar_usuarios()
+        }
+        with self.banco.conectar() as conexao:
+            conexao.execute(
+                "DELETE FROM erros_videos WHERE tarefa_id = ?;",
+                (int(tarefa_id),),
+            )
+            for _, linha in quadro.iterrows():
+                rotulador = str(linha["labeler"]).strip()
+                conexao.execute(
+                    """
+                    INSERT INTO erros_videos (
+                        tarefa_id, timestamp, video_id, url, usuario_id, labeler,
+                        assignment_id, replacement_video_id, replacement_url,
+                        replacement_assignment_id, replacement_status
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """,
+                    (
+                        int(tarefa_id),
+                        str(linha["timestamp"]),
+                        str(linha["video_id"]).strip(),
+                        str(linha["url"]).strip(),
+                        usuarios_mapa.get(rotulador),
+                        rotulador,
+                        str(linha["assignment_id"]).strip(),
+                        str(linha.get("replacement_video_id", "")),
+                        str(linha.get("replacement_url", "")),
+                        str(linha.get("replacement_assignment_id", "")),
+                        str(linha.get("replacement_status", "")),
+                    ),
+                )
+
+    def registrar_log_acesso(
+        self,
+        usuario: str,
+        acao: str,
+        tarefa_id: int | None = None,
+        tempo_desde_login_segundos: float | None = None,
+        usuario_id: int | None = None,
+        timestamp: str | None = None,
+    ) -> dict[str, Any]:
+        """Registra um evento de auditoria na tabela logs_acesso em fuso BRT."""
+        usuario_limpo = validar_tamanho_texto(
+            usuario, nome_campo="usuario", tamanho_maximo=64
+        )
+        acao_limpa = validar_tamanho_texto(
+            acao, nome_campo="acao", tamanho_maximo=64
+        )
+        if usuario_id is None:
+            conta = self.repo_usuarios.buscar_por_nome_usuario(usuario_limpo)
+            usuario_id = int(conta["usuario_id"]) if conta is not None else None
+        instante = str(timestamp or formatar_data_hora_brt())
+        tempo_valor = (
+            round(max(0.0, float(tempo_desde_login_segundos)), 2)
+            if tempo_desde_login_segundos is not None and tempo_desde_login_segundos != ""
+            else None
+        )
+        log_id = self.banco.executar(
+            """
+            INSERT INTO logs_acesso (
+                tarefa_id, usuario_id, usuario, acao, tempo_desde_login_segundos, timestamp
+            )
+            VALUES (?, ?, ?, ?, ?, ?);
+            """,
+            (
+                int(tarefa_id) if tarefa_id is not None else None,
+                usuario_id,
+                usuario_limpo,
+                acao_limpa,
+                tempo_valor,
+                instante,
+            ),
+        )
+        salvo = self.banco.consultar_um(
+            "SELECT * FROM logs_acesso WHERE log_id = ?;",
+            (log_id,),
+        )
+        if salvo is None:
+            raise RuntimeError("Falha ao registrar log de acesso.")
+        return salvo
+
+    def carregar_logs_acesso_df(self, tarefa_id: int | None = None) -> pd.DataFrame:
+        """Retorna os logs de acesso filtrados pela tarefa ou globais no formato acessos_log.csv."""
+        if tarefa_id is not None:
+            linhas = self.banco.consultar_todos(
+                """
+                SELECT timestamp, usuario, acao, tempo_desde_login_segundos
+                FROM logs_acesso
+                WHERE tarefa_id = ? OR tarefa_id IS NULL
+                ORDER BY log_id ASC;
+                """,
+                (int(tarefa_id),),
+            )
+        else:
+            linhas = self.banco.consultar_todos(
+                """
+                SELECT timestamp, usuario, acao, tempo_desde_login_segundos
+                FROM logs_acesso
+                ORDER BY log_id ASC;
+                """
+            )
+        colunas = list(COLUNAS_LOG)
+        if not linhas:
+            return pd.DataFrame(columns=colunas)
+        quadro = pd.DataFrame(linhas, columns=colunas)
+        quadro["tempo_desde_login_segundos"] = quadro[
+            "tempo_desde_login_segundos"
+        ].where(quadro["tempo_desde_login_segundos"].notna(), "")
+        return quadro.fillna("")
+
+    def exportar_arquivos_tarefa(
+        self,
+        tarefa_id: int,
+        diretorio_destino: Path | str | None = None,
+    ) -> CaminhosDados:
+        """Exporta sob demanda todos os arquivos CSV e JSON da tarefa para download no Console Admin."""
+        caminhos = resolver_caminhos_dados(diretorio_destino)
+        caminhos.diretorio_base.mkdir(parents=True, exist_ok=True)
+
+        configuracao = self.obter_configuracao_tarefa(int(tarefa_id))
+        salvar_configuracao(configuracao, caminhos.arquivo_configuracao)
+
+        videos_df = self.carregar_videos_tarefa_df(
+            int(tarefa_id), tipo_pool=POOL_PRINCIPAL
+        )
+        reservas_df = self.carregar_videos_tarefa_df(
+            int(tarefa_id), tipo_pool=POOL_RESERVA
+        )
+        atribuicoes_df = self.carregar_atribuicoes_tarefa_df(int(tarefa_id))
+        resultados_df = self.carregar_anotacoes_tarefa_df(int(tarefa_id))
+        erros_df = self.carregar_erros_videos_tarefa_df(int(tarefa_id))
+        logs_df = self.carregar_logs_acesso_df(int(tarefa_id))
+
+        videos_df.to_csv(caminhos.arquivo_videos, index=False)
+        reservas_df.to_csv(caminhos.arquivo_videos_reserva, index=False)
+        atribuicoes_df.to_csv(caminhos.arquivo_atribuicoes, index=False)
+        resultados_df.to_csv(caminhos.arquivo_resultados, index=False)
+        erros_df.to_csv(caminhos.arquivo_erros, index=False)
+        logs_df.to_csv(caminhos.arquivo_log, index=False)
+
+        relatorio_concordancia = calcular_concordancia(
+            resultados=resultados_df,
+            configuracao=configuracao,
+        )
+        caminhos.arquivo_concordancia.write_text(
+            json.dumps(relatorio_concordancia, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return caminhos
