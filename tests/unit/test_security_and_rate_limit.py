@@ -1,9 +1,15 @@
-"""Testes unitarios para limitador de tentativas de login e bloqueio de sessao simultanea."""
+"""Testes unitarios para limitador de tentativas, sessao simultanea, imunidade a SQL Injection e limites anti-DoS."""
 
+from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import pytest
 
+from tokstance.backend.repositories.database import BancoDadosSQLite
+from tokstance.backend.repositories.study_repo import RepositorioEstudo
+from tokstance.backend.repositories.user_repo import RepositorioUsuarios
+from tokstance.backend.security.password import gerar_hash_senha
 from tokstance.backend.security.rate_limit import (
     GerenciadorSessoesAtivas,
     LimitadorTentativas,
@@ -13,6 +19,7 @@ from tokstance.backend.security.rate_limit import (
     reivindicar_sessao_ativa,
     usuario_esta_ativo,
 )
+from tokstance.backend.security.validators import validar_tamanho_texto
 
 
 @pytest.mark.unit
@@ -132,3 +139,121 @@ def test_funcoes_globais_sessao_ativa_permitem_reivindicar_apos_liberacao() -> N
     assert ativo_apos_liberar is False
     assert reivindicou_novamente is True
     assert usuarios_finais == ["helena"]
+
+
+@pytest.mark.unit
+def test_busca_usuario_e_cadastro_bloqueiam_injecao_sql_booleana(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "seguranca_sqli.db")
+    repo_usuarios = RepositorioUsuarios(banco)
+    repo_usuarios.criar_usuario("admin_real", gerar_hash_senha("Senha123", rodadas=4))
+
+    resultado_busca = repo_usuarios.buscar_por_nome_usuario("admin_real' OR '1'='1")
+
+    assert resultado_busca is None
+    with pytest.raises(ValueError, match="apenas letras, números"):
+        repo_usuarios.criar_usuario("hacker' OR '1'='1", gerar_hash_senha("Senha123", rodadas=4))
+
+
+@pytest.mark.unit
+def test_consulta_e_criacao_tarefa_neutralizam_payload_drop_table_usuarios(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "seguranca_drop.db")
+    repo_usuarios = RepositorioUsuarios(banco)
+    repo_estudo = RepositorioEstudo(banco, repo_usuarios)
+    criador = repo_usuarios.criar_usuario("criador_seguro", gerar_hash_senha("Senha123", rodadas=4))
+    pool = pd.DataFrame(
+        [
+            {
+                "id": "71001",
+                "url": "https://www.tiktok.com/@u/video/71001",
+                "target": "Clima'; DROP TABLE usuarios; --",
+            }
+        ]
+    )
+
+    tarefa = repo_estudo.criar_tarefa(
+        criado_por_usuario_id=criador["usuario_id"],
+        pool_videos=pool,
+        titulo="Estudo'; DROP TABLE usuarios; --",
+        pergunta="Pergunta'; DROP TABLE tarefas; --",
+    )
+    usuarios_restantes = repo_usuarios.listar_usuarios()
+
+    assert tarefa["titulo"] == "Estudo'; DROP TABLE usuarios; --"
+    assert len(usuarios_restantes) == 1
+    assert "usuarios" in banco.listar_tabelas()
+
+
+@pytest.mark.unit
+def test_busca_por_codigo_convite_neutraliza_injecao_union_select(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "seguranca_union.db")
+    repo_usuarios = RepositorioUsuarios(banco)
+    repo_estudo = RepositorioEstudo(banco, repo_usuarios)
+    criador = repo_usuarios.criar_usuario("gestor_tarefa", gerar_hash_senha("Senha123", rodadas=4))
+    pool = pd.DataFrame(
+        [{"id": "71002", "url": "https://www.tiktok.com/@u/video/71002", "target": "Economia"}]
+    )
+    repo_estudo.criar_tarefa(
+        criado_por_usuario_id=criador["usuario_id"],
+        pool_videos=pool,
+        codigo_convite="TOK-SEGURO1",
+    )
+
+    encontrada = repo_estudo.buscar_tarefa_por_codigo_convite(
+        "TOK-SEGURO1' UNION SELECT * FROM tarefas --"
+    )
+
+    assert encontrada is None
+
+
+@pytest.mark.unit
+def test_registro_anotacao_parametrizado_preserva_integridade_contra_injecao_sql(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "seguranca_anotacao.db")
+    repo_usuarios = RepositorioUsuarios(banco)
+    repo_estudo = RepositorioEstudo(banco, repo_usuarios)
+    usuario = repo_usuarios.criar_usuario("rotulador_01", gerar_hash_senha("Senha123", rodadas=4))
+    pool = pd.DataFrame(
+        [{"id": "71003", "url": "https://www.tiktok.com/@u/video/71003", "target": "Saúde"}]
+    )
+    tarefa = repo_estudo.criar_tarefa(
+        criado_por_usuario_id=usuario["usuario_id"],
+        pool_videos=pool,
+    )
+
+    anotacao = repo_estudo.registrar_anotacao(
+        tarefa_id=tarefa["tarefa_id"],
+        assignment_id="v1:rotulador_01:71003'; DELETE FROM anotacoes; --",
+        rotulador="rotulador_01",
+        video_id="71003",
+        url="https://www.tiktok.com/@u/video/71003",
+        target="Saúde'; DROP TABLE anotacoes; --",
+        posicao="Contra",
+        tempo_analise_segundos=12.5,
+    )
+    quadro = repo_estudo.carregar_anotacoes_tarefa_df(tarefa["tarefa_id"])
+
+    assert anotacao["stance"] == "Contra"
+    assert len(quadro) == 1
+
+
+@pytest.mark.unit
+def test_validar_tamanho_texto_rejeita_payload_gigantesco_anti_dos() -> None:
+    payload_gigante = "A" * 10000
+
+    with pytest.raises(ValueError, match="excede o limite"):
+        validar_tamanho_texto(payload_gigante, nome_campo="comentario", tamanho_maximo=512)
+
+
+@pytest.mark.unit
+def test_validar_tamanho_texto_rejeita_caractere_nulo_embutido() -> None:
+    payload_com_nulo = "texto_valido\x00injetado"
+
+    with pytest.raises(ValueError, match="caracteres inválidos"):
+        validar_tamanho_texto(payload_com_nulo, nome_campo="pergunta")
