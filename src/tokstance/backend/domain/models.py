@@ -1,6 +1,7 @@
 """Core domain models, dataclasses, and tabular schema definitions."""
 
 from dataclasses import dataclass, field
+from itertools import combinations
 import json
 from pathlib import Path
 from typing import Any
@@ -64,6 +65,44 @@ DEFAULT_TASK_OPTIONS = (
     "Neutro",
     "Vídeo não relacionado ao target",
 )
+DEFAULT_LABEL_DISTANCES: dict[str, float] = {
+    "Contra|A Favor": 3.0,
+    "Contra|Neutro": 1.0,
+    "Contra|Vídeo não relacionado ao target": 2.0,
+    "A Favor|Neutro": 1.0,
+    "A Favor|Vídeo não relacionado ao target": 2.0,
+    "Neutro|Vídeo não relacionado ao target": 2.0,
+}
+
+
+def pair_key(left: str, right: str) -> str:
+    """Format a canonical key for an unordered pair of task labels."""
+    return f"{str(left).strip()}|{str(right).strip()}"
+
+
+def generate_label_combinations(
+    options: list[str] | tuple[str, ...],
+    existing_distances: dict[str, Any] | None = None,
+    default_penalty: float = 1.0,
+) -> dict[str, float]:
+    """Build all pairwise label combinations and their penalty weights for a task."""
+    normalized_options = clean_users(list(options))
+    lookup: dict[frozenset[str], float] = {}
+    if isinstance(existing_distances, dict):
+        for raw_pair, raw_weight in existing_distances.items():
+            parts = [part.strip() for part in str(raw_pair).split("|", maxsplit=1)]
+            if len(parts) == 2 and parts[0] and parts[1] and parts[0] != parts[1]:
+                try:
+                    lookup[frozenset(parts)] = float(raw_weight)
+                except (TypeError, ValueError):
+                    continue
+
+    generated: dict[str, float] = {}
+    for left, right in combinations(normalized_options, 2):
+        key = pair_key(left, right)
+        weight = lookup.get(frozenset((left, right)), float(default_penalty))
+        generated[key] = float(weight)
+    return generated
 
 
 @dataclass(frozen=True)
@@ -91,6 +130,9 @@ class StudyConfig:
     stance_options: list[str] = field(
         default_factory=lambda: list(DEFAULT_TASK_OPTIONS)
     )
+    label_distances: dict[str, float] = field(
+        default_factory=lambda: dict(DEFAULT_LABEL_DISTANCES)
+    )
     invite_token: str = DEFAULT_INVITE_TOKEN
 
     def to_dict(self) -> dict[str, Any]:
@@ -103,6 +145,9 @@ class StudyConfig:
             "tarefa": str(self.tarefa),
             "pergunta": str(self.pergunta),
             "stance_options": list(self.stance_options),
+            "label_distances": generate_label_combinations(
+                self.stance_options, self.label_distances
+            ),
             "invite_token": str(self.invite_token),
         }
 
@@ -266,6 +311,20 @@ def load_config(config_file: Path | None = None) -> dict[str, Any]:
     configured_options = clean_users(raw_config.get("stance_options", []))
     raw_config["stance_options"] = (
         configured_options if len(configured_options) >= 2 else list(DEFAULT_TASK_OPTIONS)
+    )
+    fallback_distances = (
+        DEFAULT_LABEL_DISTANCES
+        if raw_config["stance_options"] == list(DEFAULT_TASK_OPTIONS)
+        else {}
+    )
+    raw_distances = raw_config.get("label_distances")
+    effective_distances = (
+        raw_distances
+        if isinstance(raw_distances, dict) and raw_distances
+        else fallback_distances
+    )
+    raw_config["label_distances"] = generate_label_combinations(
+        raw_config["stance_options"], effective_distances
     )
     invite_token = str(raw_config.get("invite_token") or DEFAULT_INVITE_TOKEN).strip()
     raw_config["invite_token"] = invite_token or DEFAULT_INVITE_TOKEN

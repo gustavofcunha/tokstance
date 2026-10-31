@@ -1,4 +1,4 @@
-"""Unit tests for weighted stance distance, Krippendorff alpha, and fast annotation alerts."""
+"""Unit tests for configurable label distance, Krippendorff alpha, and fast annotation alerts."""
 
 import pandas as pd
 import pytest
@@ -11,34 +11,60 @@ from tokstance.backend.domain.agreement import (
     find_fast_annotations,
     label_distance,
 )
+from tokstance.backend.domain.models import (
+    DEFAULT_LABEL_DISTANCES,
+    generate_label_combinations,
+)
 
 
 @pytest.mark.unit
-def test_label_distance_returns_zero_for_identical_stance_labels() -> None:
-    assert label_distance("Contra", "Contra") == 0.0
-    assert label_distance("A Favor", "A Favor") == 0.0
-    assert label_distance("Neutro", "Neutro") == 0.0
+def test_label_distance_returns_zero_for_identical_labels() -> None:
+    custom_distances = {"Baixo|Médio": 1.5, "Baixo|Alto": 4.0, "Médio|Alto": 2.0}
+
+    assert label_distance("Baixo", "Baixo", custom_distances) == 0.0
+    assert label_distance("Contra", "Contra", DEFAULT_LABEL_DISTANCES) == 0.0
+
+
+@pytest.mark.unit
+def test_label_distance_is_symmetric_and_reads_configured_penalties() -> None:
+    assert label_distance("Contra", "A Favor", DEFAULT_LABEL_DISTANCES) == 3.0
+    assert label_distance("A Favor", "Contra", DEFAULT_LABEL_DISTANCES) == 3.0
+    assert label_distance("Contra", "Neutro", DEFAULT_LABEL_DISTANCES) == 1.0
+    assert label_distance("Neutro", "A Favor", DEFAULT_LABEL_DISTANCES) == 1.0
     assert (
         label_distance(
-            "Vídeo não relacionado ao target",
-            "Vídeo não relacionado ao target",
+            "Vídeo não relacionado ao target", "Contra", DEFAULT_LABEL_DISTANCES
         )
-        == 0.0
+        == 2.0
+    )
+    assert (
+        label_distance(
+            "A Favor", "Vídeo não relacionado ao target", DEFAULT_LABEL_DISTANCES
+        )
+        == 2.0
     )
 
 
 @pytest.mark.unit
-def test_label_distance_is_symmetric_and_respects_domain_weights() -> None:
-    assert label_distance("Contra", "A Favor") == 4.0
-    assert label_distance("A Favor", "Contra") == 4.0
-    assert label_distance("Contra", "Neutro") == 1.0
-    assert label_distance("Neutro", "A Favor") == 1.0
-    assert label_distance("Vídeo não relacionado ao target", "Contra") == 3.0
-    assert label_distance("A Favor", "Vídeo não relacionado ao target") == 3.0
+def test_generate_label_combinations_builds_all_pairs_for_custom_task_options() -> None:
+    custom_options = ["Leve", "Moderado", "Grave"]
+    configured_penalties = {"Leve|Grave": 5.0, "Leve|Moderado": 1.5}
+
+    pairs = generate_label_combinations(
+        custom_options, existing_distances=configured_penalties, default_penalty=2.0
+    )
+
+    assert pairs == {
+        "Leve|Moderado": 1.5,
+        "Leve|Grave": 5.0,
+        "Moderado|Grave": 2.0,
+    }
 
 
 @pytest.mark.unit
-def test_calculate_agreement_returns_none_alpha_when_no_video_has_multiple_annotations() -> None:
+def test_calculate_agreement_returns_none_alpha_when_no_video_has_multiple_annotations(
+    study_paths,
+) -> None:
     single_annotations = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Contra"},
@@ -54,17 +80,25 @@ def test_calculate_agreement_returns_none_alpha_when_no_video_has_multiple_annot
 
 
 @pytest.mark.unit
-def test_calculate_agreement_returns_unit_alpha_for_perfect_multi_video_consensus() -> None:
+def test_calculate_agreement_returns_unit_alpha_for_perfect_consensus_on_custom_task() -> None:
+    custom_config = {
+        "stance_options": ["Tóxico", "Não Tóxico", "Incerto"],
+        "label_distances": {
+            "Tóxico|Não Tóxico": 4.0,
+            "Tóxico|Incerto": 1.5,
+            "Não Tóxico|Incerto": 1.5,
+        },
+    }
     consensus_annotations = pd.DataFrame(
         [
-            {"video_id": "101", "labeler": "alice", "stance": "Contra"},
-            {"video_id": "101", "labeler": "bob", "stance": "Contra"},
-            {"video_id": "102", "labeler": "alice", "stance": "A Favor"},
-            {"video_id": "102", "labeler": "bob", "stance": "A Favor"},
+            {"video_id": "101", "labeler": "alice", "stance": "Tóxico"},
+            {"video_id": "101", "labeler": "bob", "stance": "Tóxico"},
+            {"video_id": "102", "labeler": "alice", "stance": "Não Tóxico"},
+            {"video_id": "102", "labeler": "bob", "stance": "Não Tóxico"},
         ]
     )
 
-    summary = calculate_agreement(consensus_annotations)
+    summary = calculate_agreement(consensus_annotations, config=custom_config)
 
     assert summary["alfa"] == 1.0
     assert summary["videos_com_multiplas_anotacoes"] == 2
@@ -73,7 +107,9 @@ def test_calculate_agreement_returns_unit_alpha_for_perfect_multi_video_consensu
 
 
 @pytest.mark.unit
-def test_calculate_agreement_penalizes_polar_disagreement_more_heavily_than_neutral_shift() -> None:
+def test_calculate_agreement_uses_configured_penalties_for_disagreement_severity(
+    study_paths,
+) -> None:
     neutral_shift = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Contra"},
@@ -95,12 +131,14 @@ def test_calculate_agreement_penalizes_polar_disagreement_more_heavily_than_neut
     polar_summary = calculate_agreement(polar_divergence)
 
     assert neutral_summary["videos_com_discordancia"][0]["discordancia_ordinal"] == 1.0
-    assert polar_summary["videos_com_discordancia"][0]["discordancia_ordinal"] == 4.0
+    assert polar_summary["videos_com_discordancia"][0]["discordancia_ordinal"] == 3.0
     assert polar_summary["alfa"] < neutral_summary["alfa"]
 
 
 @pytest.mark.unit
-def test_calculate_agreement_ranks_outlier_annotator_highest_in_penalty_list() -> None:
+def test_calculate_agreement_ranks_outlier_annotator_highest_in_penalty_list(
+    study_paths,
+) -> None:
     results = pd.DataFrame(
         [
             {"video_id": "101", "labeler": "alice", "stance": "Contra"},
@@ -115,7 +153,7 @@ def test_calculate_agreement_ranks_outlier_annotator_highest_in_penalty_list() -
     penalties = summary["labelers_com_maior_discordancia"]
 
     assert penalties[0]["labeler"] == "carol"
-    assert penalties[0]["penalidade"] == 3.5
+    assert penalties[0]["penalidade"] == 3.0
     assert penalties[-1]["labeler"] == "bob"
     assert penalties[-1]["penalidade"] == 2.0
 
@@ -218,5 +256,3 @@ def test_filter_by_assignment_version_and_table_reconstruct_historical_round() -
 
     assert len(filtered_results) == 1
     assert len(reconstructed) == 2
-
-

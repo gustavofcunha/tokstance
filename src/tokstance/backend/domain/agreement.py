@@ -1,34 +1,61 @@
-"""Weighted stance distance matrix and ordinal Krippendorff alpha calculation."""
+"""Configurable pairwise label distance and ordinal Krippendorff alpha calculation."""
 
 from typing import Any
 
 import pandas as pd
 
+from tokstance.backend.domain.models import load_config
 from tokstance.config import (
     FAST_ANNOTATION_TOLERANCE_SECONDS,
     format_brt_timestamp,
 )
 
-LABEL_DISTANCE: dict[frozenset[str], float] = {
-    frozenset(("Contra", "Neutro")): 1.0,
-    frozenset(("Neutro", "A Favor")): 1.0,
-    frozenset(("Contra", "A Favor")): 4.0,
-    frozenset(("Vídeo não relacionado ao target", "Contra")): 3.0,
-    frozenset(("Vídeo não relacionado ao target", "Neutro")): 3.0,
-    frozenset(("Vídeo não relacionado ao target", "A Favor")): 3.0,
-}
+
+def parse_distance_lookup(
+    distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
+) -> dict[frozenset[str], float]:
+    """Normalize a configured pairwise distance dictionary into symmetric frozenset keys."""
+    source = distance_map
+    if source is None:
+        source = load_config().get("label_distances", {})
+    lookup: dict[frozenset[str], float] = {}
+    if not isinstance(source, dict):
+        return lookup
+
+    for raw_key, raw_weight in source.items():
+        try:
+            weight = float(raw_weight)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(raw_key, frozenset):
+            if len(raw_key) == 2:
+                lookup[frozenset(str(item).strip() for item in raw_key)] = weight
+            continue
+        parts = [part.strip() for part in str(raw_key).split("|", maxsplit=1)]
+        if len(parts) == 2 and parts[0] and parts[1] and parts[0] != parts[1]:
+            lookup[frozenset(parts)] = weight
+    return lookup
 
 
-def label_distance(left: str, right: str) -> float:
-    """Return the weighted pairwise distance between two task labels."""
-    if left == right:
+def label_distance(
+    left: str,
+    right: str,
+    distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
+) -> float:
+    """Return the configured penalty distance between two task labels."""
+    left_norm = str(left).strip()
+    right_norm = str(right).strip()
+    if left_norm == right_norm:
         return 0.0
-    return LABEL_DISTANCE.get(frozenset((str(left), str(right))), 1.0)
+    lookup = parse_distance_lookup(distance_map)
+    return lookup.get(frozenset((left_norm, right_norm)), 1.0)
 
 
 def calculate_agreement(
     results: pd.DataFrame,
+    config: dict[str, Any] | None = None,
     allowed_options: list[str] | tuple[str, ...] | None = None,
+    distance_map: dict[str, Any] | dict[frozenset[str], float] | None = None,
 ) -> dict[str, Any]:
     """Compute distance-weighted Krippendorff alpha and per-labeler disagreement penalties."""
     if results.empty or "stance" not in results.columns:
@@ -42,9 +69,21 @@ def calculate_agreement(
             "updated_at": format_brt_timestamp(),
         }
 
+    active_config = config if isinstance(config, dict) else load_config()
+    effective_options = (
+        list(allowed_options)
+        if allowed_options is not None
+        else list(active_config.get("stance_options", []))
+    )
+    effective_distances = parse_distance_lookup(
+        distance_map
+        if distance_map is not None
+        else active_config.get("label_distances", {})
+    )
+
     valid_mask = results["stance"].astype(str).str.strip().ne("")
-    if allowed_options:
-        valid_mask = valid_mask & results["stance"].isin(list(allowed_options))
+    if effective_options:
+        valid_mask = valid_mask & results["stance"].isin(effective_options)
     labels_by_video = (
         results[valid_mask]
         .groupby("video_id")["stance"]
@@ -69,7 +108,7 @@ def calculate_agreement(
     disagreement_videos: list[dict[str, Any]] = []
     for video_id, labels in usable.items():
         distances = [
-            label_distance(labels[left_idx], labels[right_idx])
+            label_distance(labels[left_idx], labels[right_idx], effective_distances)
             for left_idx in range(len(labels))
             for right_idx in range(left_idx + 1, len(labels))
         ]
@@ -86,7 +125,7 @@ def calculate_agreement(
 
     all_labels = [label for labels in usable for label in labels]
     expected_disagreement = sum(
-        label_distance(all_labels[left_idx], all_labels[right_idx])
+        label_distance(all_labels[left_idx], all_labels[right_idx], effective_distances)
         for left_idx in range(len(all_labels))
         for right_idx in range(left_idx + 1, len(all_labels))
     )
@@ -112,7 +151,8 @@ def calculate_agreement(
             other_labels = [label for label in labels if label != row.stance]
             if other_labels:
                 score = sum(
-                    label_distance(row.stance, label) for label in other_labels
+                    label_distance(row.stance, label, effective_distances)
+                    for label in other_labels
                 ) / len(other_labels)
                 labeler_disagreements[row.labeler] = (
                     labeler_disagreements.get(row.labeler, 0.0) + score
@@ -232,5 +272,3 @@ def assignment_table_for_version(
         ],
         ignore_index=True,
     )
-
-
