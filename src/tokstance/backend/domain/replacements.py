@@ -7,12 +7,14 @@ import pandas as pd
 
 from tokstance.backend.domain.assignments import (
     assignment_identifier,
+    make_assignments,
     persist_frame_if_changed,
 )
 from tokstance.backend.domain.models import (
     ERROR_COLUMNS,
     RESULT_COLUMNS,
     load_reserve_videos,
+    load_videos,
 )
 from tokstance.config import resolve_data_paths
 
@@ -253,6 +255,74 @@ def apply_reserve_replacements(
                 .isin(available_reserves["id"].astype(str))
             ]
 
+        #promote an already annotated individual video when overlap group has partial progress
+        if group_has_completed and not existing_reserve_id:
+            video_counts = assignments.groupby(assignments["video_id"].astype(str))[
+                "assignment_id"
+            ].transform("size")
+            completed_video_ids = assignments.loc[
+                assignments["assignment_id"].astype(str).isin(completed_assignment_ids),
+                "video_id",
+            ].astype(str)
+            candidate_rows = assignments.index[
+                video_counts.eq(1)
+                & assignments["video_id"].astype(str).ne(original_video_id)
+                & assignments["video_id"].astype(str).isin(completed_video_ids)
+                & assignments["target"].astype(str).str.strip().eq(source_target)
+                & assignments["labeler"].astype(str).ne(str(error.get("labeler", "")))
+            ]
+            if not candidate_rows.empty:
+                candidate_index = candidate_rows[0]
+                candidate_video_id = str(assignments.at[candidate_index, "video_id"])
+                candidate = assignments.loc[candidate_index].copy()
+                source_labeler = str(assignments.at[source_index, "labeler"])
+                source_version = str(
+                    assignments.at[source_index, "assignment_version"]
+                )
+                source_replacement_id = assignment_identifier(
+                    source_version, source_labeler, candidate_video_id
+                )
+                rows_to_promote = [
+                    index
+                    for index in group_rows
+                    if str(assignments.at[index, "assignment_id"]).strip()
+                    not in completed_assignment_ids
+                ]
+                if source_index not in rows_to_promote:
+                    rows_to_promote.append(source_index)
+                for promotion_index in rows_to_promote:
+                    promotion_labeler = str(
+                        assignments.at[promotion_index, "labeler"]
+                    )
+                    promotion_version = str(
+                        assignments.at[promotion_index, "assignment_version"]
+                    )
+                    assignments.at[promotion_index, "video_id"] = candidate_video_id
+                    for column in (
+                        "url",
+                        "target",
+                        "video_description",
+                        "voice_to_text",
+                        "video_duration",
+                    ):
+                        assignments.at[promotion_index, column] = candidate[column]
+                    assignments.at[promotion_index, "assignment_id"] = (
+                        assignment_identifier(
+                            promotion_version, promotion_labeler, candidate_video_id
+                        )
+                    )
+                errors.at[error_index, "replacement_video_id"] = candidate_video_id
+                errors.at[error_index, "replacement_url"] = str(candidate["url"])
+                errors.at[error_index, "replacement_assignment_id"] = (
+                    source_replacement_id
+                )
+                errors.at[error_index, "replacement_status"] = (
+                    "SUBSTITUIDO_OVERLAP_REBALANCEADO"
+                )
+                assignments_changed = True
+                errors_changed = True
+                continue
+
         if compatible_reserves.empty:
             if group_has_completed:
                 errors.at[error_index, "replacement_status"] = (
@@ -319,4 +389,77 @@ def apply_reserve_replacements(
     if errors_changed:
         persist_frame_if_changed(errors, paths.errors_file, list(errors.columns))
     return assignments
+
+
+def load_assignments(
+    config: dict,
+    videos: pd.DataFrame,
+    data_dir: Path | None = None,
+) -> pd.DataFrame:
+    """Load persisted assignments for the active version and apply reserve replacements."""
+    paths = resolve_data_paths(data_dir)
+    base_assignments = make_assignments(
+        config, videos, persist=False, assignments_file=paths.assignments_file
+    )
+    assignments = base_assignments
+    if paths.assignments_file.exists() and not base_assignments.empty:
+        try:
+            persisted = pd.read_csv(paths.assignments_file, dtype=str).fillna("")
+            has_schema = set(base_assignments.columns).issubset(persisted.columns)
+            same_version = set(persisted.get("assignment_version", [])) == {
+                base_assignments.iloc[0]["assignment_version"]
+            }
+            if has_schema and same_version and len(persisted) >= len(base_assignments):
+                assignments = persisted[base_assignments.columns].copy()
+        except (pd.errors.EmptyDataError, pd.errors.ParserError):
+            pass
+
+    if not assignments.empty and not assignments.equals(base_assignments):
+        persist_frame_if_changed(
+            assignments, paths.assignments_file, list(base_assignments.columns)
+        )
+    elif not paths.assignments_file.exists():
+        persist_frame_if_changed(
+            base_assignments, paths.assignments_file, list(base_assignments.columns)
+        )
+    return apply_reserve_replacements(assignments, data_dir=paths.base_dir)
+
+
+def ensure_errors_schema(data_dir: Path | None = None) -> None:
+    """Normalize erros_videos.csv on disk to the canonical schema."""
+    paths = resolve_data_paths(data_dir)
+    if not paths.errors_file.exists() or paths.errors_file.stat().st_size == 0:
+        return
+    errors = read_error_assignments(paths.errors_file)
+    persist_frame_if_changed(errors, paths.errors_file, list(errors.columns))
+
+
+def ensure_results_schema(data_dir: Path | None = None) -> None:
+    """Normalize resultados_anotacao.csv on disk and backfill missing durations or IDs."""
+    paths = resolve_data_paths(data_dir)
+    columns = list(RESULT_COLUMNS)
+    if not paths.results_file.exists() or paths.results_file.stat().st_size == 0:
+        return
+    try:
+        df = pd.read_csv(paths.results_file, dtype=str).fillna("")
+    except (pd.errors.EmptyDataError, pd.errors.ParserError):
+        return
+    videos = load_videos(paths.videos_file).set_index("id")
+    if "video_duration" not in df.columns:
+        df["video_duration"] = ""
+    if "assignment_id" not in df.columns:
+        df["assignment_id"] = df.apply(
+            lambda row: f"legacy:{row['labeler']}:{row['video_id']}",
+            axis=1,
+        )
+    for index, row in df.iterrows():
+        if not str(row.get("video_duration", "")).strip():
+            video_key = str(row.get("video_id", ""))
+            if video_key in videos.index:
+                df.at[index, "video_duration"] = str(
+                    videos.loc[video_key, "video_duration"]
+                )
+    df = df.reindex(columns=[column for column in columns if column in df.columns])
+    df.to_csv(paths.results_file, index=False)
+
 
