@@ -6,7 +6,6 @@ import pandas as pd
 
 from tokstance.config import (
     FAST_ANNOTATION_TOLERANCE_SECONDS,
-    STANCE_OPTIONS,
     format_brt_timestamp,
 )
 
@@ -21,13 +20,16 @@ LABEL_DISTANCE: dict[frozenset[str], float] = {
 
 
 def label_distance(left: str, right: str) -> float:
-    """Return the weighted pairwise distance between two stance labels."""
+    """Return the weighted pairwise distance between two task labels."""
     if left == right:
         return 0.0
-    return LABEL_DISTANCE.get(frozenset((str(left), str(right))), 0.0)
+    return LABEL_DISTANCE.get(frozenset((str(left), str(right))), 1.0)
 
 
-def calculate_agreement(results: pd.DataFrame) -> dict[str, Any]:
+def calculate_agreement(
+    results: pd.DataFrame,
+    allowed_options: list[str] | tuple[str, ...] | None = None,
+) -> dict[str, Any]:
     """Compute distance-weighted Krippendorff alpha and per-labeler disagreement penalties."""
     if results.empty or "stance" not in results.columns:
         return {
@@ -40,8 +42,11 @@ def calculate_agreement(results: pd.DataFrame) -> dict[str, Any]:
             "updated_at": format_brt_timestamp(),
         }
 
+    valid_mask = results["stance"].astype(str).str.strip().ne("")
+    if allowed_options:
+        valid_mask = valid_mask & results["stance"].isin(list(allowed_options))
     labels_by_video = (
-        results[results["stance"].isin(STANCE_OPTIONS)]
+        results[valid_mask]
         .groupby("video_id")["stance"]
         .apply(list)
     )

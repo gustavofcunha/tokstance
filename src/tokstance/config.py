@@ -9,13 +9,6 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 #brasilia official timezone utc minus 3
 BRT_TZ = timezone(timedelta(hours=-3))
 
-STANCE_OPTIONS = [
-    "Contra",
-    "A Favor",
-    "Neutro",
-    "Vídeo não relacionado ao target",
-]
-
 MIN_ERROR_REPORT_SECONDS = 10.0
 FAST_ANNOTATION_TOLERANCE_SECONDS = 5.0
 

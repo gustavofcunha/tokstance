@@ -56,6 +56,15 @@ LOG_COLUMNS = (
     "tempo_desde_login_segundos",
 )
 
+DEFAULT_TASK_NAME = "Detecção de Posição"
+DEFAULT_TASK_QUESTION = "Qual a posição expressa no vídeo em relação ao target?"
+DEFAULT_TASK_OPTIONS = (
+    "Contra",
+    "A Favor",
+    "Neutro",
+    "Vídeo não relacionado ao target",
+)
+
 
 @dataclass(frozen=True)
 class VideoRecord:
@@ -77,7 +86,11 @@ class StudyConfig:
     labelers: list[str] = field(default_factory=list)
     videos_per_labeler: int = 10
     overlap_percent: float = 0.0
-    tarefa: str = "Detecção de Posição"
+    tarefa: str = DEFAULT_TASK_NAME
+    pergunta: str = DEFAULT_TASK_QUESTION
+    stance_options: list[str] = field(
+        default_factory=lambda: list(DEFAULT_TASK_OPTIONS)
+    )
     invite_token: str = DEFAULT_INVITE_TOKEN
 
     def to_dict(self) -> dict[str, Any]:
@@ -88,6 +101,8 @@ class StudyConfig:
             "videos_per_labeler": int(self.videos_per_labeler),
             "overlap_percent": float(self.overlap_percent),
             "tarefa": str(self.tarefa),
+            "pergunta": str(self.pergunta),
+            "stance_options": list(self.stance_options),
             "invite_token": str(self.invite_token),
         }
 
@@ -243,7 +258,15 @@ def load_config(config_file: Path | None = None) -> dict[str, Any]:
     raw_config["labelers"] = clean_users(raw_config.get("labelers", []))
     raw_config["videos_per_labeler"] = int(raw_config.get("videos_per_labeler", 10))
     raw_config["overlap_percent"] = float(raw_config.get("overlap_percent", 0.0))
-    raw_config["tarefa"] = str(raw_config.get("tarefa", "Detecção de Posição"))
+    raw_config["tarefa"] = str(raw_config.get("tarefa") or DEFAULT_TASK_NAME).strip() or DEFAULT_TASK_NAME
+    raw_config["pergunta"] = (
+        str(raw_config.get("pergunta") or DEFAULT_TASK_QUESTION).strip()
+        or DEFAULT_TASK_QUESTION
+    )
+    configured_options = clean_users(raw_config.get("stance_options", []))
+    raw_config["stance_options"] = (
+        configured_options if len(configured_options) >= 2 else list(DEFAULT_TASK_OPTIONS)
+    )
     invite_token = str(raw_config.get("invite_token") or DEFAULT_INVITE_TOKEN).strip()
     raw_config["invite_token"] = invite_token or DEFAULT_INVITE_TOKEN
     return raw_config
