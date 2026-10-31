@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from tokstance.backend.repositories.database import BancoDadosSQLite
+from tokstance.backend.services.admin_service import ServicoAdministracao
 from tokstance.backend.services.auth_service import ServicoAutenticacao
 from tokstance.backend.services.queue_service import ServicoFilaAnotacao
 
@@ -164,3 +165,178 @@ def test_parar_rotulacao_registra_evento_de_auditoria_em_logs_acesso(
 
     assert resultado["interrompido"] is True
     assert "parar_rotulacao" in logs_df["acao"].tolist()
+
+
+
+@pytest.mark.unit
+def test_criacao_tarefa_com_preset_padrao_configura_quatro_opcoes_e_pesos(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "preset.db")
+    servico_auth = ServicoAutenticacao(banco=banco, rodadas_bcrypt=4)
+    admin = servico_auth.cadastrar_usuario("admin_preset", "SenhaForte123")
+    servico_admin = ServicoAdministracao(banco=banco)
+
+    pool = pd.DataFrame(
+        [
+            {"id": "1", "url": "http://a/1", "target": "T1"},
+            {"id": "2", "url": "http://a/2", "target": "T2"},
+        ]
+    )
+    tarefa = servico_admin.criar_nova_tarefa(
+        usuario_administrador_id=admin["usuario_id"],
+        pool_videos=pool,
+        quantidade_videos_principal=2,
+    )
+
+    assert tarefa["titulo"] == "Detecção de Posição"
+    assert len(tarefa["opcoes_posicao"]) == 4
+    assert tarefa["distancias_rotulos"]["Contra|A Favor"] == 3.0
+
+
+@pytest.mark.unit
+def test_criacao_tarefa_customizada_gera_pares_de_penalidade_automaticamente(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "custom.db")
+    servico_auth = ServicoAutenticacao(banco=banco, rodadas_bcrypt=4)
+    admin = servico_auth.cadastrar_usuario("admin_custom", "SenhaForte123")
+    servico_admin = ServicoAdministracao(banco=banco)
+
+    pool = pd.DataFrame(
+        [
+            {"id": "10", "url": "http://b/10", "target": "Bio"},
+            {"id": "20", "url": "http://b/20", "target": "Bio"},
+        ]
+    )
+    opcoes = ["Positivo", "Negativo", "Neutro"]
+    tarefa = servico_admin.criar_nova_tarefa(
+        usuario_administrador_id=admin["usuario_id"],
+        pool_videos=pool,
+        quantidade_videos_principal=2,
+        titulo="Analise de Sentimento",
+        pergunta="Qual o sentimento do video?",
+        opcoes_posicao=opcoes,
+        distancias_rotulos={"Positivo|Negativo": 2.5},
+    )
+
+    assert tarefa["titulo"] == "Analise de Sentimento"
+    assert tarefa["opcoes_posicao"] == opcoes
+    assert tarefa["distancias_rotulos"]["Positivo|Negativo"] == 2.5
+    assert tarefa["distancias_rotulos"]["Negativo|Neutro"] == 1.0
+
+
+@pytest.mark.unit
+def test_divisao_automatica_de_pool_entre_principal_e_reserva(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "pool_split.db")
+    servico_auth = ServicoAutenticacao(banco=banco, rodadas_bcrypt=4)
+    admin = servico_auth.cadastrar_usuario("admin_pool", "SenhaForte123")
+    servico_admin = ServicoAdministracao(banco=banco)
+
+    pool = pd.DataFrame(
+        [
+            {"id": f"{i}", "url": f"http://v/{i}", "target": "Alvo"}
+            for i in range(1, 7)
+        ]
+    )
+    tarefa = servico_admin.criar_nova_tarefa(
+        usuario_administrador_id=admin["usuario_id"],
+        pool_videos=pool,
+        quantidade_videos_principal=4,
+    )
+    principais = servico_admin.repo_estudo.carregar_videos_tarefa_df(
+        tarefa["tarefa_id"], "principal"
+    )
+    reservas = servico_admin.repo_estudo.carregar_videos_tarefa_df(
+        tarefa["tarefa_id"], "reserva"
+    )
+
+    assert len(principais) == 4
+    assert len(reservas) == 2
+
+
+@pytest.mark.unit
+def test_rotulador_externo_entra_via_codigo_convite_assumindo_vaga(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "convite_externo.db")
+    servico_auth = ServicoAutenticacao(banco=banco, rodadas_bcrypt=4)
+    admin = servico_auth.cadastrar_usuario("criador", "SenhaForte123")
+    rotulador = servico_auth.cadastrar_usuario("externo", "SenhaForte123")
+    servico_admin = ServicoAdministracao(banco=banco)
+
+    pool = pd.DataFrame(
+        [
+            {"id": "1", "url": "http://v/1", "target": "T1"},
+            {"id": "2", "url": "http://v/2", "target": "T1"},
+        ]
+    )
+    tarefa = servico_admin.criar_nova_tarefa(
+        usuario_administrador_id=admin["usuario_id"],
+        pool_videos=pool,
+        codigo_convite="TOK-JOIN-TEST",
+        permitir_admin_como_rotulador=False,
+    )
+    resultado = servico_auth.entrar_na_tarefa_por_convite(
+        rotulador["usuario_id"], "TOK-JOIN-TEST"
+    )
+
+    assert resultado["papel"] == "rotulador"
+    assert resultado["vaga_atribuida"] == "vaga_1"
+
+
+@pytest.mark.unit
+def test_administrador_pode_acumular_papel_de_rotulador_na_propria_tarefa(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "admin_rotulador.db")
+    servico_auth = ServicoAutenticacao(banco=banco, rodadas_bcrypt=4)
+    admin = servico_auth.cadastrar_usuario("pesquisador", "SenhaForte123")
+    servico_admin = ServicoAdministracao(banco=banco)
+
+    pool = pd.DataFrame(
+        [
+            {"id": "1", "url": "http://v/1", "target": "T1"},
+        ]
+    )
+    tarefa = servico_admin.criar_nova_tarefa(
+        usuario_administrador_id=admin["usuario_id"],
+        pool_videos=pool,
+        permitir_admin_como_rotulador=True,
+    )
+    papeis = servico_auth.repo_usuarios.listar_papeis_usuario_na_tarefa(
+        tarefa["tarefa_id"], admin["usuario_id"]
+    )
+
+    assert "administrador" in papeis
+    assert "rotulador" in papeis
+
+
+@pytest.mark.unit
+def test_metricas_operacionais_refletem_kpis_e_progresso_da_tarefa(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "metricas_kpi.db")
+    servico_auth = ServicoAutenticacao(banco=banco, rodadas_bcrypt=4)
+    admin = servico_auth.cadastrar_usuario("gestor_kpi", "SenhaForte123")
+    servico_admin = ServicoAdministracao(banco=banco)
+
+    pool = pd.DataFrame(
+        [
+            {"id": "1", "url": "http://v/1", "target": "T1", "video_duration": "20.0"},
+            {"id": "2", "url": "http://v/2", "target": "T1", "video_duration": "25.0"},
+        ]
+    )
+    tarefa = servico_admin.criar_nova_tarefa(
+        usuario_administrador_id=admin["usuario_id"],
+        pool_videos=pool,
+        quantidade_videos_principal=2,
+    )
+    metricas = servico_admin.obter_metricas_operacionais(tarefa["tarefa_id"])
+
+    assert metricas["total_videos_principais"] == 2
+    assert metricas["total_atribuicoes"] == 2
+    assert metricas["total_anotacoes"] == 0
+    assert metricas["progresso_percentual"] == 0.0
