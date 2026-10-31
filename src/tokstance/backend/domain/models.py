@@ -14,6 +14,8 @@ VIDEO_OPTIONAL_COLUMNS = ("video_description", "voice_to_text", "video_duration"
 VIDEO_COLUMNS = VIDEO_REQUIRED_COLUMNS + VIDEO_OPTIONAL_COLUMNS
 
 ASSIGNMENT_COLUMNS = (
+    "assignment_version",
+    "assignment_id",
     "labeler",
     "video_id",
     "url",
@@ -21,9 +23,6 @@ ASSIGNMENT_COLUMNS = (
     "video_description",
     "voice_to_text",
     "video_duration",
-    "assignment_version",
-    "assignment_id",
-    "overlap_group_id",
 )
 
 RESULT_COLUMNS = (
