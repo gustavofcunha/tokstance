@@ -153,3 +153,140 @@ def make_assignments(
         )
         persist_frame_if_changed(result, target_file, columns)
     return result
+
+
+def build_evaluation_queue_for_labeler(
+    username: str,
+    version: str,
+    videos: pd.DataFrame,
+    max_videos: int | None = None,
+) -> pd.DataFrame:
+    """Create a target-balanced, contiguous-target queue for a newly registered labeler."""
+    columns = list(ASSIGNMENT_COLUMNS)
+    if videos.empty or not str(username).strip():
+        return pd.DataFrame(columns=columns)
+
+    target_buckets: dict[str, list[int]] = {}
+    target_order: list[str] = []
+    for video_index, raw_target in enumerate(videos["target"].astype(str).tolist()):
+        target_key = raw_target.strip()
+        if target_key not in target_buckets:
+            target_buckets[target_key] = []
+            target_order.append(target_key)
+        target_buckets[target_key].append(video_index)
+
+    interleaved_indices: list[int] = []
+    while any(target_buckets[target_key] for target_key in target_order):
+        for target_key in target_order:
+            if target_buckets[target_key]:
+                interleaved_indices.append(target_buckets[target_key].pop(0))
+
+    limit = len(interleaved_indices)
+    if max_videos is not None and int(max_videos) > 0:
+        limit = min(limit, int(max_videos))
+    selected_indices = interleaved_indices[:limit]
+
+    target_rank = {target_key: rank for rank, target_key in enumerate(target_order)}
+    selected_indices.sort(
+        key=lambda idx: (
+            target_rank[str(videos.iloc[idx]["target"]).strip()],
+            idx,
+        )
+    )
+
+    rows = [
+        {
+            "assignment_version": version,
+            "assignment_id": assignment_identifier(
+                version, username, str(videos.iloc[idx]["id"])
+            ),
+            "labeler": username,
+            "video_id": str(videos.iloc[idx]["id"]),
+            "url": videos.iloc[idx]["url"],
+            "target": videos.iloc[idx]["target"],
+            "video_description": videos.iloc[idx].get("video_description", ""),
+            "voice_to_text": videos.iloc[idx].get("voice_to_text", ""),
+            "video_duration": videos.iloc[idx].get("video_duration", ""),
+        }
+        for idx in selected_indices
+    ]
+    return pd.DataFrame(rows, columns=columns)
+
+
+def bind_or_allocate_labeler_slot(
+    username: str,
+    config: dict[str, Any],
+    assignments: pd.DataFrame,
+    videos: pd.DataFrame,
+    claimed_users: set[str] | None = None,
+    completed_labelers: set[str] | None = None,
+) -> tuple[dict[str, Any], pd.DataFrame, str]:
+    """Bind a new labeler to an unclaimed slot or allocate a dynamic queue in the active round."""
+    normalized_user = str(username).strip()
+    updated_config = dict(config)
+    labelers = list(updated_config.get("labelers", []))
+    claimed = set(claimed_users or set())
+    annotated = set(completed_labelers or set())
+    columns = list(ASSIGNMENT_COLUMNS)
+
+    if assignments.empty:
+        if normalized_user not in labelers:
+            labelers.append(normalized_user)
+            updated_config["labelers"] = labelers
+        generated = make_assignments(updated_config, videos, persist=False)
+        return updated_config, generated, normalized_user
+
+    active_version = str(assignments["assignment_version"].iloc[-1])
+
+    #reuse existing queue if labeler is already present in assignments
+    if normalized_user in set(assignments["labeler"].astype(str)):
+        if normalized_user not in labelers:
+            labelers.append(normalized_user)
+            updated_config["labelers"] = labelers
+        return updated_config, assignments.reindex(columns=columns), normalized_user
+
+    #bind to first unclaimed and unannotated configured slot when available
+    unclaimed_slot = None
+    for candidate in labelers:
+        if candidate not in claimed and candidate not in annotated:
+            if candidate.startswith(("slot_", "rotulador_", " vaga_")):
+                unclaimed_slot = candidate
+                break
+
+    if unclaimed_slot is not None:
+        updated_config["labelers"] = [
+            normalized_user if item == unclaimed_slot else item for item in labelers
+        ]
+        updated_assignments = assignments.copy()
+        slot_mask = updated_assignments["labeler"].astype(str).eq(unclaimed_slot)
+        updated_assignments.loc[slot_mask, "labeler"] = normalized_user
+        updated_assignments.loc[slot_mask, "assignment_id"] = updated_assignments.loc[
+            slot_mask
+        ].apply(
+            lambda row: assignment_identifier(
+                str(row["assignment_version"]),
+                normalized_user,
+                str(row["video_id"]),
+            ),
+            axis=1,
+        )
+        return updated_config, updated_assignments.reindex(columns=columns), unclaimed_slot
+
+    #allocate an immediate evaluation queue when all initial slots are already occupied
+    if normalized_user not in labelers:
+        labelers.append(normalized_user)
+        updated_config["labelers"] = labelers
+
+    max_videos = int(updated_config.get("videos_per_labeler", len(videos)) or len(videos))
+    extra_queue = build_evaluation_queue_for_labeler(
+        normalized_user,
+        active_version,
+        videos,
+        max_videos=max_videos,
+    )
+    combined = pd.concat([assignments, extra_queue], ignore_index=True)
+    combined = combined.drop_duplicates(
+        subset=["assignment_version", "labeler", "video_id"], keep="last"
+    ).reset_index(drop=True)
+    return updated_config, combined.reindex(columns=columns), normalized_user
+
