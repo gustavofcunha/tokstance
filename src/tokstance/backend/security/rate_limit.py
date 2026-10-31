@@ -1,4 +1,4 @@
-"""Limitador de tentativas por janela deslizante para login e cadastro."""
+"""Limitador de tentativas por janela deslizante e controle de sessoes simultaneas."""
 
 from collections.abc import Callable
 import threading
@@ -89,3 +89,79 @@ class LimitadorTentativas:
         with self._trava:
             self._falhas.clear()
             self._bloqueado_ate.clear()
+
+
+class GerenciadorSessoesAtivas:
+    """Impede logins simultaneos na mesma conta mantendo registro thread-safe."""
+
+    def __init__(self) -> None:
+        self._trava = threading.Lock()
+        self._usuarios_ativos: set[str] = set()
+
+    def _normalizar_usuario(self, nome_usuario: str) -> str:
+        return str(nome_usuario or "").strip()
+
+    def reivindicar_sessao(self, nome_usuario: str) -> bool:
+        """Reserva a sessao ativa para o usuario caso ainda nao esteja conectado."""
+        limpo = self._normalizar_usuario(nome_usuario)
+        if not limpo:
+            return False
+        with self._trava:
+            if limpo in self._usuarios_ativos:
+                return False
+            self._usuarios_ativos.add(limpo)
+            return True
+
+    def liberar_sessao(self, nome_usuario: str) -> None:
+        """Libera a sessao ativa de um usuario ao encerrar ou expirar a conexao."""
+        limpo = self._normalizar_usuario(nome_usuario)
+        if not limpo:
+            return
+        with self._trava:
+            self._usuarios_ativos.discard(limpo)
+
+    def esta_ativo(self, nome_usuario: str) -> bool:
+        """Verifica se o usuario possui uma sessao ativa registrada."""
+        limpo = self._normalizar_usuario(nome_usuario)
+        if not limpo:
+            return False
+        with self._trava:
+            return limpo in self._usuarios_ativos
+
+    def listar_ativos(self) -> list[str]:
+        """Retorna a lista ordenada de usuarios com sessao ativa no momento."""
+        with self._trava:
+            return sorted(self._usuarios_ativos)
+
+    def limpar_tudo(self) -> None:
+        """Remove todas as sessoes ativas registradas."""
+        with self._trava:
+            self._usuarios_ativos.clear()
+
+
+_GERENCIADOR_SESSOES_PADRAO = GerenciadorSessoesAtivas()
+
+
+def reivindicar_sessao_ativa(nome_usuario: str) -> bool:
+    """Reserva sessao ativa global para o usuario caso nao haja outra aberta."""
+    return _GERENCIADOR_SESSOES_PADRAO.reivindicar_sessao(nome_usuario)
+
+
+def liberar_sessao_ativa(nome_usuario: str) -> None:
+    """Libera a sessao ativa global associada ao usuario."""
+    _GERENCIADOR_SESSOES_PADRAO.liberar_sessao(nome_usuario)
+
+
+def usuario_esta_ativo(nome_usuario: str) -> bool:
+    """Indica se o usuario ja possui sessao ativa global aberta."""
+    return _GERENCIADOR_SESSOES_PADRAO.esta_ativo(nome_usuario)
+
+
+def listar_usuarios_ativos() -> list[str]:
+    """Lista os nomes de usuario com sessao ativa global no momento."""
+    return _GERENCIADOR_SESSOES_PADRAO.listar_ativos()
+
+
+def limpar_sessoes_ativas() -> None:
+    """Limpa todas as sessoes ativas globais registradas."""
+    _GERENCIADOR_SESSOES_PADRAO.limpar_tudo()
