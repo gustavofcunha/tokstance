@@ -151,6 +151,10 @@ def apply_reserve_replacements(
         return assignments
 
     available_reserves = compute_available_reserves(reserve_videos, assignments, errors)
+    results = read_results(paths.results_file)
+    completed_assignment_ids = set(
+        results.get("assignment_id", pd.Series(dtype=str)).astype(str).str.strip()
+    )
     assignments_changed = False
     errors_changed = False
 
@@ -158,6 +162,20 @@ def apply_reserve_replacements(
         if str(error.get("replacement_assignment_id", "")).strip():
             continue
         assignment_id = str(error.get("assignment_id", "")).strip()
+        original_video_id = str(error.get("video_id", "")).strip()
+        prior_replacement = errors[
+            errors["video_id"].astype(str).eq(original_video_id)
+            & errors["replacement_assignment_id"].astype(str).ne("")
+        ]
+        existing_reserve_id = ""
+        prior_status = ""
+        if not prior_replacement.empty:
+            original_video_id = str(prior_replacement.iloc[0]["video_id"]).strip()
+            existing_reserve_id = str(
+                prior_replacement.iloc[0]["replacement_video_id"]
+            ).strip()
+            prior_status = str(prior_replacement.iloc[0]["replacement_status"]).strip()
+
         matching_rows = assignments.index[
             assignments["assignment_id"].astype(str).eq(assignment_id)
         ]
@@ -166,49 +184,132 @@ def apply_reserve_replacements(
                 assignments["labeler"].astype(str).eq(str(error.get("labeler", "")))
                 & assignments["video_id"].astype(str).eq(str(error.get("video_id", "")))
             ]
+        if matching_rows.empty and existing_reserve_id:
+            matching_rows = assignments.index[
+                assignments["labeler"].astype(str).eq(str(error.get("labeler", "")))
+                & assignments["video_id"].astype(str).eq(existing_reserve_id)
+            ]
         if matching_rows.empty:
             continue
 
         source_index = matching_rows[0]
+        if prior_status == "SUBSTITUIDO_OVERLAP_REBALANCEADO":
+            errors.at[error_index, "replacement_video_id"] = existing_reserve_id
+            errors.at[error_index, "replacement_url"] = str(
+                assignments.at[source_index, "url"]
+            )
+            errors.at[error_index, "replacement_assignment_id"] = str(
+                assignments.at[source_index, "assignment_id"]
+            )
+            errors.at[error_index, "replacement_status"] = prior_status
+            errors_changed = True
+            continue
+
+        #resolve all assignment rows belonging to the same overlap group
+        group_rows = assignments.index[
+            assignments["video_id"].astype(str).eq(original_video_id)
+        ]
+        replacement_rows = (
+            errors[
+                errors["video_id"].astype(str).eq(original_video_id)
+                & errors["replacement_assignment_id"].astype(str).ne("")
+            ]["replacement_assignment_id"]
+            .astype(str)
+            .tolist()
+        )
+        if replacement_rows:
+            group_rows = group_rows.union(
+                assignments.index[
+                    assignments["assignment_id"].astype(str).isin(replacement_rows)
+                ]
+            )
+        if existing_reserve_id:
+            group_rows = group_rows.union(
+                assignments.index[
+                    assignments["video_id"].astype(str).eq(existing_reserve_id)
+                ]
+            )
+        group_rows = group_rows.sort_values()
+        group_has_completed = any(
+            str(assignments.at[index, "assignment_id"]).strip()
+            in completed_assignment_ids
+            for index in group_rows
+        )
         source_target = str(assignments.at[source_index, "target"]).strip()
+        if group_rows.empty:
+            group_rows = matching_rows
+
         compatible_reserves = reserve_videos[
             reserve_videos["target"].astype(str).str.strip().eq(source_target)
-            & reserve_videos["id"].astype(str).isin(available_reserves["id"].astype(str))
         ]
+        if existing_reserve_id:
+            compatible_reserves = compatible_reserves[
+                compatible_reserves["id"].astype(str).eq(existing_reserve_id)
+            ]
+        else:
+            compatible_reserves = compatible_reserves[
+                compatible_reserves["id"]
+                .astype(str)
+                .isin(available_reserves["id"].astype(str))
+            ]
+
         if compatible_reserves.empty:
-            errors.at[error_index, "replacement_status"] = (
-                "SEM_RESERVA_DISPONIVEL"
-                if available_reserves.empty
-                else "SEM_RESERVA_COMPATIVEL"
-            )
+            if group_has_completed:
+                errors.at[error_index, "replacement_status"] = (
+                    "CRITICO_OVERLAP_INCONSISTENTE"
+                )
+            else:
+                errors.at[error_index, "replacement_status"] = (
+                    "SEM_RESERVA_DISPONIVEL"
+                    if available_reserves.empty
+                    else "SEM_RESERVA_COMPATIVEL"
+                )
             errors_changed = True
             continue
 
         reserve = compatible_reserves.iloc[0]
         reserve_id = str(reserve["id"])
+        rows_to_replace = matching_rows if group_has_completed else group_rows
+        for replacement_index in rows_to_replace:
+            labeler = str(assignments.at[replacement_index, "labeler"])
+            version = str(assignments.at[replacement_index, "assignment_version"])
+            replacement_assignment_id = assignment_identifier(
+                version, labeler, reserve_id
+            )
+            if (
+                str(assignments.at[replacement_index, "assignment_id"]).strip()
+                in completed_assignment_ids
+            ):
+                continue
+            assignments.at[replacement_index, "video_id"] = reserve_id
+            for column in (
+                "url",
+                "target",
+                "video_description",
+                "voice_to_text",
+                "video_duration",
+            ):
+                assignments.at[replacement_index, column] = reserve.get(column, "")
+            assignments.at[replacement_index, "assignment_id"] = (
+                replacement_assignment_id
+            )
+            assignments_changed = True
+
         labeler = str(assignments.at[source_index, "labeler"])
         version = str(assignments.at[source_index, "assignment_version"])
         replacement_assignment_id = assignment_identifier(version, labeler, reserve_id)
-
-        assignments.at[source_index, "video_id"] = reserve_id
-        for column in (
-            "url",
-            "target",
-            "video_description",
-            "voice_to_text",
-            "video_duration",
-        ):
-            assignments.at[source_index, column] = reserve.get(column, "")
-        assignments.at[source_index, "assignment_id"] = replacement_assignment_id
-        assignments_changed = True
-
         errors.at[error_index, "replacement_video_id"] = reserve_id
         errors.at[error_index, "replacement_url"] = str(reserve["url"])
         errors.at[error_index, "replacement_assignment_id"] = replacement_assignment_id
-        errors.at[error_index, "replacement_status"] = "SUBSTITUIDO_OVERLAP"
-        available_reserves = available_reserves[
-            available_reserves["id"].astype(str).ne(reserve_id)
-        ]
+        errors.at[error_index, "replacement_status"] = (
+            "CRITICO_OVERLAP_INCONSISTENTE"
+            if group_has_completed
+            else "SUBSTITUIDO_OVERLAP"
+        )
+        if not group_has_completed and not existing_reserve_id:
+            available_reserves = available_reserves[
+                available_reserves["id"].astype(str).ne(reserve_id)
+            ]
         errors_changed = True
 
     if assignments_changed:
