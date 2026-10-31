@@ -4,7 +4,11 @@ from typing import Any
 
 import pandas as pd
 
-from tokstance.config import STANCE_OPTIONS, format_brt_timestamp
+from tokstance.config import (
+    FAST_ANNOTATION_TOLERANCE_SECONDS,
+    STANCE_OPTIONS,
+    format_brt_timestamp,
+)
 
 LABEL_DISTANCE: dict[frozenset[str], float] = {
     frozenset(("Contra", "Neutro")): 1.0,
@@ -123,4 +127,105 @@ def calculate_agreement(results: pd.DataFrame) -> dict[str, Any]:
         "labelers_com_maior_discordancia": labelers,
         "updated_at": format_brt_timestamp(),
     }
+
+
+def find_fast_annotations(
+    results: pd.DataFrame,
+    videos: pd.DataFrame,
+    tolerance_seconds: float = FAST_ANNOTATION_TOLERANCE_SECONDS,
+) -> list[dict[str, Any]]:
+    """Detect annotations completed faster than video duration minus tolerance."""
+    if results.empty or videos.empty:
+        return []
+    durations = videos.set_index(videos["id"].astype(str))["video_duration"].to_dict()
+    alerts: list[dict[str, Any]] = []
+    for row in results.itertuples():
+        raw_duration = getattr(row, "video_duration", "") or durations.get(
+            str(row.video_id), ""
+        )
+        try:
+            duration = float(raw_duration)
+            analysis_time = float(row.tempo_analise_segundos)
+        except (TypeError, ValueError):
+            continue
+        if analysis_time < duration - float(tolerance_seconds):
+            alerts.append(
+                {
+                    "video_id": str(row.video_id),
+                    "labeler": str(row.labeler),
+                    "video_duration": round(duration, 2),
+                    "tempo_analise_segundos": round(analysis_time, 2),
+                    "diferenca_segundos": round(duration - analysis_time, 2),
+                }
+            )
+    return sorted(alerts, key=lambda item: item["diferenca_segundos"], reverse=True)
+
+
+def assignment_versions(
+    assignments: pd.DataFrame,
+    results: pd.DataFrame,
+    errors: pd.DataFrame,
+) -> list[str]:
+    """List the active assignment version followed by historical versions in reverse order."""
+    versions: list[str] = []
+    current_version: str | None = None
+    if not assignments.empty and "assignment_version" in assignments.columns:
+        versions.extend(
+            assignments["assignment_version"].dropna().astype(str).tolist()
+        )
+        current_version = versions[0] if versions else None
+    for frame in (results, errors):
+        if not frame.empty and "assignment_id" in frame.columns:
+            versions.extend(
+                frame["assignment_id"]
+                .astype(str)
+                .str.split(":", n=1)
+                .str[0]
+                .tolist()
+            )
+    available = {
+        version for version in versions if version and version != "legacy"
+    }
+    if current_version:
+        available.discard(current_version)
+    return ([current_version] if current_version else []) + sorted(
+        available, reverse=True
+    )
+
+
+def filter_by_assignment_version(
+    frame: pd.DataFrame,
+    version: str | None,
+) -> pd.DataFrame:
+    """Filter results or error rows belonging to a specific assignment version prefix."""
+    if frame.empty or not version or "assignment_id" not in frame.columns:
+        return frame.copy()
+    return frame[
+        frame["assignment_id"].astype(str).str.startswith(f"{version}:")
+    ].copy()
+
+
+def assignment_table_for_version(
+    assignments: pd.DataFrame,
+    results: pd.DataFrame,
+    errors: pd.DataFrame,
+    version: str | None,
+) -> pd.DataFrame:
+    """Return active assignment rows or reconstruct historical rows for an older version."""
+    if (
+        version
+        and not assignments.empty
+        and version in set(assignments["assignment_version"].astype(str))
+    ):
+        return assignments[
+            assignments["assignment_version"].astype(str).eq(version)
+        ].copy()
+    return pd.concat(
+        [
+            filter_by_assignment_version(results, version),
+            filter_by_assignment_version(errors, version),
+        ],
+        ignore_index=True,
+    )
+
 
