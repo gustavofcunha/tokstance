@@ -15,7 +15,7 @@ def render_tiktok(url: str) -> str:
     return f"""
     <div style="display: flex; justify-content: center; width: 100%; margin: 0; padding: 0;">
         <iframe
-            style="width: min(100%, 340px); height: 530px; border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+            style="width: min(100%, 330px); height: 500px; border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
             scrolling="no"
             src="{player_url}"
             title="Player do vídeo TikTok"
@@ -65,11 +65,11 @@ def generate_progress_bar(position: int, total: int) -> str:
     """Renderiza a barra de progresso visual com contador e percentual."""
     percent = int((position / total) * 100) if total > 0 else 100
     return f"""
-    <div style="width: 100%; margin-bottom: 25px;">
-        <div style="width: 100%; background-color: #e0e0e0; border-radius: 6px; height: 12px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="width: 100%; margin-bottom: 12px;">
+        <div style="width: 100%; background-color: #e0e0e0; border-radius: 6px; height: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
             <div style="width: {percent}%; background-color: #9c0014; height: 100%; transition: width 0.4s ease;"></div>
         </div>
-        <div style="text-align: right; font-size: 14px; color: #333; font-weight: 600; margin-top: 6px;">
+        <div style="text-align: right; font-size: 13px; color: #333; font-weight: 600; margin-top: 4px;">
             {position} de {total} ({percent}%)
         </div>
     </div>

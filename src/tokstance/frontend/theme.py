@@ -46,18 +46,18 @@ APP_CSS = """
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif !important;
     }
 
-    /* Container Principal */
+    /* Container Principal com Otimizacao Total para Telas Widescreen (16:9, 16:10, 21:9) */
     .shell {
-        width: min(98%, 1750px) !important;
-        max-width: 1750px !important;
+        width: min(98%, 1880px) !important;
+        max-width: 1880px !important;
         margin: 4px auto !important;
         background: #ffffff !important;
-        padding: 16px 24px !important;
+        padding: 14px 22px !important;
         border-radius: 12px !important;
         font-size: 15px !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
         border: 1px solid #e2e8f0 !important;
-        border-top: 6px solid #9c0014 !important;
+        border-top: 5px solid #9c0014 !important;
         position: relative !important;
         box-sizing: border-box !important;
     }
@@ -426,9 +426,27 @@ APP_CSS = """
 
     .hub-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-        gap: 20px;
-        margin: 14px 0 24px;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 14px;
+        margin: 8px 0 14px;
+        max-height: 240px !important;
+        overflow-y: auto !important;
+    }
+
+    .hub-join-box {
+        margin-top: 14px !important;
+        padding: 12px 18px !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02) !important;
+    }
+    .hub-join-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 16px !important;
+        width: 100% !important;
     }
 
     .hub-card {
@@ -716,20 +734,20 @@ APP_CSS = """
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: flex-start !important;
-        gap: 20px !important;
+        gap: 22px !important;
         width: 100% !important;
     }
     .video-column {
-        flex: 1.15 1 0 !important;
-        min-width: 320px !important;
-        max-width: 58% !important;
+        flex: 1.25 1 0 !important;
+        min-width: 480px !important;
+        max-width: 63% !important;
     }
     .labeler-controls-column {
         flex: 0.85 1 0 !important;
-        min-width: 280px !important;
-        max-width: 45% !important;
+        min-width: 320px !important;
+        max-width: 39% !important;
     }
-    @media (max-width: 900px) {
+    @media (max-width: 1024px) {
         .labeler-layout {
             flex-direction: column !important;
         }
@@ -749,29 +767,60 @@ APP_CSS = """
     .labeler-warning-stack {
         display: flex !important;
         flex-direction: column !important;
-        gap: 8px !important;
+        gap: 6px !important;
         background: #f8fafc !important;
         border: 1px solid #e2e8f0 !important;
         border-radius: 8px !important;
-        padding: 12px 16px !important;
+        padding: 10px 14px !important;
         font-size: 13px !important;
         color: #475569 !important;
-        margin-bottom: 16px !important;
+        margin-bottom: 12px !important;
     }
     .annotation-controls {
         background: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
         border-radius: 10px !important;
-        padding: 20px !important;
+        padding: 16px 20px !important;
     }
 
     .form-wizard-card {
         border: 1px solid #e2e8f0;
         border-top: 5px solid #9c0014;
-        padding: 28px 32px;
+        padding: 20px 24px;
         background: #ffffff;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+    .wizard-grid {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 24px !important;
+        width: 100% !important;
+        align-items: stretch !important;
+    }
+    @media (max-width: 1024px) {
+        .wizard-grid {
+            flex-direction: column !important;
+        }
+    }
+    .wizard-col {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    .wizard-submit-row {
+        margin-top: 18px !important;
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    .wizard-submit-btn {
+        min-width: 280px !important;
+        height: 46px !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
     }
     .pairwise-penalty-table {
         width: 100%;
@@ -866,8 +915,8 @@ APP_CSS = """
     .assignment-table [role="gridcell"], .assignment-table td { border-color: #e2e8f0 !important; color: #0f172a !important; }
 
     .video-card { width: 100%; min-width: 0; color: #0f172a; overflow: visible; }
-    .video-card iframe { display: block; width: 100% !important; max-width: 360px !important; height: 600px !important; overflow: hidden !important; border-radius: 8px !important; border: 1px solid #e2e8f0 !important; }
-    .video-meta { padding: 14px 16px; margin-bottom: 14px; border-left: 4px solid #9c0014; background: #fffafa; font-size: 16px; border-radius: 0 6px 6px 0; border: 1px solid #ffd6dc; border-left-width: 4px; }
+    .video-card iframe { display: block; width: 100% !important; max-width: 330px !important; height: 500px !important; overflow: hidden !important; border-radius: 8px !important; border: 1px solid #e2e8f0 !important; }
+    .video-meta { padding: 10px 14px; margin-bottom: 12px; border-left: 4px solid #9c0014; background: #fffafa; font-size: 15px; border-radius: 0 6px 6px 0; border: 1px solid #ffd6dc; border-left-width: 4px; }
     .target-transition { animation: target-highlight 12s ease-in-out; will-change: background, border-color, box-shadow, transform; }
     @keyframes target-highlight {
         0%, 100% { background: #fffafa; border-left-color: #9c0014; box-shadow: none; transform: translateY(0); }
@@ -876,13 +925,13 @@ APP_CSS = """
         55% { background: #ffe1e5; border-left-color: #c12d42; box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.24), 0 6px 16px rgba(156, 0, 20, 0.14); }
         78% { background: #fff1f3; border-left-color: #ae1c32; box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.18), 0 4px 12px rgba(156, 0, 20, 0.1); }
     }
-    .video-content-grid { display: grid; grid-template-columns: minmax(180px, 0.9fr) minmax(280px, 1.1fr); gap: 16px; align-items: start; }
+    .video-content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
     .video-player-column, .video-context-column { min-width: 0; }
-    .video-player-column { display: flex; justify-content: center; align-items: flex-start; height: auto; min-height: 500px; overflow: hidden; }
-    .video-description { padding: 18px; margin-bottom: 18px; border: 1px solid #e2e8f0; background: #ffffff; line-height: 1.55; overflow-wrap: anywhere; font-size: 15px; border-radius: 8px; }
+    .video-player-column { display: flex; justify-content: center; align-items: flex-start; height: 500px; min-height: 500px; overflow: hidden; }
+    .video-description { padding: 14px 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; background: #ffffff; line-height: 1.5; overflow-wrap: anywhere; font-size: 14px; border-radius: 8px; max-height: 200px; overflow-y: auto; }
     .video-description strong { display: block; color: #9c0014; margin-bottom: 6px; }
     .video-description.unavailable { color: #64748b; }
-    .video-transcription { padding: 18px; margin: 0 0 14px; border: 1px solid #e2e8f0; background: #f8fafc; line-height: 1.55; overflow-wrap: anywhere; font-size: 15px; border-radius: 8px; }
+    .video-transcription { padding: 14px 16px; margin: 0; border: 1px solid #e2e8f0; background: #f8fafc; line-height: 1.5; overflow-wrap: anywhere; font-size: 14px; border-radius: 8px; max-height: 200px; overflow-y: auto; }
     .video-transcription strong { display: block; color: #9c0014; margin-bottom: 6px; }
     .transcription-note { color: #64748b; font-size: 0.82em; font-style: italic; font-weight: 400; }
     .video-transcription.unavailable { color: #64748b; }
@@ -952,14 +1001,14 @@ APP_CSS = """
 
     /* Rodape da Aplicacao */
     .app-footer {
-        margin-top: 28px !important;
-        padding-top: 16px !important;
+        margin-top: 14px !important;
+        padding-top: 10px !important;
         border-top: 1px solid #e2e8f0 !important;
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
         flex-wrap: wrap !important;
-        gap: 12px !important;
+        gap: 10px !important;
         font-size: 13px !important;
         color: #64748b !important;
     }
