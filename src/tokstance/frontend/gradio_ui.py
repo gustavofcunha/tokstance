@@ -1,4 +1,4 @@
-"""Interface Gradio completa: Login, Cadastro, Hub Inicial e Criador de Nova Tarefa (versao inicial do frontend)."""
+"""Interface Gradio completa: Login, Cadastro, Hub Inicial, Criador, Rotulacao e Console Admin (versao inicial do frontend)."""
 
 from html import escape
 import json
@@ -23,6 +23,12 @@ from tokstance.backend.services.admin_service import ServicoAdministracao
 from tokstance.backend.services.auth_service import ServicoAutenticacao
 from tokstance.backend.services.queue_service import ServicoFilaAnotacao
 from tokstance.config import ARQUIVO_VIDEOS, ARQUIVO_VIDEOS_RESERVA
+from tokstance.frontend.components import (
+    agreement_summary,
+    generate_progress_bar,
+    render_video_card,
+    video_outputs,
+)
 from tokstance.frontend.theme import APP_CSS, obter_tema_branco
 
 
@@ -89,7 +95,6 @@ def gerar_tabela_penalidades_df(opcoes_texto: str) -> pd.DataFrame:
     if len(opcoes) < 2:
         return pd.DataFrame(columns=["Opção A", "Opção B", "Penalidade"])
 
-    #pesos padrao legados para as 4 opcoes classicas
     pesos_conhecidos = {
         "Contra|Neutro": 1.0,
         "Neutro|A Favor": 1.0,
@@ -157,9 +162,22 @@ def construir_interface(
 
     auth.garantir_conta_admin_padrao()
 
-    with gr.Blocks(theme=obter_tema_branco(), css=APP_CSS, title="TokStance!") as app:
-        #estados de sessao
-        estado_sessao = gr.State({"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None})
+    with gr.Blocks(title="TokStance!") as app:
+        #estilos css globais injetados para compatibilidade com gradio 5 e 6
+        gr.HTML(f"<style>{APP_CSS}</style>")
+
+        #estado completo da sessao do usuario
+        estado_sessao = gr.State({
+            "usuario_id": None,
+            "nome_usuario": "",
+            "tarefa_ativa_id": None,
+            "login_time": 0.0,
+            "start_time": 0.0,
+            "assignment_id": "",
+            "pergunta_template": "",
+            "opcoes_posicao": [],
+            "previous_target": "",
+        })
 
         with gr.Column(elem_classes="shell"):
             gr.HTML("""
@@ -306,22 +324,77 @@ def construir_interface(
                     wizard_mensagem = gr.Markdown()
 
             # ==================================================================
-            # 4. TELA DE ROTULACAO (WORKSPACE) - Scaffolding C50
+            # 4. TELA DE ROTULACAO (WORKSPACE DO ROTULADOR)
             # ==================================================================
             with gr.Column(visible=False, elem_classes="labeler-panel") as painel_rotulador:
                 with gr.Row(elem_classes="labeler-actions"):
                     btn_voltar_hub_rotulacao = gr.Button("Salvar e sair", elem_classes="ufmg-btn")
-                workspace_placeholder = gr.Markdown("Espaço do rotulador em inicialização...")
+
+                with gr.Column(elem_classes="labeler-workspace-container"):
+                    with gr.Column(visible=False, elem_classes="sensitive-warning-wrapper") as painel_aviso_sensivel:
+                        with gr.Column(elem_classes="sensitive-warning-card"):
+                            gr.HTML("""
+                                <div class="sensitive-warning-header">
+                                    <div class="sensitive-warning-badge">⚠️ Aviso de Conteúdo</div>
+                                    <h2>Possível Conteúdo Sensível ou Nocivo</h2>
+                                </div>
+                                <div class="sensitive-warning-body">
+                                    <p>O conteúdo dos vídeos e seus metadados (tema, descrição e transcrição) podem envolver assuntos sensíveis, controversos ou potencialmente desconfortáveis.</p>
+                                    <p>Deseja visualizar o material completo e prosseguir com a rotulação?</p>
+                                </div>
+                            """)
+                            with gr.Row(elem_classes="sensitive-warning-actions"):
+                                btn_continuar_sensivel = gr.Button("Continuar", elem_classes=["ufmg-btn", "sensitive-btn-continue"])
+                                btn_parar_sensivel = gr.Button("Parar de rotular", elem_classes=["error-btn", "sensitive-btn-stop"])
+
+                    with gr.Row(elem_classes="labeler-layout"):
+                        with gr.Column(scale=5, min_width=1000, elem_classes="video-column"):
+                            rotulador_video_html = gr.HTML()
+
+                        with gr.Column(scale=3, min_width=600, elem_classes="labeler-controls-column"):
+                            rotulador_cabecalho = gr.Markdown()
+                            rotulador_progresso = gr.HTML()
+
+                            with gr.Column(visible=False, elem_classes="annotation-controls") as painel_controles_anotacao:
+                                gr.HTML("<div class='labeler-warning-stack'><div>⏳ O player do TikTok pode demorar alguns segundos para carregar.</div><div>🔊 Certifique-se de que o som do vídeo está habilitado clicando no ícone de som do player do TikTok.</div></div>")
+
+                                rotulador_pergunta_html = gr.HTML()
+                                rotulador_radio = gr.Radio(choices=[], label="Selecione uma opção:", elem_classes="wrap-radio")
+
+                                btn_salvar_resposta = gr.Button("Salvar Resposta e Avançar", elem_classes="ufmg-btn")
+                                btn_erro_video = gr.Button("⚠️ O vídeo não carregou", elem_classes="error-btn")
+
+                                rotulador_mensagem = gr.Markdown(elem_classes="warning-text")
 
             # ==================================================================
-            # 5. TELA DE ADMINISTRACAO (CONSOLE) - Scaffolding C50
+            # 5. TELA DE ADMINISTRACAO (CONSOLE DA TAREFA)
             # ==================================================================
             with gr.Column(visible=False, elem_classes="admin-panel") as painel_admin:
                 with gr.Row(elem_classes="admin-header"):
-                    gr.Markdown("## Console de Administração da Tarefa")
+                    admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="admin-actions"):
                         btn_voltar_hub_admin = gr.Button("Voltar ao Hub", elem_classes="error-btn")
-                admin_console_placeholder = gr.Markdown("Console do administrador em inicialização...")
+
+                admin_configuracao_view = gr.Markdown(elem_classes="admin-configuration")
+                admin_status_view = gr.Markdown(elem_classes="admin-status")
+
+                gr.Markdown("### Dados Coletados e Análise Operacional")
+                admin_dashboard_html = gr.HTML()
+
+                with gr.Row(elem_classes="admin-downloads"):
+                    admin_download_resultados = gr.File(label="Resultados Anotação (CSV)")
+                    admin_download_logs = gr.File(label="Metadados e Tempos (CSV)")
+                    admin_download_erros = gr.File(label="Vídeos com Erro (CSV)")
+                    admin_download_concordancia = gr.File(label="Concordância (JSON)")
+
+                gr.Markdown("### Auditoria de Atribuições", elem_classes="admin-audit")
+                admin_tabela_atribuicoes = gr.Dataframe(
+                    headers=["assignment_version", "assignment_id", "labeler", "video_id", "url", "target", "video_description", "voice_to_text", "video_duration"],
+                    interactive=False,
+                    elem_classes="assignment-table",
+                    max_height=2000,
+                    wrap=True,
+                )
 
         # ======================================================================
         # FUNCOES DE CONTROLE E TRANSICAO DE TELAS
@@ -357,6 +430,12 @@ def construir_interface(
                     "usuario_id": dados["usuario_id"],
                     "nome_usuario": dados["nome_usuario"],
                     "tarefa_ativa_id": None,
+                    "login_time": time.time(),
+                    "start_time": time.time(),
+                    "assignment_id": "",
+                    "pergunta_template": "",
+                    "opcoes_posicao": [],
+                    "previous_target": "",
                 }
                 opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
                 return (
@@ -375,7 +454,7 @@ def construir_interface(
                     gr.update(visible=True),
                     gr.update(visible=False),
                     f"⚠️ {str(exc)}",
-                    {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None},
+                    {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""},
                     gr.update(),
                     gr.update(),
                     "",
@@ -389,7 +468,7 @@ def construir_interface(
                     gr.update(visible=True),
                     gr.update(visible=False),
                     "⚠️ As senhas digitadas não coincidem.",
-                    {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None},
+                    {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""},
                     gr.update(),
                     gr.update(),
                     "",
@@ -404,7 +483,7 @@ def construir_interface(
                     gr.update(visible=True),
                     gr.update(visible=False),
                     f"⚠️ {str(exc)}",
-                    {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None},
+                    {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""},
                     gr.update(),
                     gr.update(),
                     "",
@@ -416,7 +495,7 @@ def construir_interface(
             nome_u = sessao.get("nome_usuario", "")
             if nome_u:
                 auth.encerrar_sessao(nome_u)
-            nova_sessao = {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None}
+            nova_sessao = {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""}
             return (
                 gr.update(visible=True),
                 gr.update(visible=False),
@@ -530,7 +609,326 @@ def construir_interface(
             except Exception as exc:
                 return f"⚠️ Erro ao criar tarefa: {str(exc)}"
 
-        #conexoes de eventos
+        # ======================================================================
+        # CONTROLE DO WORKSPACE DO ROTULADOR
+        # ======================================================================
+        def renderizar_video_rotulador(
+            video_item: Optional[Dict[str, Any]],
+            posicao: int,
+            total: int,
+            pergunta_template: str,
+            previous_target: str,
+        ) -> Tuple[str, str, str, str]:
+            if not video_item or posicao >= total:
+                html_fim = (
+                    '<div class="empty-video">'
+                    '<h2 style="color:#9c0014; margin-top:0;">Fila Concluída</h2>'
+                    '<p>Você rotulou todos os vídeos atribuídos a você nesta rodada. Aguarde novas instruções. Obrigado!</p>'
+                    '</div>'
+                )
+                pb = generate_progress_bar(total, total)
+                return html_fim, "", pb, previous_target
+
+            target = str(video_item.get("target", "") or "").strip()
+            if "{target}" in pergunta_template:
+                texto_pergunta = escape(pergunta_template.replace("{target}", target))
+            elif pergunta_template:
+                texto_pergunta = escape(pergunta_template)
+            else:
+                texto_pergunta = f'Com relação ao target <strong>"{escape(target)}"</strong>, como você classifica a posição deste vídeo?'
+
+            pergunta_html = f'<div class="target-question">{texto_pergunta}</div>'
+            pb = generate_progress_bar(posicao, total)
+            target_mudou = bool(previous_target and previous_target != target)
+            v_html = render_video_card(video_item, target_mudou)
+            return v_html, pergunta_html, pb, target
+
+        def abrir_rotulacao_tarefa(tarefa_id_str: str, sessao: Dict[str, Any]) -> Tuple[Any, Any, Any, Any, Any, str, str, str, str, Dict[str, Any]]:
+            if not tarefa_id_str:
+                return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), "", "", "", "", sessao
+            t_id = int(tarefa_id_str)
+            nome_u = sessao.get("nome_usuario", "")
+
+            estado_f = fila.obter_estado_fila(tarefa_id=t_id, nome_usuario=nome_u)
+            exibir_aviso = estado_f["exibir_aviso_sensivel"]
+            pos = estado_f["posicao_concluida"]
+            tot = estado_f["total_videos"]
+            vid = estado_f["video_atual"]
+            opcoes = estado_f["opcoes_posicao"]
+            pergunta = estado_f["pergunta"]
+
+            v_html, p_html, pb, novo_target = renderizar_video_rotulador(
+                video_item=vid,
+                posicao=pos,
+                total=tot,
+                pergunta_template=pergunta,
+                previous_target="",
+            )
+
+            cabecalho_txt = f"### Tarefa: **{escape(estado_f['titulo'])}**  \nRotulador: `{escape(nome_u)}`"
+            sessao_atualizada = dict(sessao)
+            sessao_atualizada["tarefa_ativa_id"] = t_id
+            sessao_atualizada["start_time"] = time.time()
+            sessao_atualizada["assignment_id"] = vid.get("assignment_id", "") if vid else ""
+            sessao_atualizada["pergunta_template"] = pergunta
+            sessao_atualizada["opcoes_posicao"] = opcoes
+            sessao_atualizada["previous_target"] = novo_target
+
+            controles_visiveis = not exibir_aviso and not estado_f["concluida"]
+
+            return (
+                gr.update(visible=False), #painel_hub
+                gr.update(visible=True),  #painel_rotulador
+                gr.update(visible=exibir_aviso), #painel_aviso_sensivel
+                gr.update(visible=controles_visiveis), #painel_controles_anotacao
+                gr.update(choices=opcoes, value=None), #rotulador_radio
+                cabecalho_txt,
+                v_html,
+                p_html,
+                pb,
+                sessao_atualizada,
+            )
+
+        def continuar_aviso_sensivel(sessao: Dict[str, Any]) -> Tuple[Any, Any, Dict[str, Any]]:
+            t_id = sessao.get("tarefa_ativa_id")
+            nome_u = sessao.get("nome_usuario", "")
+            if t_id and nome_u:
+                fila.aceitar_aviso_conteudo_sensivel(tarefa_id=int(t_id), nome_usuario=nome_u)
+            sessao_atualizada = dict(sessao)
+            sessao_atualizada["start_time"] = time.time()
+            return gr.update(visible=False), gr.update(visible=True), sessao_atualizada
+
+        def parar_rotulacao_sensivel(sessao: Dict[str, Any]) -> Tuple[Any, Any, Any, Any, str, str, str, Dict[str, Any]]:
+            t_id = sessao.get("tarefa_ativa_id")
+            nome_u = sessao.get("nome_usuario", "")
+            if t_id and nome_u:
+                fila.parar_rotulacao(tarefa_id=int(t_id), nome_usuario=nome_u)
+            sessao_atualizada = dict(sessao)
+            sessao_atualizada["tarefa_ativa_id"] = None
+            opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao_atualizada)
+            return (
+                gr.update(visible=True), #painel_hub
+                gr.update(visible=False), #painel_rotulador
+                opt_admin,
+                opt_rot,
+                h_adm,
+                h_rot,
+                saudacao,
+                sessao_atualizada,
+            )
+
+        def salvar_resposta_rotulador(
+            escolha_posicao: str,
+            sessao: Dict[str, Any],
+        ) -> Tuple[str, str, str, Any, str, Any, Dict[str, Any]]:
+            t_id = sessao.get("tarefa_ativa_id")
+            nome_u = sessao.get("nome_usuario", "")
+            as_id = sessao.get("assignment_id", "")
+            if not t_id or not nome_u:
+                return "", "", "", gr.update(), "⚠️ Sessão de tarefa inválida.", gr.update(), sessao
+
+            if not escolha_posicao:
+                return (
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    "⚠️ Selecione uma opção antes de salvar.",
+                    gr.update(),
+                    sessao,
+                )
+
+            agora = time.time()
+            start_t = sessao.get("start_time", agora)
+            login_t = sessao.get("login_time", agora)
+            tempo_analise = max(0.1, agora - start_t)
+            tempo_login = max(0.0, agora - login_t)
+
+            try:
+                fila.salvar_anotacao(
+                    tarefa_id=int(t_id),
+                    nome_usuario=nome_u,
+                    assignment_id=as_id,
+                    stance=escolha_posicao,
+                    tempo_analise_segundos=tempo_analise,
+                    login_time_segundos=tempo_login,
+                )
+            except Exception as exc:
+                return (
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    f"⚠️ {str(exc)}",
+                    gr.update(),
+                    sessao,
+                )
+
+            estado_f = fila.obter_estado_fila(tarefa_id=int(t_id), nome_usuario=nome_u, aviso_sensivel_aceito=True)
+            pos = estado_f["posicao_concluida"]
+            tot = estado_f["total_videos"]
+            vid = estado_f["video_atual"]
+            v_html, p_html, pb, novo_target = renderizar_video_rotulador(
+                video_item=vid,
+                posicao=pos,
+                total=tot,
+                pergunta_template=sessao.get("pergunta_template", ""),
+                previous_target=sessao.get("previous_target", ""),
+            )
+
+            sessao_atualizada = dict(sessao)
+            sessao_atualizada["start_time"] = time.time()
+            sessao_atualizada["assignment_id"] = vid.get("assignment_id", "") if vid else ""
+            sessao_atualizada["previous_target"] = novo_target
+            controles_visiveis = not estado_f["concluida"]
+
+            return (
+                v_html,
+                p_html,
+                pb,
+                gr.update(value=None),
+                "",
+                gr.update(visible=controles_visiveis),
+                sessao_atualizada,
+            )
+
+        def reportar_erro_rotulador(sessao: Dict[str, Any]) -> Tuple[str, str, str, Any, str, Any, Dict[str, Any]]:
+            t_id = sessao.get("tarefa_ativa_id")
+            nome_u = sessao.get("nome_usuario", "")
+            as_id = sessao.get("assignment_id", "")
+            if not t_id or not nome_u:
+                return "", "", "", gr.update(), "⚠️ Sessão de tarefa inválida.", gr.update(), sessao
+
+            agora = time.time()
+            start_t = sessao.get("start_time", agora)
+            login_t = sessao.get("login_time", agora)
+            tempo_analise = max(0.1, agora - start_t)
+            tempo_login = max(0.0, agora - login_t)
+
+            try:
+                fila.reportar_erro_video(
+                    tarefa_id=int(t_id),
+                    nome_usuario=nome_u,
+                    assignment_id=as_id,
+                    tempo_analise_segundos=tempo_analise,
+                    login_time_segundos=tempo_login,
+                )
+            except Exception as exc:
+                return (
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    f"⚠️ {str(exc)}",
+                    gr.update(),
+                    sessao,
+                )
+
+            estado_f = fila.obter_estado_fila(tarefa_id=int(t_id), nome_usuario=nome_u, aviso_sensivel_aceito=True)
+            pos = estado_f["posicao_concluida"]
+            tot = estado_f["total_videos"]
+            vid = estado_f["video_atual"]
+            v_html, p_html, pb, novo_target = renderizar_video_rotulador(
+                video_item=vid,
+                posicao=pos,
+                total=tot,
+                pergunta_template=sessao.get("pergunta_template", ""),
+                previous_target=sessao.get("previous_target", ""),
+            )
+
+            sessao_atualizada = dict(sessao)
+            sessao_atualizada["start_time"] = time.time()
+            sessao_atualizada["assignment_id"] = vid.get("assignment_id", "") if vid else ""
+            sessao_atualizada["previous_target"] = novo_target
+            controles_visiveis = not estado_f["concluida"]
+
+            return (
+                v_html,
+                p_html,
+                pb,
+                gr.update(value=None),
+                "⚠️ O vídeo reportado com erro foi substituído por uma reserva da mesma classe.",
+                gr.update(visible=controles_visiveis),
+                sessao_atualizada,
+            )
+
+        # ======================================================================
+        # CONTROLE DO CONSOLE DE ADMINISTRACAO
+        # ======================================================================
+        def abrir_admin_console(tarefa_id_str: str, sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str, str, Any, Any, Any, Any, Any, Dict[str, Any]]:
+            if not tarefa_id_str:
+                return gr.update(), gr.update(), "", "", "", "", gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), sessao
+            t_id = int(tarefa_id_str)
+            nome_u = sessao.get("nome_usuario", "")
+
+            try:
+                metricas = admin.obter_metricas_operacionais(tarefa_id=t_id)
+                arquivos = admin.exportar_arquivos_console(tarefa_id=t_id)
+            except Exception as exc:
+                return gr.update(), gr.update(), f"⚠️ Erro ao abrir console: {str(exc)}", "", "", "", gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), sessao
+
+            tarefa_meta = repo_e.buscar_tarefa_por_id(t_id) or {}
+            titulo_tela = f"## Console de Administração: **{escape(str(tarefa_meta.get('titulo', f'Tarefa #{t_id}')))}**"
+            convite = str(tarefa_meta.get("codigo_convite", ""))
+            config_view = (
+                f"**Configuração vigente (somente leitura)**  \n"
+                f"ID da Tarefa: `{t_id}` | Código de Convite: `{convite}`  \n"
+                f"Pergunta: `{tarefa_meta.get('pergunta', '')}`  \n"
+                f"Opções: `{', '.join(tarefa_meta.get('opcoes_posicao', []))}`  \n"
+                f"Vagas: `{tarefa_meta.get('numero_vagas', 0)}` | Overlap: `{tarefa_meta.get('percentual_sobreposicao', 0)}%`"
+            )
+
+            status_msg = (
+                f"{metricas['total_videos_principais']} vídeos principais | "
+                f"{metricas['total_videos_reservas']} vídeos reserva | "
+                f"{metricas['total_anotacoes']} anotações registradas | "
+                f"{metricas['total_atribuicoes']} atribuições na rodada."
+            )
+
+            df_atrib = repo_e.carregar_atribuicoes_tarefa_df(t_id)
+            df_anot = repo_e.carregar_anotacoes_tarefa_df(t_id)
+            df_err = repo_e.carregar_erros_videos_tarefa_df(t_id)
+            df_vid = repo_e.carregar_videos_tarefa_df(t_id)
+            df_log = repo_e.carregar_logs_acesso_tarefa_df(t_id)
+
+            dashboard_html = agreement_summary(
+                agreement_data=metricas.get("concordancia", {}),
+                assignments_df=df_atrib,
+                results_df=df_anot,
+                errors_df=df_err,
+                videos_df=df_vid,
+                logs_df=df_log,
+                version_name=f"rodada_tarefa_{t_id}",
+                opcoes_tarefa=list(tarefa_meta.get("opcoes_posicao", [])),
+                total_reservas=metricas.get("total_videos_reservas", 0),
+            )
+
+            res_path = str(arquivos.arquivo_resultados) if arquivos.arquivo_resultados.exists() else None
+            log_path = str(arquivos.arquivo_log) if arquivos.arquivo_log.exists() else None
+            err_path = str(arquivos.arquivo_erros) if arquivos.arquivo_erros.exists() else None
+            agr_path = str(arquivos.arquivo_concordancia) if arquivos.arquivo_concordancia.exists() else None
+
+            sessao_atualizada = dict(sessao)
+            sessao_atualizada["tarefa_ativa_id"] = t_id
+
+            return (
+                gr.update(visible=False), #painel_hub
+                gr.update(visible=True),  #painel_admin
+                titulo_tela,
+                config_view,
+                status_msg,
+                dashboard_html,
+                gr.update(value=res_path),
+                gr.update(value=log_path),
+                gr.update(value=err_path),
+                gr.update(value=agr_path),
+                df_atrib,
+                sessao_atualizada,
+            )
+
+        # ======================================================================
+        # CONEXOES DE EVENTOS (WIRING)
+        # ======================================================================
         btn_login.click(
             executar_login,
             inputs=[login_usuario, login_senha],
@@ -637,6 +1035,122 @@ def construir_interface(
                 wizard_qtd_principal,
             ],
             outputs=[wizard_mensagem],
+        )
+
+        #eventos da tela de rotulacao
+        btn_abrir_rotulacao.click(
+            abrir_rotulacao_tarefa,
+            inputs=[select_tarefa_rotulador, estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_rotulador,
+                painel_aviso_sensivel,
+                painel_controles_anotacao,
+                rotulador_radio,
+                rotulador_cabecalho,
+                rotulador_video_html,
+                rotulador_pergunta_html,
+                rotulador_progresso,
+                estado_sessao,
+            ],
+        )
+
+        btn_continuar_sensivel.click(
+            continuar_aviso_sensivel,
+            inputs=[estado_sessao],
+            outputs=[painel_aviso_sensivel, painel_controles_anotacao, estado_sessao],
+        )
+
+        btn_parar_sensivel.click(
+            parar_rotulacao_sensivel,
+            inputs=[estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_rotulador,
+                select_tarefa_admin,
+                select_tarefa_rotulador,
+                hub_admin_cards_html,
+                hub_rotulador_cards_html,
+                hub_saudacao,
+                estado_sessao,
+            ],
+        )
+
+        btn_voltar_hub_rotulacao.click(
+            parar_rotulacao_sensivel,
+            inputs=[estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_rotulador,
+                select_tarefa_admin,
+                select_tarefa_rotulador,
+                hub_admin_cards_html,
+                hub_rotulador_cards_html,
+                hub_saudacao,
+                estado_sessao,
+            ],
+        )
+
+        btn_salvar_resposta.click(
+            salvar_resposta_rotulador,
+            inputs=[rotulador_radio, estado_sessao],
+            outputs=[
+                rotulador_video_html,
+                rotulador_pergunta_html,
+                rotulador_progresso,
+                rotulador_radio,
+                rotulador_mensagem,
+                painel_controles_anotacao,
+                estado_sessao,
+            ],
+        )
+
+        btn_erro_video.click(
+            reportar_erro_rotulador,
+            inputs=[estado_sessao],
+            outputs=[
+                rotulador_video_html,
+                rotulador_pergunta_html,
+                rotulador_progresso,
+                rotulador_radio,
+                rotulador_mensagem,
+                painel_controles_anotacao,
+                estado_sessao,
+            ],
+        )
+
+        #eventos do console de administracao
+        btn_abrir_admin.click(
+            abrir_admin_console,
+            inputs=[select_tarefa_admin, estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_admin,
+                admin_titulo_tarefa,
+                admin_configuracao_view,
+                admin_status_view,
+                admin_dashboard_html,
+                admin_download_resultados,
+                admin_download_logs,
+                admin_download_erros,
+                admin_download_concordancia,
+                admin_tabela_atribuicoes,
+                estado_sessao,
+            ],
+        )
+
+        btn_voltar_hub_admin.click(
+            voltar_hub_de_wizard,
+            inputs=[estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_admin,
+                select_tarefa_admin,
+                select_tarefa_rotulador,
+                hub_admin_cards_html,
+                hub_rotulador_cards_html,
+                hub_saudacao,
+            ],
         )
 
     return app

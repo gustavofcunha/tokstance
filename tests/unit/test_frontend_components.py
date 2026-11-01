@@ -188,3 +188,36 @@ def test_admin_insights_html_and_agreement_summary() -> None:
     assert "rodada_piloto" in html_dashboard
     assert "Anotações mais rápidas que o vídeo" in html_dashboard
     assert "Vídeos concluídos por dia e rotulador" in html_dashboard
+
+
+def test_construir_interface_and_hub_cards() -> None:
+    """Verifica geracao de cartoes do hub e instanciacao do app Gradio Blocks."""
+    from tokstance.frontend.gradio_ui import (
+        construir_interface,
+        converter_df_para_distancias,
+        gerar_tabela_penalidades_df,
+        renderizar_hub_cards_html,
+    )
+    import gradio as gr
+
+    #teste de cartoes vazios e preenchidos
+    h_adm_vazio, h_rot_vazio = renderizar_hub_cards_html([], [])
+    assert "Você ainda não criou nenhuma tarefa" in h_adm_vazio
+    assert "Você ainda não está inscrito" in h_rot_vazio
+
+    t_adm = [{"tarefa_id": 1, "titulo": "Tarefa Teste", "codigo_convite": "TOK-123", "vagas_ocupadas": 2, "numero_vagas": 3, "progresso_percentual": 66.7}]
+    t_rot = [{"tarefa_id": 1, "titulo": "Tarefa Teste", "posicao_concluida": 5, "total_videos": 10}]
+    h_adm, h_rot = renderizar_hub_cards_html(t_adm, t_rot)
+    assert "TOK-123" in h_adm
+    assert "5 de 10 vídeos (50%)" in h_rot
+
+    #teste de geracao de matriz de penalidades
+    df_pares = gerar_tabela_penalidades_df("Contra\nA Favor\nNeutro")
+    assert len(df_pares) == 3
+    distancias = converter_df_para_distancias(df_pares)
+    assert len(distancias) == 3
+
+    #teste de montagem dos Blocks
+    app = construir_interface()
+    assert isinstance(app, gr.Blocks)
+    assert app.title == "TokStance!"
