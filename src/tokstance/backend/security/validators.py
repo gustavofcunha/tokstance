@@ -11,6 +11,17 @@ from tokstance.config import (
 
 PADRAO_NOME_USUARIO = re.compile(r"^[A-Za-z0-9_.\-]+$")
 PADRAO_CODIGO_CONVITE = re.compile(r"^[A-Za-z0-9_\-]+$")
+PADRAO_EMAIL = re.compile(r"^[\w\.\+\-]+@[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)+$")
+
+
+def validar_email(email: str) -> str:
+    """Valida e normaliza um endereco de e-mail para cadastro e recuperacao."""
+    limpo = str(email or "").strip().lower()
+    if not limpo:
+        raise ValueError("O endereço de e-mail é obrigatório.")
+    if len(limpo) > 120 or not PADRAO_EMAIL.match(limpo):
+        raise ValueError("Informe um endereço de e-mail válido (exemplo: usuario@dominio.com).")
+    return limpo
 
 
 def validar_tamanho_texto(

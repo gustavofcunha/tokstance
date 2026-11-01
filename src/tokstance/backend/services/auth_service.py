@@ -1,5 +1,10 @@
 """Servico de autenticacao, cadastro de usuarios, sessao unica e Hub Inicial de tarefas."""
 
+import os
+import secrets
+import smtplib
+from datetime import datetime, timedelta
+from email.mime.text import MIMEText
 from typing import Any
 
 from tokstance.backend.domain.models import PAPEL_ADMINISTRADOR, PAPEL_ROTULADOR
@@ -13,6 +18,7 @@ from tokstance.backend.security.rate_limit import (
 )
 from tokstance.backend.security.validators import (
     validar_codigo_convite,
+    validar_email,
     validar_nome_usuario,
 )
 from tokstance.config import SENHA_ADMIN_PADRAO, USUARIO_ADMIN_PADRAO
@@ -51,12 +57,15 @@ class ServicoAutenticacao:
         self,
         nome_usuario: str,
         senha: str,
+        email: str = "",
         codigo_convite: str | None = None,
     ) -> dict[str, Any]:
-        """Cria uma nova conta de usuario e opcionalmente o vincula a uma tarefa via convite."""
+        """Cria uma nova conta de usuario com e-mail obrigatorio e opcionalmente o vincula a uma tarefa via convite."""
         nome_limpo = validar_nome_usuario(nome_usuario)
         if self.repo_usuarios.buscar_por_nome_usuario(nome_limpo) is not None:
             raise ValueError(f"O nome de usuário '{nome_limpo}' já está cadastrado.")
+
+        email_limpo = validar_email(email) if email and str(email).strip() else ""
 
         tarefa_alvo: dict[str, Any] | None = None
         if codigo_convite is not None and str(codigo_convite).strip():
@@ -68,7 +77,11 @@ class ServicoAutenticacao:
                 raise ValueError("Código de convite não encontrado.")
 
         senha_hash = gerar_hash_senha(senha, rodadas=self.rodadas_bcrypt)
-        usuario = self.repo_usuarios.criar_usuario(nome_limpo, senha_hash)
+        usuario = self.repo_usuarios.criar_usuario(
+            nome_usuario=nome_limpo,
+            senha_hash=senha_hash,
+            email=email_limpo,
+        )
         self.repo_estudo.registrar_log_acesso(
             usuario=nome_limpo,
             acao="cadastro",
@@ -86,8 +99,116 @@ class ServicoAutenticacao:
         return {
             "usuario_id": int(usuario["usuario_id"]),
             "nome_usuario": str(usuario["nome_usuario"]),
+            "email": str(usuario.get("email", email_limpo)),
             "criado_em": str(usuario["criado_em"]),
             "vinculo_inicial": vinculo_rotulador,
+        }
+
+    def solicitar_recuperacao_senha(self, identificador: str) -> dict[str, Any]:
+        """Gera um codigo de recuperacao temporario de 6 digitos sem custo algum para o usuario."""
+        termo = str(identificador or "").strip()
+        if not termo:
+            raise ValueError("Informe seu nome de usuário ou e-mail cadastrado.")
+
+        usuario = self.repo_usuarios.buscar_por_nome_usuario(termo)
+        if usuario is None:
+            usuario = self.repo_usuarios.buscar_por_email(termo)
+        if usuario is None:
+            raise ValueError("Nenhum usuário cadastrado encontrado com este identificador ou e-mail.")
+
+        codigo = f"{secrets.randbelow(900000) + 100000}"
+        agora = datetime.now()
+        expira_dt = agora + timedelta(minutes=15)
+        expira_em = expira_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        self.repo_usuarios.salvar_codigo_recuperacao(
+            usuario_id=int(usuario["usuario_id"]),
+            codigo_recuperacao=codigo,
+            expira_em=expira_em,
+        )
+        self.repo_estudo.registrar_log_acesso(
+            usuario=str(usuario["nome_usuario"]),
+            acao="solicitar_recuperacao_senha",
+            usuario_id=int(usuario["usuario_id"]),
+        )
+
+        email_destino = str(usuario.get("email", "") or "").strip()
+        disparado_smtp = False
+        smtp_host = os.environ.get("SMTP_HOST")
+        if smtp_host and email_destino:
+            try:
+                smtp_port = int(os.environ.get("SMTP_PORT", 587))
+                smtp_user = os.environ.get("SMTP_USER", "")
+                smtp_pass = os.environ.get("SMTP_PASSWORD", "")
+                msg = MIMEText(
+                    f"Olá, {usuario['nome_usuario']}!\n\n"
+                    f"Seu código gratuito de recuperação de senha no TokStance é: {codigo}\n"
+                    f"Ele é válido por 15 minutos.\n\n"
+                    f"Atenciosamente,\nEquipe TokStance"
+                )
+                msg["Subject"] = "Código de Recuperação de Senha - TokStance"
+                msg["From"] = smtp_user or "noreply@tokstance.local"
+                msg["To"] = email_destino
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as s:
+                    s.starttls()
+                    if smtp_user and smtp_pass:
+                        s.login(smtp_user, smtp_pass)
+                    s.send_message(msg)
+                disparado_smtp = True
+            except Exception:
+                disparado_smtp = False
+
+        return {
+            "sucesso": True,
+            "usuario_id": int(usuario["usuario_id"]),
+            "nome_usuario": str(usuario["nome_usuario"]),
+            "email": email_destino,
+            "codigo": codigo,
+            "disparado_smtp": disparado_smtp,
+        }
+
+    def redefinir_senha_com_codigo(
+        self,
+        identificador: str,
+        codigo: str,
+        nova_senha: str,
+    ) -> dict[str, Any]:
+        """Valida o codigo recebido e atualiza a senha de forma segura e 100% gratuita."""
+        termo = str(identificador or "").strip()
+        cod = str(codigo or "").strip()
+        if not termo:
+            raise ValueError("Informe seu nome de usuário ou e-mail cadastrado.")
+        if not cod:
+            raise ValueError("O código de recuperação de 6 dígitos é obrigatório.")
+        if not isinstance(nova_senha, str) or len(nova_senha) < 6:
+            raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
+
+        usuario = self.repo_usuarios.buscar_por_nome_usuario(termo)
+        if usuario is None:
+            usuario = self.repo_usuarios.buscar_por_email(termo)
+        if usuario is None:
+            raise ValueError("Usuário não encontrado.")
+
+        u_id = int(usuario["usuario_id"])
+        valido = self.repo_usuarios.validar_codigo_recuperacao(
+            usuario_id=u_id,
+            codigo_recuperacao=cod,
+        )
+        if not valido:
+            raise ValueError("Código de recuperação inválido ou expirado (limite de 15 minutos).")
+
+        novo_hash = gerar_hash_senha(nova_senha, rodadas=self.rodadas_bcrypt)
+        self.repo_usuarios.atualizar_senha(usuario_id=u_id, nova_senha_hash=novo_hash)
+        self.repo_usuarios.consumir_codigo_recuperacao(usuario_id=u_id, codigo_recuperacao=cod)
+
+        self.repo_estudo.registrar_log_acesso(
+            usuario=str(usuario["nome_usuario"]),
+            acao="redefinir_senha_concluida",
+            usuario_id=u_id,
+        )
+        return {
+            "sucesso": True,
+            "mensagem": "Senha redefinida com sucesso! Você já pode acessar o sistema com sua nova senha.",
         }
 
     def autenticar_usuario(

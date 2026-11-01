@@ -13,6 +13,7 @@ DDL_ESQUEMA_RELACIONAL = (
     CREATE TABLE IF NOT EXISTS usuarios (
         usuario_id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome_usuario TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL DEFAULT '',
         senha_hash TEXT NOT NULL,
         criado_em TEXT NOT NULL
     );
@@ -133,12 +134,24 @@ DDL_ESQUEMA_RELACIONAL = (
         FOREIGN KEY (usuario_id) REFERENCES usuarios(usuario_id) ON DELETE SET NULL
     );
     """,
+    """
+    CREATE TABLE IF NOT EXISTS recuperacao_senha (
+        recuperacao_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER NOT NULL,
+        codigo_recuperacao TEXT NOT NULL,
+        expira_em TEXT NOT NULL,
+        usado INTEGER NOT NULL DEFAULT 0,
+        criado_em TEXT NOT NULL,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(usuario_id) ON DELETE CASCADE
+    );
+    """,
     "CREATE INDEX IF NOT EXISTS idx_membros_tarefa_usuario ON membros_tarefa(usuario_id, papel);",
     "CREATE INDEX IF NOT EXISTS idx_videos_tarefa_pool ON videos_tarefa(tarefa_id, tipo_pool);",
     "CREATE INDEX IF NOT EXISTS idx_atribuicoes_tarefa_rotulador ON atribuicoes(tarefa_id, labeler, ordem_fila);",
     "CREATE INDEX IF NOT EXISTS idx_anotacoes_tarefa_rotulador ON anotacoes(tarefa_id, labeler);",
     "CREATE INDEX IF NOT EXISTS idx_erros_videos_tarefa ON erros_videos(tarefa_id, video_id);",
     "CREATE INDEX IF NOT EXISTS idx_logs_acesso_tarefa ON logs_acesso(tarefa_id, timestamp);",
+    "CREATE INDEX IF NOT EXISTS idx_recuperacao_usuario ON recuperacao_senha(usuario_id, codigo_recuperacao);",
 )
 
 
@@ -186,6 +199,10 @@ class BancoDadosSQLite:
         with self.conectar() as conexao:
             for comando_ddl in DDL_ESQUEMA_RELACIONAL:
                 conexao.execute(comando_ddl)
+            # Migracao incremental para coluna email em usuarios se ainda nao existir
+            cols_usuarios = [r[1] for r in conexao.execute("PRAGMA table_info(usuarios);").fetchall()]
+            if "email" not in cols_usuarios:
+                conexao.execute("ALTER TABLE usuarios ADD COLUMN email TEXT NOT NULL DEFAULT '';")
 
     def executar(self, sql: str, parametros: Sequence[Any] = ()) -> int:
         """Executa um comando parametrizado de escrita e retorna o id inserido ou linhas afetadas."""

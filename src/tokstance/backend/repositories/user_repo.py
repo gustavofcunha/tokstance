@@ -20,20 +20,22 @@ class RepositorioUsuarios:
         self,
         nome_usuario: str,
         senha_hash: str,
+        email: str = "",
         criado_em: str | None = None,
     ) -> dict[str, Any]:
         """Registra um novo usuario na tabela usuarios e retorna seus dados."""
         nome_limpo = validar_nome_usuario(nome_usuario)
         if not isinstance(senha_hash, str) or not senha_hash.strip():
             raise ValueError("O hash da senha é obrigatório.")
+        email_limpo = str(email or "").strip().lower()
         instante = str(criado_em or formatar_data_hora_brt())
         try:
             usuario_id = self.banco.executar(
                 """
-                INSERT INTO usuarios (nome_usuario, senha_hash, criado_em)
-                VALUES (?, ?, ?);
+                INSERT INTO usuarios (nome_usuario, email, senha_hash, criado_em)
+                VALUES (?, ?, ?, ?);
                 """,
-                (nome_limpo, senha_hash.strip(), instante),
+                (nome_limpo, email_limpo, senha_hash.strip(), instante),
             )
         except sqlite3.IntegrityError as exc:
             raise ValueError(f"O nome de usuário '{nome_limpo}' já está cadastrado.") from exc
@@ -49,29 +51,117 @@ class RepositorioUsuarios:
             return None
         return self.banco.consultar_um(
             """
-            SELECT usuario_id, nome_usuario, senha_hash, criado_em
+            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
             FROM usuarios
             WHERE nome_usuario = ?;
             """,
             (nome_usuario.strip(),),
         )
 
+    def buscar_por_email(self, email: str) -> dict[str, Any] | None:
+        """Busca um usuario pelo endereco de e-mail cadastrado."""
+        if not isinstance(email, str) or not email.strip():
+            return None
+        return self.banco.consultar_um(
+            """
+            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
+            FROM usuarios
+            WHERE LOWER(email) = ?;
+            """,
+            (email.strip().lower(),),
+        )
+
     def buscar_por_id(self, usuario_id: int) -> dict[str, Any] | None:
         """Busca um usuario pela chave primaria usuario_id."""
         return self.banco.consultar_um(
             """
-            SELECT usuario_id, nome_usuario, senha_hash, criado_em
+            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
             FROM usuarios
             WHERE usuario_id = ?;
             """,
             (int(usuario_id),),
         )
 
+    def atualizar_senha(self, usuario_id: int, nova_senha_hash: str) -> bool:
+        """Atualiza a senha hash de um usuario existente."""
+        if not isinstance(nova_senha_hash, str) or not nova_senha_hash.strip():
+            raise ValueError("O hash da nova senha é obrigatório.")
+        linhas = self.banco.executar(
+            """
+            UPDATE usuarios
+            SET senha_hash = ?
+            WHERE usuario_id = ?;
+            """,
+            (nova_senha_hash.strip(), int(usuario_id)),
+        )
+        return linhas > 0
+
+    def salvar_codigo_recuperacao(
+        self,
+        usuario_id: int,
+        codigo_recuperacao: str,
+        expira_em: str,
+    ) -> int:
+        """Armazena um codigo de recuperacao para o usuario."""
+        instante = formatar_data_hora_brt()
+        # Invalida codigos anteriores nao usados
+        self.banco.executar(
+            """
+            UPDATE recuperacao_senha
+            SET usado = 1
+            WHERE usuario_id = ? AND usado = 0;
+            """,
+            (int(usuario_id),),
+        )
+        return self.banco.executar(
+            """
+            INSERT INTO recuperacao_senha (usuario_id, codigo_recuperacao, expira_em, usado, criado_em)
+            VALUES (?, ?, ?, 0, ?);
+            """,
+            (int(usuario_id), str(codigo_recuperacao).strip(), str(expira_em), instante),
+        )
+
+    def validar_codigo_recuperacao(
+        self,
+        usuario_id: int,
+        codigo_recuperacao: str,
+    ) -> bool:
+        """Verifica se o codigo de recuperacao e valido, nao usado e dentro do prazo."""
+        registro = self.banco.consultar_um(
+            """
+            SELECT recuperacao_id, expira_em, usado
+            FROM recuperacao_senha
+            WHERE usuario_id = ? AND codigo_recuperacao = ? AND usado = 0
+            ORDER BY recuperacao_id DESC
+            LIMIT 1;
+            """,
+            (int(usuario_id), str(codigo_recuperacao).strip()),
+        )
+        if registro is None:
+            return False
+        agora = formatar_data_hora_brt()
+        return str(agora) <= str(registro["expira_em"])
+
+    def consumir_codigo_recuperacao(
+        self,
+        usuario_id: int,
+        codigo_recuperacao: str,
+    ) -> None:
+        """Marca o codigo de recuperacao como utilizado."""
+        self.banco.executar(
+            """
+            UPDATE recuperacao_senha
+            SET usado = 1
+            WHERE usuario_id = ? AND codigo_recuperacao = ?;
+            """,
+            (int(usuario_id), str(codigo_recuperacao).strip()),
+        )
+
     def listar_usuarios(self) -> list[dict[str, Any]]:
         """Retorna todos os usuarios cadastrados em ordem de criacao."""
         return self.banco.consultar_todos(
             """
-            SELECT usuario_id, nome_usuario, criado_em
+            SELECT usuario_id, nome_usuario, email, criado_em
             FROM usuarios
             ORDER BY usuario_id ASC;
             """
