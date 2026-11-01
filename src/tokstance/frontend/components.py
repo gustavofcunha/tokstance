@@ -9,13 +9,13 @@ from tokstance.backend.domain.agreement import encontrar_anotacoes_rapidas
 
 
 def render_tiktok(url: str) -> str:
-    """Gera o iframe responsivo do player incorporado oficial do TikTok."""
+    """Gera o iframe responsivo do player incorporado oficial do TikTok com proporcao otimizada."""
     video_id = str(url or "").rstrip("/").split("/")[-1].split("?")[0]
     player_url = f"https://www.tiktok.com/player/v1/{escape(video_id)}?music_info=1&description=1&rel=0"
     return f"""
     <div style="display: flex; justify-content: center; width: 100%; margin: 0; padding: 0;">
         <iframe
-            style="width: min(100%, 600px); height: 720px; border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+            style="width: min(100%, 340px); height: 530px; border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
             scrolling="no"
             src="{player_url}"
             title="Player do vídeo TikTok"

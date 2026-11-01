@@ -94,6 +94,30 @@ def renderizar_hub_cards_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotul
     return html_admin, html_rotulador
 
 
+def renderizar_configuracao_admin_html(tarefa_meta: Dict[str, Any]) -> str:
+    """Renderiza a configuracao vigente da tarefa em cartao HTML de alto contraste sem blocos escuros."""
+    t_id = tarefa_meta.get("tarefa_id", "")
+    convite = escape(str(tarefa_meta.get("codigo_convite", "")))
+    pergunta = escape(str(tarefa_meta.get("pergunta", "")))
+    opcoes = escape(", ".join(str(op) for op in tarefa_meta.get("opcoes_posicao", [])))
+    vagas = tarefa_meta.get("numero_vagas", 0)
+    overlap = tarefa_meta.get("percentual_sobreposicao", 0)
+
+    return f"""
+    <div class="admin-config-card">
+        <div class="admin-config-title">Configuração Vigente da Rodada (Somente Leitura)</div>
+        <div class="admin-config-grid">
+            <div class="config-item"><span class="config-label">ID da Tarefa:</span> <span class="config-val-badge">#{t_id}</span></div>
+            <div class="config-item"><span class="config-label">Código de Convite:</span> <span class="config-val-badge convite">{convite}</span></div>
+            <div class="config-item"><span class="config-label">Vagas de Rotuladores:</span> <span class="config-val-badge">{vagas}</span></div>
+            <div class="config-item"><span class="config-label">Sobreposição (Overlap):</span> <span class="config-val-badge">{overlap}%</span></div>
+            <div class="config-item full-width"><span class="config-label">Pergunta Norteadora:</span> <div class="config-val-text">{pergunta}</div></div>
+            <div class="config-item full-width"><span class="config-label">Opções de Resposta:</span> <div class="config-val-text">{opcoes}</div></div>
+        </div>
+    </div>
+    """
+
+
 def gerar_tabela_penalidades_df(opcoes_texto: str) -> pd.DataFrame:
     """Gera um DataFrame com as combinacoes de pares e pesos de penalidade a partir do texto das opcoes."""
     opcoes = limpar_usuarios(opcoes_texto.splitlines())
@@ -232,46 +256,48 @@ def construir_interface(
                         btn_ir_criar_tarefa = gr.Button("+ Criar Nova Tarefa", elem_classes="ufmg-btn")
                         btn_logout = gr.Button("Encerrar Sessão", elem_classes="error-btn")
 
-                #secao de tarefas de administrador
-                with gr.Column(elem_classes="hub-section-box"):
-                    gr.HTML("""
-                    <div style="margin-bottom: 12px;">
-                        <h3 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">Tarefas sob sua Administração</h3>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #475569;">Rodadas de anotação criadas e coordenadas por você</p>
-                    </div>
-                    """)
-                    hub_admin_cards_html = gr.HTML()
-                    with gr.Row(elem_classes="hub-action-row"):
-                        select_tarefa_admin = gr.Dropdown(
-                            label="Selecionar Tarefa para Gerenciar",
-                            choices=[],
-                            value=None,
-                            interactive=True,
-                            scale=4,
-                        )
-                        btn_abrir_admin = gr.Button("Abrir Console de Administração", elem_classes="ufmg-btn", scale=2)
-                        btn_excluir_tarefa_hub = gr.Button("🗑️ Excluir Tarefa", elem_classes="error-btn", scale=1)
+                # Secoes de tarefas organizadas lado a lado em duas colunas responsivas
+                with gr.Row(elem_classes="hub-two-col"):
+                    # Secao de tarefas de administrador
+                    with gr.Column(scale=1, elem_classes="hub-section-box"):
+                        gr.HTML("""
+                        <div style="margin-bottom: 12px;">
+                            <h3 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">Tarefas sob sua Administração</h3>
+                            <p style="margin: 4px 0 0; font-size: 14px; color: #475569;">Rodadas de anotação criadas e coordenadas por você</p>
+                        </div>
+                        """)
+                        hub_admin_cards_html = gr.HTML()
+                        with gr.Row(elem_classes="hub-action-row"):
+                            select_tarefa_admin = gr.Dropdown(
+                                label="Selecionar Tarefa para Gerenciar",
+                                choices=[],
+                                value=None,
+                                interactive=True,
+                                scale=4,
+                            )
+                            btn_abrir_admin = gr.Button("Abrir Console de Administração", elem_classes=["ufmg-btn", "hub-btn"], scale=2)
+                            btn_excluir_tarefa_hub = gr.Button("🗑️ Excluir Tarefa", elem_classes=["error-btn", "hub-btn"], scale=1)
 
-                #secao de tarefas de rotulador
-                with gr.Column(elem_classes="hub-section-box"):
-                    gr.HTML("""
-                    <div style="margin-bottom: 12px;">
-                        <h3 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">Tarefas Atribuídas a Você para Rotular</h3>
-                        <p style="margin: 4px 0 0; font-size: 14px; color: #475569;">Fila individual de vídeos atribuídos para sua análise</p>
-                    </div>
-                    """)
-                    hub_rotulador_cards_html = gr.HTML()
-                    with gr.Row(elem_classes="hub-action-row"):
-                        select_tarefa_rotulador = gr.Dropdown(
-                            label="Selecionar Tarefa para Rotular",
-                            choices=[],
-                            value=None,
-                            interactive=True,
-                            scale=4,
-                        )
-                        btn_abrir_rotulacao = gr.Button("Rotular Vídeos da Tarefa", elem_classes="ufmg-btn", scale=2)
+                    # Secao de tarefas de rotulador
+                    with gr.Column(scale=1, elem_classes="hub-section-box"):
+                        gr.HTML("""
+                        <div style="margin-bottom: 12px;">
+                            <h3 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">Tarefas Atribuídas a Você para Rotular</h3>
+                            <p style="margin: 4px 0 0; font-size: 14px; color: #475569;">Fila individual de vídeos atribuídos para sua análise</p>
+                        </div>
+                        """)
+                        hub_rotulador_cards_html = gr.HTML()
+                        with gr.Row(elem_classes="hub-action-row"):
+                            select_tarefa_rotulador = gr.Dropdown(
+                                label="Selecionar Tarefa para Rotular",
+                                choices=[],
+                                value=None,
+                                interactive=True,
+                                scale=4,
+                            )
+                            btn_abrir_rotulacao = gr.Button("Rotular Vídeos da Tarefa", elem_classes=["ufmg-btn", "hub-btn"], scale=2)
 
-                #secao de ingresso por codigo de convite
+                # Secao de ingresso por codigo de convite
                 with gr.Column(elem_classes="hub-section-box"):
                     gr.HTML("""
                     <div style="margin-bottom: 12px;">
@@ -285,7 +311,7 @@ def construir_interface(
                             placeholder="Ex: TOKSTANCE-2026",
                             scale=4,
                         )
-                        btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes="ufmg-btn", scale=2)
+                        btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes=["ufmg-btn", "hub-btn"], scale=2)
                     hub_mensagem = gr.Markdown()
 
             # ==================================================================
@@ -380,8 +406,8 @@ def construir_interface(
             # ==================================================================
             with gr.Column(visible=False, elem_classes="labeler-panel") as painel_rotulador:
                 with gr.Row(elem_classes="labeler-header-bar"):
-                    btn_voltar_hub_rotulacao = gr.Button("← Sair do Workspace", elem_classes=["error-btn", "compact-action-btn"], scale=0)
-                    rotulador_tarefa_meta_topo = gr.Markdown("### Workspace de Rotulação", elem_classes="workspace-header-title")
+                    rotulador_tarefa_meta_topo = gr.HTML("<div class='workspace-header-title'><h2>Workspace de Rotulação</h2></div>", scale=1)
+                    btn_voltar_hub_rotulacao = gr.Button("← Sair do Workspace", elem_classes=["ufmg-btn", "labeler-exit-btn"], scale=0)
 
                 with gr.Column(elem_classes="labeler-workspace-container"):
                     with gr.Column(visible=False, elem_classes="sensitive-warning-wrapper") as painel_aviso_sensivel:
@@ -405,7 +431,7 @@ def construir_interface(
                             rotulador_video_html = gr.HTML()
 
                         with gr.Column(scale=5, min_width=280, elem_classes="labeler-controls-column"):
-                            rotulador_cabecalho = gr.Markdown()
+                            rotulador_cabecalho = gr.HTML(elem_classes="labeler-header-badge-wrapper")
                             rotulador_progresso = gr.HTML()
 
                             with gr.Column(visible=False, elem_classes="annotation-controls") as painel_controles_anotacao:
@@ -429,7 +455,7 @@ def construir_interface(
                         btn_excluir_tarefa_admin = gr.Button("🗑️ Excluir esta Tarefa", elem_classes="error-btn")
                         btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes="error-btn")
 
-                admin_configuracao_view = gr.Markdown(elem_classes="admin-configuration")
+                admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")
                 admin_status_view = gr.Markdown(elem_classes="admin-status")
 
                 gr.Markdown("### Dados Coletados e Análise Operacional")
@@ -744,7 +770,12 @@ def construir_interface(
                 previous_target="",
             )
 
-            cabecalho_txt = f"### Tarefa: **{escape(estado_f['titulo'])}**  \nRotulador: `{escape(nome_u)}`"
+            cabecalho_txt = (
+                f"<div class='labeler-info-badge'>"
+                f"<span>Tarefa:</span> <strong style='color:#0f172a; font-size:15px;'>{escape(str(estado_f['titulo']))}</strong>"
+                f"<span style='margin-left:14px;'>Rotulador:</span> <span class='user-pill'>{escape(str(nome_u))}</span>"
+                f"</div>"
+            )
             sessao_atualizada = dict(sessao)
             sessao_atualizada["tarefa_ativa_id"] = t_id
             sessao_atualizada["start_time"] = time.time()
@@ -946,14 +977,7 @@ def construir_interface(
 
             tarefa_meta = repo_e.buscar_tarefa_por_id(t_id) or {}
             titulo_tela = f"## Console de Administração: **{escape(str(tarefa_meta.get('titulo', f'Tarefa #{t_id}')))}**"
-            convite = str(tarefa_meta.get("codigo_convite", ""))
-            config_view = (
-                f"**Configuração vigente (somente leitura)**  \n"
-                f"ID da Tarefa: `{t_id}` | Código de Convite: `{convite}`  \n"
-                f"Pergunta: `{tarefa_meta.get('pergunta', '')}`  \n"
-                f"Opções: `{', '.join(tarefa_meta.get('opcoes_posicao', []))}`  \n"
-                f"Vagas: `{tarefa_meta.get('numero_vagas', 0)}` | Overlap: `{tarefa_meta.get('percentual_sobreposicao', 0)}%`"
-            )
+            config_view = renderizar_configuracao_admin_html(tarefa_meta)
 
             status_msg = (
                 f"{metricas['total_videos_principais']} vídeos principais | "
