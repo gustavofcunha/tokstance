@@ -175,6 +175,12 @@ class BancoDadosSQLite:
         finally:
             conexao.close()
 
+    @contextmanager
+    def transacao(self) -> Iterator[sqlite3.Connection]:
+        """Alias para conectar() com gerenciamento transacional de commit e rollback."""
+        with self.conectar() as conn:
+            yield conn
+
     def inicializar_esquema(self) -> None:
         """Cria todas as tabelas e indices relacionais caso ainda nao existam."""
         with self.conectar() as conexao:

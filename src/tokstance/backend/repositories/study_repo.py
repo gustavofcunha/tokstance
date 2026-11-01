@@ -628,7 +628,9 @@ class RepositorioEstudo:
         )
         if salva is None:
             raise RuntimeError("Falha ao persistir anotação.")
-        return salva
+        d = dict(salva)
+        d["posicao"] = d.get("stance", "")
+        return d
 
     def carregar_anotacoes_tarefa_df(
         self,
@@ -857,6 +859,40 @@ class RepositorioEstudo:
             "tempo_desde_login_segundos"
         ].where(quadro["tempo_desde_login_segundos"].notna(), "")
         return quadro.fillna("")
+
+    def carregar_logs_acesso_tarefa_df(self, tarefa_id: int) -> pd.DataFrame:
+        """Alias para carregar_logs_acesso_df com escopo explicito na tarefa."""
+        return self.carregar_logs_acesso_df(tarefa_id=int(tarefa_id))
+
+    def excluir_tarefa(self, tarefa_id: int, usuario_administrador_id: int) -> bool:
+        """Exclui completamente uma tarefa e todos os seus registros associados se o usuario for administrador."""
+        tarefa = self.buscar_tarefa_por_id(int(tarefa_id))
+        if tarefa is None:
+            raise ValueError(f"Tarefa {tarefa_id} não encontrada.")
+
+        criador_id = int(tarefa.get("criado_por_usuario_id") or 0)
+        eh_admin = criador_id == int(usuario_administrador_id)
+        if not eh_admin:
+            membros_admin = self.repo_usuarios.listar_membros_da_tarefa(
+                int(tarefa_id), papel=PAPEL_ADMINISTRADOR
+            )
+            eh_admin = any(
+                int(m["usuario_id"]) == int(usuario_administrador_id) for m in membros_admin
+            )
+
+        if not eh_admin:
+            raise PermissionError("Apenas o administrador da tarefa pode excluí-la.")
+
+        with self.banco.conectar() as conexao:
+            conexao.execute("DELETE FROM anotacoes WHERE tarefa_id = ?;", (int(tarefa_id),))
+            conexao.execute("DELETE FROM erros_videos WHERE tarefa_id = ?;", (int(tarefa_id),))
+            conexao.execute("DELETE FROM atribuicoes WHERE tarefa_id = ?;", (int(tarefa_id),))
+            conexao.execute("DELETE FROM videos_tarefa WHERE tarefa_id = ?;", (int(tarefa_id),))
+            conexao.execute("DELETE FROM membros_tarefa WHERE tarefa_id = ?;", (int(tarefa_id),))
+            conexao.execute("DELETE FROM logs_acesso WHERE tarefa_id = ?;", (int(tarefa_id),))
+            conexao.execute("DELETE FROM tarefas WHERE tarefa_id = ?;", (int(tarefa_id),))
+
+        return True
 
     def exportar_arquivos_tarefa(
         self,

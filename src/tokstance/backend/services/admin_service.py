@@ -158,3 +158,10 @@ class ServicoAdministracao:
             tarefa_id=int(tarefa_id),
             diretorio_destino=diretorio_destino,
         )
+
+    def excluir_tarefa(self, tarefa_id: int, usuario_administrador_id: int) -> bool:
+        """Exclui uma tarefa criada pelo administrador e todos os dados associados."""
+        return self.repo_estudo.excluir_tarefa(
+            tarefa_id=int(tarefa_id),
+            usuario_administrador_id=int(usuario_administrador_id),
+        )
