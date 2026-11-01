@@ -191,7 +191,7 @@ def construir_interface(
                     <h1>TokStance!</h1>
                     <span style='font-size: 13px; font-weight: 700; color: #9c0014; background: #fff0f2; border: 1px solid #ffd6dc; padding: 2px 8px; border-radius: 12px;'>v1.0</span>
                 </div>
-                <p>Plataforma de Anotação e Concordância em Posicionamento de Vídeos Curtos (UFMG)</p>
+                <p>Plataforma open source de rotulação e análise de posicionamento em vídeos</p>
             </div>
             """)
 
@@ -201,10 +201,10 @@ def construir_interface(
             with gr.Column(visible=True) as painel_acesso:
                 with gr.Column(elem_classes="auth-card"):
                     gr.HTML("""
-                    <div style='text-align: center; margin-bottom: 22px;'>
-                        <div style='display: inline-block; padding: 4px 12px; background: #fff0f2; border: 1px solid #ffd6dc; border-radius: 20px; color: #9c0014; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;'>Acesso Restrito</div>
-                        <h2 style='margin: 0 0 6px 0; color: #0f172a; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;'>Bem-vindo ao TokStance</h2>
-                        <p style='color: #475569; font-size: 14px; margin: 0;'>Entre com suas credenciais ou cadastre-se para participar</p>
+                    <div style='text-align: center; margin-bottom: 18px;'>
+                        <div style='display: inline-block; padding: 4px 12px; background: #fff0f2; border: 1px solid #ffd6dc; border-radius: 20px; color: #9c0014; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;'>Acesso ao Sistema</div>
+                        <h2 style='margin: 0 0 4px 0; color: #0f172a; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;'>Bem-vindo ao TokStance</h2>
+                        <p style='color: #475569; font-size: 14px; margin: 0;'>Entre com suas credenciais ou crie uma conta para participar</p>
                     </div>
                     """)
 
@@ -348,6 +348,7 @@ def construir_interface(
                             value=gerar_codigo_convite(),
                             scale=3,
                         )
+                        btn_copiar_codigo = gr.Button("📋 Copiar Código", elem_classes="error-btn", scale=1)
                         btn_gerar_novo_codigo = gr.Button("Gerar Novo Código", elem_classes="error-btn", scale=1)
 
                     wizard_admin_como_rotulador = gr.Checkbox(
@@ -358,13 +359,16 @@ def construir_interface(
                     gr.Markdown("### 4. Pool de Vídeos e Divisão Principal / Reserva")
                     with gr.Row():
                         wizard_arquivo_videos = gr.File(
-                            label="Upload do Arquivo CSV de Vídeos (opcional: se vazio, usa o pool padrão da UFMG)",
+                            label="Upload do Arquivo CSV de Vídeos (opcional: se vazio, utiliza a coleção padrão do sistema)",
                             file_types=[".csv"],
+                            scale=2,
                         )
                         wizard_qtd_principal = gr.Number(
-                            label="Quantidade de Vídeos para Anotação Principal (0 ou vazio = automático)",
+                            label="Quantidade de Vídeos para Anotação Principal (0 = automático)",
+                            info="Define a quantidade de vídeos únicos da rodada que serão distribuídos para os rotuladores. Deixe 0 para calcular automaticamente o máximo possível com base no pool e na taxa de sobreposição (overlap).",
                             value=0,
                             precision=0,
+                            scale=1,
                         )
 
                     btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes="ufmg-btn")
@@ -442,6 +446,22 @@ def construir_interface(
                     max_height=2000,
                     wrap=True,
                 )
+
+            # Rodapé Institucional e Metadados do Projeto
+            gr.HTML("""
+            <div class="app-footer">
+                <div>
+                    <strong>TokStance</strong> · Plataforma open source de rotulação e análise de posicionamento em vídeos
+                </div>
+                <div class="footer-links">
+                    <span>Desenvolvido por: <strong>Gustavo Cunha</strong></span>
+                    <span>•</span>
+                    <a href="mailto:gustavocunha@dcc.ufmg.br">gustavocunha@dcc.ufmg.br</a>
+                    <span>•</span>
+                    <a href="https://github.com/gustavofcunha/tokstance" target="_blank" rel="noopener noreferrer">GitHub: gustavofcunha/tokstance</a>
+                </div>
+            </div>
+            """)
 
         # ======================================================================
         # FUNCOES DE CONTROLE E TRANSICAO DE TELAS
@@ -602,14 +622,14 @@ def construir_interface(
             admin_como_rotulador: bool,
             arquivo_upload: Any,
             qtd_principal: float,
-        ) -> str:
+        ) -> Tuple[str, Any]:
             u_id = sessao.get("usuario_id")
             if not u_id:
-                return "⚠️ Usuário não autenticado."
+                return "⚠️ Usuário não autenticado.", gr.update()
 
             opcoes = limpar_usuarios(opcoes_txt.splitlines())
             if len(opcoes) < 2:
-                return "⚠️ A tarefa precisa conter ao menos duas opções de resposta distintas."
+                return "⚠️ A tarefa precisa conter ao menos duas opções de resposta distintas.", gr.update()
 
             distancias = converter_df_para_distancias(tabela_df)
 
@@ -619,14 +639,14 @@ def construir_interface(
                     caminho_arq = getattr(arquivo_upload, "name", str(arquivo_upload))
                     pool_videos = pd.read_csv(caminho_arq, dtype=str).fillna("")
                 except Exception as exc:
-                    return f"⚠️ Erro ao ler arquivo CSV de vídeos: {str(exc)}"
+                    return f"⚠️ Erro ao ler arquivo CSV de vídeos: {str(exc)}", gr.update()
             else:
                 if ARQUIVO_VIDEOS.exists():
                     p_base = pd.read_csv(ARQUIVO_VIDEOS, dtype=str).fillna("")
                     p_res = pd.read_csv(ARQUIVO_VIDEOS_RESERVA, dtype=str).fillna("") if ARQUIVO_VIDEOS_RESERVA.exists() else pd.DataFrame()
                     pool_videos = pd.concat([p_base, p_res], ignore_index=True) if not p_res.empty else p_base
                 else:
-                    return "⚠️ Arquivos de vídeo padrão não encontrados no servidor."
+                    return "⚠️ Arquivos de vídeo padrão não encontrados no servidor.", gr.update()
 
             qtd_p = int(qtd_principal) if qtd_principal and int(qtd_principal) > 0 else None
 
@@ -646,16 +666,24 @@ def construir_interface(
                 )
                 t_id = tarefa["tarefa_id"]
                 c_convite = tarefa["codigo_convite"]
-                tot_p = tarefa["quantidade_videos_principal"]
-                tot_r = tarefa["quantidade_videos_reserva"]
+                tot_p = tarefa.get("quantidade_videos_principal", len(pool_videos))
+                tot_r = tarefa.get("quantidade_videos_reserva", 0)
+                novo_convite = gerar_codigo_convite()
                 return (
                     f"✅ **Tarefa criada com sucesso!**  \n"
-                    f"ID: `{t_id}` | Código de Convite: `{c_convite}`  \n"
-                    f"Pool dividido: **{tot_p}** principais e **{tot_r}** reservas.  \n"
-                    f"Clique em 'Voltar ao Hub' para visualizar e acessar a tarefa."
+                    f"ID: `{t_id}` | Código de Convite: `<strong>{c_convite}</strong>`  \n"
+                    f"Pool dividido: **{tot_p}** vídeos principais e **{tot_r}** vídeos reservas.  \n"
+                    f"Clique em '← Voltar ao Hub' para visualizar e acessar a tarefa.",
+                    gr.update(value=novo_convite),
+                )
+            except ValueError as ve:
+                novo_convite = gerar_codigo_convite()
+                return (
+                    f"⚠️ {str(ve)} Geramos um novo código no campo acima; tente clicar novamente.",
+                    gr.update(value=novo_convite),
                 )
             except Exception as exc:
-                return f"⚠️ Erro ao criar tarefa: {str(exc)}"
+                return f"⚠️ Erro ao criar tarefa: {str(exc)}", gr.update()
 
         # ======================================================================
         # CONTROLE DO WORKSPACE DO ROTULADOR
@@ -977,10 +1005,10 @@ def construir_interface(
         # ======================================================================
         # CONEXOES DE EVENTOS (WIRING)
         # ======================================================================
-        btn_login.click(
-            executar_login,
-            inputs=[login_usuario, login_senha],
-            outputs=[
+        handler_login_params = {
+            "fn": executar_login,
+            "inputs": [login_usuario, login_senha],
+            "outputs": [
                 painel_acesso,
                 painel_hub,
                 mensagem_acesso,
@@ -991,12 +1019,15 @@ def construir_interface(
                 hub_rotulador_cards_html,
                 hub_saudacao,
             ],
-        )
+        }
+        btn_login.click(**handler_login_params)
+        login_usuario.submit(**handler_login_params)
+        login_senha.submit(**handler_login_params)
 
-        btn_cadastrar.click(
-            executar_cadastro,
-            inputs=[cadastro_usuario, cadastro_senha, cadastro_confirma, cadastro_convite],
-            outputs=[
+        handler_cadastro_params = {
+            "fn": executar_cadastro,
+            "inputs": [cadastro_usuario, cadastro_senha, cadastro_confirma, cadastro_convite],
+            "outputs": [
                 painel_acesso,
                 painel_hub,
                 mensagem_acesso,
@@ -1007,7 +1038,12 @@ def construir_interface(
                 hub_rotulador_cards_html,
                 hub_saudacao,
             ],
-        )
+        }
+        btn_cadastrar.click(**handler_cadastro_params)
+        cadastro_usuario.submit(**handler_cadastro_params)
+        cadastro_senha.submit(**handler_cadastro_params)
+        cadastro_confirma.submit(**handler_cadastro_params)
+        cadastro_convite.submit(**handler_cadastro_params)
 
         btn_logout.click(
             executar_logout,
@@ -1023,17 +1059,19 @@ def construir_interface(
             ],
         )
 
-        btn_entrar_convite.click(
-            executar_entrar_convite,
-            inputs=[input_codigo_convite, estado_sessao],
-            outputs=[
+        handler_convite_params = {
+            "fn": executar_entrar_convite,
+            "inputs": [input_codigo_convite, estado_sessao],
+            "outputs": [
                 hub_mensagem,
                 select_tarefa_admin,
                 select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
             ],
-        )
+        }
+        btn_entrar_convite.click(**handler_convite_params)
+        input_codigo_convite.submit(**handler_convite_params)
 
         btn_ir_criar_tarefa.click(
             abrir_wizard_criacao,
@@ -1061,6 +1099,34 @@ def construir_interface(
             outputs=[wizard_tabela_penalidades],
         )
 
+        btn_copiar_codigo.click(
+            None,
+            inputs=[wizard_convite],
+            outputs=[],
+            js="""
+            (codigo) => {
+                if (codigo) {
+                    navigator.clipboard.writeText(codigo);
+                    const toast = document.createElement('div');
+                    toast.innerText = '📋 Código ' + codigo + ' copiado com sucesso!';
+                    toast.style.position = 'fixed';
+                    toast.style.bottom = '24px';
+                    toast.style.right = '24px';
+                    toast.style.background = '#0f172a';
+                    toast.style.color = '#ffffff';
+                    toast.style.padding = '12px 20px';
+                    toast.style.borderRadius = '8px';
+                    toast.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+                    toast.style.zIndex = '9999';
+                    toast.style.fontWeight = '700';
+                    toast.style.fontSize = '14px';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2500);
+                }
+            }
+            """,
+        )
+
         btn_gerar_novo_codigo.click(
             gerar_novo_codigo_convite_handler,
             inputs=[],
@@ -1082,7 +1148,7 @@ def construir_interface(
                 wizard_arquivo_videos,
                 wizard_qtd_principal,
             ],
-            outputs=[wizard_mensagem],
+            outputs=[wizard_mensagem, wizard_convite],
         )
 
         #eventos da tela de rotulacao

@@ -50,21 +50,23 @@ APP_CSS = """
     .shell {
         width: min(100%, 1380px) !important;
         max-width: 1380px !important;
-        margin: 16px auto !important;
+        margin: 8px auto !important;
         background: #ffffff !important;
-        padding: 32px 40px !important;
+        padding: 20px 28px !important;
         border-radius: 12px !important;
-        font-size: 16px !important;
+        font-size: 15px !important;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
         border: 1px solid #e2e8f0 !important;
         border-top: 6px solid #9c0014 !important;
         position: relative !important;
+        box-sizing: border-box !important;
     }
 
     .gradio-container, .gradio-container .main, .gradio-container .contain {
         max-width: none !important;
         width: 100% !important;
         background: #f8fafc !important;
+        overflow-x: hidden !important;
     }
 
     /* Exterminar containers pretos e caixas escuras do Gradio */
@@ -98,7 +100,7 @@ APP_CSS = """
     }
 
     /* Inputs, Textareas, Selects e Dropdowns com visual limpo e claro */
-    .dark input,
+    .dark input:not([type="checkbox"]):not([type="radio"]),
     .dark textarea,
     .dark select,
     .dark .gr-input,
@@ -106,7 +108,7 @@ APP_CSS = """
     .dark .wrap-default,
     .dark .secondary-wrap,
     .dark .reference-container,
-    input,
+    input:not([type="checkbox"]):not([type="radio"]),
     textarea,
     select,
     .gr-input,
@@ -128,6 +130,88 @@ APP_CSS = """
         border-color: #9c0014 !important;
         box-shadow: 0 0 0 3px rgba(156, 0, 20, 0.12) !important;
         outline: none !important;
+    }
+
+    /* Checkboxes com visual nativo de alto contraste */
+    input[type="checkbox"],
+    .dark input[type="checkbox"] {
+        appearance: auto !important;
+        -webkit-appearance: checkbox !important;
+        accent-color: #9c0014 !important;
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
+        margin: 0 10px 0 0 !important;
+        padding: 0 !important;
+        cursor: pointer !important;
+        border-radius: 4px !important;
+        vertical-align: middle !important;
+    }
+
+    label:has(input[type="checkbox"]),
+    .dark label:has(input[type="checkbox"]) {
+        display: inline-flex !important;
+        align-items: center !important;
+        cursor: pointer !important;
+        color: #0f172a !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 4px 0 !important;
+    }
+
+    /* Exterminar fundo escuro de tabelas e dataframes no Gradio */
+    .dataframe,
+    [data-testid="dataframe"],
+    [data-testid="dataframe"] *,
+    .table-wrap,
+    .table-wrap *,
+    .virtual-table-viewport,
+    .virtual-table-viewport *,
+    table,
+    tbody,
+    thead,
+    tr,
+    th,
+    td,
+    div[role="grid"],
+    div[role="row"],
+    div[role="gridcell"],
+    div[role="columnheader"],
+    .cell-wrap,
+    .cell-wrap input {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #e2e8f0 !important;
+    }
+
+    div[role="columnheader"],
+    th,
+    thead tr,
+    .header-cell {
+        background-color: #f1f5f9 !important;
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+    }
+
+    tbody tr:nth-child(even),
+    div[role="row"]:nth-child(even) {
+        background-color: #f8fafc !important;
+        background: #f8fafc !important;
+    }
+
+    tbody tr:nth-child(odd),
+    div[role="row"]:nth-child(odd) {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+    }
+
+    .cell-wrap input {
+        color: #0f172a !important;
+        font-weight: 600 !important;
     }
 
     /* Rótulos de Campos (Labels) de Alto Contraste */
@@ -164,12 +248,12 @@ APP_CSS = """
 
     .brand-header {
         border-bottom: 1px solid #e2e8f0;
-        padding-bottom: 20px;
-        margin-bottom: 28px;
+        padding-bottom: 14px;
+        margin-bottom: 16px;
         text-align: left !important;
     }
     .brand-header h1 {
-        font-size: 30px !important;
+        font-size: 28px !important;
         font-weight: 800 !important;
         margin: 0 !important;
         color: #9c0014 !important;
@@ -177,9 +261,9 @@ APP_CSS = """
     }
     .brand-header p {
         color: #475569 !important;
-        margin: 6px 0 0 !important;
-        font-size: 15px !important;
-        line-height: 1.5;
+        margin: 4px 0 0 !important;
+        font-size: 14px !important;
+        line-height: 1.4;
     }
 
     /* =========================================================================
@@ -238,14 +322,14 @@ APP_CSS = """
        3. TELA DE ACESSO (CARD CENTRALIZADO ELEGANTE)
        ========================================================================= */
     .auth-card {
-        max-width: 480px !important;
+        max-width: 460px !important;
         width: 100% !important;
-        margin: 24px auto !important;
+        margin: 8px auto !important;
         background: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
         border-top: 5px solid #9c0014 !important;
         border-radius: 12px !important;
-        padding: 32px 36px !important;
+        padding: 22px 28px !important;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
     }
 
@@ -620,6 +704,34 @@ APP_CSS = """
 
     .warning-text { color: #9c0014 !important; font-weight: 700; font-size: 14px; text-align: center; margin-top: 10px; }
 
+    /* Rodape da Aplicacao */
+    .app-footer {
+        margin-top: 28px !important;
+        padding-top: 16px !important;
+        border-top: 1px solid #e2e8f0 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        font-size: 13px !important;
+        color: #64748b !important;
+    }
+    .app-footer a {
+        color: #9c0014 !important;
+        text-decoration: none !important;
+        font-weight: 600 !important;
+    }
+    .app-footer a:hover {
+        text-decoration: underline !important;
+    }
+    .footer-links {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        flex-wrap: wrap !important;
+    }
+
     /* Ocultar footer do Gradio */
     footer, .footer { display: none !important; }
 """
@@ -672,4 +784,26 @@ def obter_tema_branco() -> Any:
         button_secondary_border_color_dark=COR_BORDA_INPUT,
         button_secondary_text_color=COR_TEXTO_CORPO,
         button_secondary_text_color_dark=COR_TEXTO_CORPO,
+        table_border_color=COR_BORDA,
+        table_border_color_dark=COR_BORDA,
+        table_even_background_fill=COR_BRANCO,
+        table_even_background_fill_dark=COR_BRANCO,
+        table_odd_background_fill=COR_FUNDO,
+        table_odd_background_fill_dark=COR_FUNDO,
+        table_row_focus="#f1f5f9",
+        table_row_focus_dark="#f1f5f9",
+        table_text_color=COR_TEXTO_TITULO,
+        table_text_color_dark=COR_TEXTO_TITULO,
+        checkbox_background_color=COR_BRANCO,
+        checkbox_background_color_dark=COR_BRANCO,
+        checkbox_background_color_selected=COR_PRIMARIA,
+        checkbox_background_color_selected_dark=COR_PRIMARIA,
+        checkbox_border_color=COR_BORDA_INPUT,
+        checkbox_border_color_dark=COR_BORDA_INPUT,
+        checkbox_border_color_selected=COR_PRIMARIA,
+        checkbox_border_color_selected_dark=COR_PRIMARIA,
+        checkbox_label_text_color=COR_TEXTO_CORPO,
+        checkbox_label_text_color_dark=COR_TEXTO_CORPO,
+        checkbox_label_text_color_selected=COR_TEXTO_TITULO,
+        checkbox_label_text_color_selected_dark=COR_TEXTO_TITULO,
     )
