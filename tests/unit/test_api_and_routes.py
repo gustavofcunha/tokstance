@@ -95,3 +95,18 @@ def test_autenticar_usuario_sucesso_falha_e_sessao_simultanea(tmp_path: Path) ->
     servico_auth.encerrar_sessao("user_auth")
     sessao_nova = servico_auth.autenticar_usuario("user_auth", "SenhaValida123")
     assert sessao_nova["nome_usuario"] == "user_auth"
+
+
+@pytest.mark.unit
+def test_criar_aplicacao_monta_gradio_e_fastapi() -> None:
+    """Valida a criacao da aplicacao acoplando FastAPI e Gradio na raiz."""
+    from tokstance.main import criar_aplicacao
+    app_montada = criar_aplicacao()
+    cliente = TestClient(app_montada)
+
+    res_saude = cliente.get("/api/health")
+    assert res_saude.status_code == 200
+    assert res_saude.json()["status"] == "ok"
+
+    res_raiz = cliente.get("/")
+    assert res_raiz.status_code == 200
