@@ -1,5 +1,6 @@
 """Repositorio relacional de contas de usuarios e associacao multi-papel por tarefa."""
 
+import json
 import sqlite3
 from typing import Any
 
@@ -208,6 +209,20 @@ class RepositorioUsuarios:
             (int(tarefa_id),),
         )
 
+    def _deserializar_item_tarefa(self, linha: dict[str, Any]) -> dict[str, Any]:
+        copia = dict(linha)
+        if "opcoes_json" in copia:
+            try:
+                copia["opcoes_posicao"] = json.loads(str(copia.pop("opcoes_json") or "[]"))
+            except Exception:
+                copia["opcoes_posicao"] = []
+        if "distancias_rotulos_json" in copia:
+            try:
+                copia["distancias_rotulos"] = json.loads(str(copia.pop("distancias_rotulos_json") or "{}"))
+            except Exception:
+                copia["distancias_rotulos"] = {}
+        return copia
+
     def listar_tarefas_do_usuario(
         self,
         usuario_id: int,
@@ -215,9 +230,10 @@ class RepositorioUsuarios:
     ) -> list[dict[str, Any]]:
         """Retorna todas as tarefas vinculadas ao usuario, com filtro opcional de papel."""
         if papel is not None:
-            return self.banco.consultar_todos(
+            linhas = self.banco.consultar_todos(
                 """
                 SELECT t.tarefa_id, t.slug_tarefa, t.titulo, t.pergunta,
+                       t.opcoes_json, t.distancias_rotulos_json,
                        t.numero_vagas, t.videos_por_rotulador, t.percentual_sobreposicao,
                        t.codigo_convite, t.versao_atribuicao, t.criado_em,
                        m.papel, m.vaga_atribuida, m.entrou_em
@@ -228,9 +244,11 @@ class RepositorioUsuarios:
                 """,
                 (int(usuario_id), str(papel).strip().lower()),
             )
-        return self.banco.consultar_todos(
+            return [self._deserializar_item_tarefa(linha) for linha in linhas]
+        linhas = self.banco.consultar_todos(
             """
             SELECT t.tarefa_id, t.slug_tarefa, t.titulo, t.pergunta,
+                   t.opcoes_json, t.distancias_rotulos_json,
                    t.numero_vagas, t.videos_por_rotulador, t.percentual_sobreposicao,
                    t.codigo_convite, t.versao_atribuicao, t.criado_em,
                    m.papel, m.vaga_atribuida, m.entrou_em
@@ -241,3 +259,4 @@ class RepositorioUsuarios:
             """,
             (int(usuario_id),),
         )
+        return [self._deserializar_item_tarefa(linha) for linha in linhas]

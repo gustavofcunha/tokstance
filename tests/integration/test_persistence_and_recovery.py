@@ -337,3 +337,52 @@ def test_violacao_chave_estrangeira_em_membros_tarefa_e_bloqueada_pelo_sqlite(
             usuario_id=8888,
             papel="rotulador",
         )
+
+
+
+@pytest.mark.integration
+def test_executar_distingue_lastrowid_para_insert_e_rowcount_para_update_delete(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "rowcount_test.db")
+
+    id_inserido = banco.executar(
+        "INSERT INTO usuarios (nome_usuario, senha_hash, criado_em) VALUES (?, ?, ?);",
+        ("usuario_teste", "hash_teste", "2026-10-31 12:00:00"),
+    )
+    linhas_afetadas_update = banco.executar(
+        "UPDATE usuarios SET senha_hash = ? WHERE usuario_id = ?;",
+        ("novo_hash", id_inserido),
+    )
+    linhas_afetadas_delete = banco.executar(
+        "DELETE FROM usuarios WHERE usuario_id = ?;",
+        (id_inserido,),
+    )
+
+    assert id_inserido >= 1
+    assert linhas_afetadas_update == 1
+    assert linhas_afetadas_delete == 1
+
+
+@pytest.mark.integration
+def test_listar_tarefas_do_usuario_deserializa_opcoes_posicao_e_distancias(
+    tmp_path: Path,
+) -> None:
+    banco = BancoDadosSQLite(tmp_path / "tarefas_deserializadas.db")
+    repo_usuarios = RepositorioUsuarios(banco)
+    repo_estudo = RepositorioEstudo(banco, repo_usuarios)
+    admin = repo_usuarios.criar_usuario("admin_json", "hash_seguro")
+
+    tarefa = repo_estudo.criar_tarefa(
+        criado_por_usuario_id=admin["usuario_id"],
+        pool_videos=_pool_videos_exemplo(),
+        opcoes_posicao=["A Favor", "Contra"],
+        distancias_rotulos={"A Favor|Contra": 2.5},
+    )
+    tarefas_admin = repo_usuarios.listar_tarefas_do_usuario(
+        admin["usuario_id"], papel="administrador"
+    )
+
+    assert len(tarefas_admin) == 1
+    assert tarefas_admin[0]["opcoes_posicao"] == ["A Favor", "Contra"]
+    assert tarefas_admin[0]["distancias_rotulos"]["A Favor|Contra"] == 2.5

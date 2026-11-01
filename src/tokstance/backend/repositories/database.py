@@ -185,7 +185,8 @@ class BancoDadosSQLite:
         """Executa um comando parametrizado de escrita e retorna o id inserido ou linhas afetadas."""
         with self.conectar() as conexao:
             cursor = conexao.execute(sql, tuple(parametros))
-            if cursor.lastrowid:
+            sql_comando = sql.strip().split()[0].upper()
+            if sql_comando == "INSERT" and cursor.lastrowid is not None:
                 return int(cursor.lastrowid)
             return int(cursor.rowcount)
 
