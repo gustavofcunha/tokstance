@@ -679,15 +679,14 @@ def construir_interface(
         def executar_solicitar_recuperacao(identificador: str) -> str:
             try:
                 res = auth.solicitar_recuperacao_senha(identificador)
-                cod = res["codigo"]
-                email = res.get("email", "")
                 if res.get("disparado_smtp"):
-                    return f"✅ Código gratuito de recuperação enviado para o e-mail `{email}`. Válido por 15 minutos."
+                    return "✅ Se os dados informados estiverem corretos, um código de verificação de 6 dígitos foi enviado para o seu e-mail cadastrado. Ele expira em 15 minutos."
                 else:
                     return (
-                        f"✅ **Código gerado com sucesso!**  \n"
-                        f"Seu código gratuito de recuperação é: `<strong>{cod}</strong>` (válido por 15 minutos).  \n"
-                        f"Copie o código acima e preencha os campos abaixo com a sua nova senha."
+                        "⚠️ **Serviço de e-mail (SMTP) não configurado no servidor.**\n\n"
+                        "Por segurança, o código de recuperação não é exibido publicamente na tela para impedir sequestro de contas.\n\n"
+                        "• **Em desenvolvimento local:** o código foi impresso no terminal onde o servidor está rodando.\n"
+                        "• **Em produção:** configure as variáveis de SMTP gratuito (como Gmail ou e-mail institucional) no `.env` para envio direto."
                     )
             except Exception as exc:
                 return f"⚠️ {str(exc)}"

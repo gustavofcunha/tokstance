@@ -158,6 +158,12 @@ class ServicoAutenticacao:
             except Exception:
                 disparado_smtp = False
 
+        if not disparado_smtp:
+            print(
+                f"\n[TokStance Dev] Código de recuperação gerado para '{usuario['nome_usuario']}': {codigo} (válido por 15 min)\n",
+                flush=True,
+            )
+
         return {
             "sucesso": True,
             "usuario_id": int(usuario["usuario_id"]),
