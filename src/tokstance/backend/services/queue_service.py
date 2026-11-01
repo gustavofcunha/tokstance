@@ -247,6 +247,23 @@ class ServicoFilaAnotacao:
             assignment_id=str(item["assignment_id"]),
         )
 
+        reservas_disponiveis = self.repo_estudo.carregar_videos_tarefa_df(
+            int(tarefa_id), tipo_pool="reserva"
+        )
+        if reservas_disponiveis.empty:
+            estado_fila = self.obter_estado_fila(
+                tarefa_id=int(tarefa_id),
+                nome_usuario=nome_limpo,
+                aviso_sensivel_aceito=True,
+            )
+            return {
+                "tarefa_id": int(tarefa_id),
+                "rotulador": nome_limpo,
+                "erro_registrado": dict(item),
+                "status_substituicao": "SEM_RESERVA_DISPONIVEL",
+                "estado_fila": estado_fila,
+            }
+
         with tempfile.TemporaryDirectory() as pasta_temp:
             caminhos_temp = self.repo_estudo.exportar_arquivos_tarefa(
                 int(tarefa_id), Path(pasta_temp)
