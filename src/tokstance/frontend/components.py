@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import gradio as gr
 import pandas as pd
 
-from tokstance.domain.agreement import encontrar_anotacoes_rapidas
+from tokstance.backend.domain.agreement import encontrar_anotacoes_rapidas
 
 
 def render_tiktok(url: str) -> str:
