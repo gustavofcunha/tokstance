@@ -165,22 +165,40 @@ APP_CSS = """
     .dataframe,
     [data-testid="dataframe"],
     [data-testid="dataframe"] *,
+    .dark [data-testid="dataframe"],
+    .dark [data-testid="dataframe"] *,
     .table-wrap,
     .table-wrap *,
+    .dark .table-wrap,
+    .dark .table-wrap *,
     .virtual-table-viewport,
     .virtual-table-viewport *,
+    .dark .virtual-table-viewport,
+    .dark .virtual-table-viewport *,
     table,
     tbody,
     thead,
     tr,
     th,
     td,
+    .dark table,
+    .dark tbody,
+    .dark thead,
+    .dark tr,
+    .dark th,
+    .dark td,
     div[role="grid"],
     div[role="row"],
     div[role="gridcell"],
     div[role="columnheader"],
+    .dark div[role="grid"],
+    .dark div[role="row"],
+    .dark div[role="gridcell"],
+    .dark div[role="columnheader"],
     .cell-wrap,
-    .cell-wrap input {
+    .cell-wrap input,
+    .dark .cell-wrap,
+    .dark .cell-wrap input {
         background-color: #ffffff !important;
         background: #ffffff !important;
         color: #0f172a !important;
@@ -190,7 +208,11 @@ APP_CSS = """
     div[role="columnheader"],
     th,
     thead tr,
-    .header-cell {
+    .header-cell,
+    .dark div[role="columnheader"],
+    .dark th,
+    .dark thead tr,
+    .dark .header-cell {
         background-color: #f1f5f9 !important;
         background: #f1f5f9 !important;
         color: #0f172a !important;
@@ -198,18 +220,23 @@ APP_CSS = """
     }
 
     tbody tr:nth-child(even),
-    div[role="row"]:nth-child(even) {
+    div[role="row"]:nth-child(even),
+    .dark tbody tr:nth-child(even),
+    .dark div[role="row"]:nth-child(even) {
         background-color: #f8fafc !important;
         background: #f8fafc !important;
     }
 
     tbody tr:nth-child(odd),
-    div[role="row"]:nth-child(odd) {
+    div[role="row"]:nth-child(odd),
+    .dark tbody tr:nth-child(odd),
+    .dark div[role="row"]:nth-child(odd) {
         background-color: #ffffff !important;
         background: #ffffff !important;
     }
 
-    .cell-wrap input {
+    .cell-wrap input,
+    .dark .cell-wrap input {
         color: #0f172a !important;
         font-weight: 600 !important;
     }
@@ -506,6 +533,67 @@ APP_CSS = """
         gap: 12px !important;
     }
 
+    .labeler-header-bar {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        margin-bottom: 16px !important;
+        padding-bottom: 12px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        width: 100% !important;
+    }
+    .labeler-header-bar button,
+    .compact-action-btn,
+    .labeler-actions button {
+        width: auto !important;
+        min-width: 150px !important;
+        max-width: 240px !important;
+        flex: 0 0 auto !important;
+        padding: 8px 16px !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    .workspace-header-title {
+        margin: 0 !important;
+    }
+    .workspace-header-title h3 {
+        margin: 0 !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+
+    .labeler-layout {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        gap: 20px !important;
+        width: 100% !important;
+    }
+    .video-column {
+        flex: 1.15 1 0 !important;
+        min-width: 320px !important;
+        max-width: 58% !important;
+    }
+    .labeler-controls-column {
+        flex: 0.85 1 0 !important;
+        min-width: 280px !important;
+        max-width: 45% !important;
+    }
+    @media (max-width: 900px) {
+        .labeler-layout {
+            flex-direction: column !important;
+        }
+        .video-column, .labeler-controls-column {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+    }
+
     .labeler-actions {
         display: flex !important;
         justify-content: flex-end !important;
@@ -633,7 +721,7 @@ APP_CSS = """
     .assignment-table [role="gridcell"], .assignment-table td { border-color: #e2e8f0 !important; color: #0f172a !important; }
 
     .video-card { width: 100%; min-width: 0; color: #0f172a; overflow: visible; }
-    .video-card iframe { display: block; width: min(100%, 600px) !important; max-width: 600px !important; height: 720px !important; overflow: hidden !important; border-radius: 8px !important; border: 1px solid #e2e8f0 !important; }
+    .video-card iframe { display: block; width: 100% !important; max-width: 360px !important; height: 600px !important; overflow: hidden !important; border-radius: 8px !important; border: 1px solid #e2e8f0 !important; }
     .video-meta { padding: 14px 16px; margin-bottom: 14px; border-left: 4px solid #9c0014; background: #fffafa; font-size: 16px; border-radius: 0 6px 6px 0; border: 1px solid #ffd6dc; border-left-width: 4px; }
     .target-transition { animation: target-highlight 12s ease-in-out; will-change: background, border-color, box-shadow, transform; }
     @keyframes target-highlight {
@@ -643,9 +731,9 @@ APP_CSS = """
         55% { background: #ffe1e5; border-left-color: #c12d42; box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.24), 0 6px 16px rgba(156, 0, 20, 0.14); }
         78% { background: #fff1f3; border-left-color: #ae1c32; box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.18), 0 4px 12px rgba(156, 0, 20, 0.1); }
     }
-    .video-content-grid { display: grid; grid-template-columns: minmax(360px, 0.8fr) minmax(0, 1.2fr); gap: 28px; align-items: start; }
+    .video-content-grid { display: grid; grid-template-columns: minmax(180px, 0.9fr) minmax(280px, 1.1fr); gap: 16px; align-items: start; }
     .video-player-column, .video-context-column { min-width: 0; }
-    .video-player-column { display: flex; justify-content: center; align-items: flex-start; height: 720px; overflow: hidden; }
+    .video-player-column { display: flex; justify-content: center; align-items: flex-start; height: auto; min-height: 500px; overflow: hidden; }
     .video-description { padding: 18px; margin-bottom: 18px; border: 1px solid #e2e8f0; background: #ffffff; line-height: 1.55; overflow-wrap: anywhere; font-size: 15px; border-radius: 8px; }
     .video-description strong { display: block; color: #9c0014; margin-bottom: 6px; }
     .video-description.unavailable { color: #64748b; }

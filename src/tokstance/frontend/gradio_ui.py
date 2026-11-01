@@ -250,6 +250,7 @@ def construir_interface(
                             scale=4,
                         )
                         btn_abrir_admin = gr.Button("Abrir Console de Administração", elem_classes="ufmg-btn", scale=2)
+                        btn_excluir_tarefa_hub = gr.Button("🗑️ Excluir Tarefa", elem_classes="error-btn", scale=1)
 
                 #secao de tarefas de rotulador
                 with gr.Column(elem_classes="hub-section-box"):
@@ -378,8 +379,9 @@ def construir_interface(
             # 4. TELA DE ROTULACAO (WORKSPACE DO ROTULADOR)
             # ==================================================================
             with gr.Column(visible=False, elem_classes="labeler-panel") as painel_rotulador:
-                with gr.Row(elem_classes="labeler-actions"):
-                    btn_voltar_hub_rotulacao = gr.Button("← Salvar e Sair do Workspace", elem_classes="error-btn")
+                with gr.Row(elem_classes="labeler-header-bar"):
+                    btn_voltar_hub_rotulacao = gr.Button("← Sair do Workspace", elem_classes=["error-btn", "compact-action-btn"], scale=0)
+                    rotulador_tarefa_meta_topo = gr.Markdown("### Workspace de Rotulação", elem_classes="workspace-header-title")
 
                 with gr.Column(elem_classes="labeler-workspace-container"):
                     with gr.Column(visible=False, elem_classes="sensitive-warning-wrapper") as painel_aviso_sensivel:
@@ -399,10 +401,10 @@ def construir_interface(
                                 btn_parar_sensivel = gr.Button("Parar de rotular", elem_classes=["error-btn", "sensitive-btn-stop"])
 
                     with gr.Row(elem_classes="labeler-layout"):
-                        with gr.Column(scale=5, min_width=1000, elem_classes="video-column"):
+                        with gr.Column(scale=6, min_width=320, elem_classes="video-column"):
                             rotulador_video_html = gr.HTML()
 
-                        with gr.Column(scale=3, min_width=600, elem_classes="labeler-controls-column"):
+                        with gr.Column(scale=5, min_width=280, elem_classes="labeler-controls-column"):
                             rotulador_cabecalho = gr.Markdown()
                             rotulador_progresso = gr.HTML()
 
@@ -424,6 +426,7 @@ def construir_interface(
                 with gr.Row(elem_classes="admin-header"):
                     admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="admin-actions"):
+                        btn_excluir_tarefa_admin = gr.Button("🗑️ Excluir esta Tarefa", elem_classes="error-btn")
                         btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes="error-btn")
 
                 admin_configuracao_view = gr.Markdown(elem_classes="admin-configuration")
@@ -493,7 +496,7 @@ def construir_interface(
 
         def executar_login(usuario: str, senha: str) -> Tuple[Any, Any, str, Dict[str, Any], Any, Any, str, str, str]:
             try:
-                dados = auth.autenticar_usuario(usuario, senha)
+                dados = auth.autenticar_usuario(usuario, senha, permitir_reassumir=True)
                 sessao = {
                     "usuario_id": dados["usuario_id"],
                     "nome_usuario": dados["nome_usuario"],
@@ -821,13 +824,12 @@ def construir_interface(
             tempo_login = max(0.0, agora - login_t)
 
             try:
-                fila.salvar_anotacao(
+                fila.salvar_anotacao_e_avancar(
                     tarefa_id=int(t_id),
                     nome_usuario=nome_u,
                     assignment_id=as_id,
-                    stance=escolha_posicao,
+                    posicao=escolha_posicao,
                     tempo_analise_segundos=tempo_analise,
-                    login_time_segundos=tempo_login,
                 )
             except Exception as exc:
                 return (
@@ -887,7 +889,6 @@ def construir_interface(
                     nome_usuario=nome_u,
                     assignment_id=as_id,
                     tempo_analise_segundos=tempo_analise,
-                    login_time_segundos=tempo_login,
                 )
             except Exception as exc:
                 return (
@@ -965,7 +966,7 @@ def construir_interface(
             df_anot = repo_e.carregar_anotacoes_tarefa_df(t_id)
             df_err = repo_e.carregar_erros_videos_tarefa_df(t_id)
             df_vid = repo_e.carregar_videos_tarefa_df(t_id)
-            df_log = repo_e.carregar_logs_acesso_tarefa_df(t_id)
+            df_log = repo_e.carregar_logs_acesso_df(tarefa_id=t_id)
 
             dashboard_html = agreement_summary(
                 agreement_data=metricas.get("concordancia", {}),
@@ -1001,6 +1002,53 @@ def construir_interface(
                 df_atrib,
                 sessao_atualizada,
             )
+
+        def excluir_tarefa_pelo_hub(
+            tarefa_id_str: str,
+            sessao: Dict[str, Any],
+        ) -> Tuple[str, Any, Any, str, str, str]:
+            u_id = sessao.get("usuario_id")
+            if not u_id or not tarefa_id_str:
+                return "⚠️ Selecione uma tarefa na lista acima para excluir.", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+            try:
+                t_id = int(tarefa_id_str)
+                admin.excluir_tarefa(tarefa_id=t_id, usuario_administrador_id=int(u_id))
+                opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return f"✅ Tarefa #{t_id} excluída com sucesso.", opt_admin, opt_rot, h_adm, h_rot, saudacao
+            except Exception as exc:
+                return f"⚠️ Erro ao excluir tarefa: {str(exc)}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+
+        def excluir_tarefa_pelo_admin(
+            sessao: Dict[str, Any],
+        ) -> Tuple[Any, Any, str, Any, Any, str, str, str]:
+            u_id = sessao.get("usuario_id")
+            t_id = sessao.get("tarefa_ativa_id")
+            if not u_id or not t_id:
+                return gr.update(visible=True), gr.update(visible=False), "⚠️ Sessão inválida para exclusão.", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+            try:
+                admin.excluir_tarefa(tarefa_id=int(t_id), usuario_administrador_id=int(u_id))
+                opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return (
+                    gr.update(visible=True),
+                    gr.update(visible=False),
+                    f"✅ Tarefa #{t_id} excluída com sucesso.",
+                    opt_admin,
+                    opt_rot,
+                    h_adm,
+                    h_rot,
+                    saudacao,
+                )
+            except Exception as exc:
+                return (
+                    gr.update(),
+                    gr.update(),
+                    f"⚠️ Erro ao excluir tarefa: {str(exc)}",
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                )
 
         # ======================================================================
         # CONEXOES DE EVENTOS (WIRING)
@@ -1259,6 +1307,34 @@ def construir_interface(
             outputs=[
                 painel_hub,
                 painel_admin,
+                select_tarefa_admin,
+                select_tarefa_rotulador,
+                hub_admin_cards_html,
+                hub_rotulador_cards_html,
+                hub_saudacao,
+            ],
+        )
+
+        btn_excluir_tarefa_hub.click(
+            excluir_tarefa_pelo_hub,
+            inputs=[select_tarefa_admin, estado_sessao],
+            outputs=[
+                hub_mensagem,
+                select_tarefa_admin,
+                select_tarefa_rotulador,
+                hub_admin_cards_html,
+                hub_rotulador_cards_html,
+                hub_saudacao,
+            ],
+        )
+
+        btn_excluir_tarefa_admin.click(
+            excluir_tarefa_pelo_admin,
+            inputs=[estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_admin,
+                hub_mensagem,
                 select_tarefa_admin,
                 select_tarefa_rotulador,
                 hub_admin_cards_html,
