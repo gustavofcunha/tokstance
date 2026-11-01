@@ -138,8 +138,9 @@ class ServicoAutenticacao:
         if smtp_host and email_destino:
             try:
                 smtp_port = int(os.environ.get("SMTP_PORT", 587))
-                smtp_user = os.environ.get("SMTP_USER", "")
-                smtp_pass = os.environ.get("SMTP_PASSWORD", "")
+                smtp_user = os.environ.get("SMTP_USER", "").strip()
+                smtp_pass_raw = os.environ.get("SMTP_PASSWORD", "").strip()
+                smtp_pass = smtp_pass_raw.replace(" ", "") if "gmail" in (smtp_host or "").lower() else smtp_pass_raw
                 msg = MIMEText(
                     f"Olá, {usuario['nome_usuario']}!\n\n"
                     f"Seu código gratuito de recuperação de senha no TokStance é: {codigo}\n"
@@ -149,13 +150,14 @@ class ServicoAutenticacao:
                 msg["Subject"] = "Código de Recuperação de Senha - TokStance"
                 msg["From"] = smtp_user or "noreply@tokstance.local"
                 msg["To"] = email_destino
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as s:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as s:
                     s.starttls()
                     if smtp_user and smtp_pass:
                         s.login(smtp_user, smtp_pass)
                     s.send_message(msg)
                 disparado_smtp = True
-            except Exception:
+            except Exception as exc:
+                logger.warning("Falha ao disparar e-mail via SMTP (%s): %s", smtp_host, exc)
                 disparado_smtp = False
 
         if not disparado_smtp:
