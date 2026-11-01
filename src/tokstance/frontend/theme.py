@@ -294,41 +294,49 @@ APP_CSS = """
     }
 
     /* =========================================================================
-       2. ABAS (TABS) MODERNAS COM ALTO CONTRASTE (REFERO / SPELL.SH)
+       2. ABAS (TABS) MODERNAS ESTILO SEGMENTED CONTROL (REFERO / SPELL.SH)
        ========================================================================= */
     .tab-nav,
     div[role="tablist"],
     .dark .tab-nav,
     .dark div[role="tablist"] {
         display: flex !important;
-        border-bottom: 2px solid #e2e8f0 !important;
-        margin-bottom: 22px !important;
-        gap: 8px !important;
-        background: transparent !important;
+        background: #f1f5f9 !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 4px !important;
+        margin-bottom: 20px !important;
+        gap: 4px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
 
     .tab-nav button,
     div[role="tablist"] button,
     .dark .tab-nav button,
     .dark div[role="tablist"] button {
-        font-size: 14px !important;
+        flex: 1 1 0 !important;
+        font-size: 13px !important;
         font-weight: 700 !important;
-        color: #334155 !important; /* Total contraste para aba inativa: cinza escuro legivel! */
-        background: #f1f5f9 !important;
-        border: 1px solid #cbd5e1 !important;
-        border-bottom: none !important;
-        padding: 10px 22px !important;
-        border-radius: 8px 8px 0 0 !important;
+        color: #475569 !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 9px 12px !important;
+        border-radius: 7px !important;
         cursor: pointer !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.15s ease !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
 
     .tab-nav button:hover,
     div[role="tablist"] button:hover,
     .dark .tab-nav button:hover,
     .dark div[role="tablist"] button:hover {
-        color: #9c0014 !important;
-        background: #fdf2f4 !important;
+        color: #0f172a !important;
+        background: rgba(255, 255, 255, 0.7) !important;
     }
 
     .tab-nav button.selected,
@@ -339,10 +347,26 @@ APP_CSS = """
     .dark div[role="tablist"] button.selected {
         color: #9c0014 !important;
         background: #ffffff !important;
-        border: 2px solid #9c0014 !important;
-        border-bottom: 2px solid #ffffff !important;
-        margin-bottom: -2px !important;
+        border: 1px solid #ffd6dc !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
         font-weight: 800 !important;
+        outline: none !important;
+    }
+
+    /* Elimina outline / contorno preto indesejado nos botoes de tab ativos do Gradio */
+    .tab-nav button:focus,
+    .tab-nav button:focus-visible,
+    .tab-nav button:active,
+    div[role="tablist"] button:focus,
+    div[role="tablist"] button:focus-visible,
+    div[role="tablist"] button:active,
+    div[role="tablist"] button[aria-selected="true"]:focus,
+    div[role="tablist"] button[aria-selected="true"]:focus-visible,
+    .dark .tab-nav button:focus,
+    .dark div[role="tablist"] button:focus {
+        outline: none !important;
+        border: 1px solid #ffd6dc !important;
+        box-shadow: 0 1px 4px rgba(156, 0, 20, 0.12) !important;
     }
 
     /* =========================================================================
@@ -786,15 +810,15 @@ APP_CSS = """
     .form-wizard-card {
         border: 1px solid #e2e8f0;
         border-top: 5px solid #9c0014;
-        padding: 20px 24px;
-        background: #ffffff;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        padding: 24px;
+        background: #f8fafc;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
     }
     .wizard-grid {
         display: flex !important;
         flex-direction: row !important;
-        gap: 24px !important;
+        gap: 20px !important;
         width: 100% !important;
         align-items: stretch !important;
     }
@@ -808,37 +832,164 @@ APP_CSS = """
         min-width: 0 !important;
         display: flex !important;
         flex-direction: column !important;
-        gap: 12px !important;
+        gap: 16px !important;
+    }
+    .wizard-section-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 20px 22px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 14px !important;
+        box-sizing: border-box !important;
+    }
+    .wizard-section-header {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding-bottom: 12px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+    .wizard-badge {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 26px !important;
+        height: 26px !important;
+        border-radius: 50% !important;
+        background: #fff0f2 !important;
+        color: #9c0014 !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+        border: 1px solid #ffd6dc !important;
+        flex-shrink: 0 !important;
+    }
+    .wizard-section-title {
+        margin: 0 !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.01em !important;
+    }
+    .wizard-section-subtitle {
+        margin: 2px 0 0 0 !important;
+        font-size: 12px !important;
+        color: #64748b !important;
+        font-weight: 500 !important;
+    }
+    .wizard-info-callout {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-left: 4px solid #9c0014 !important;
+        border-radius: 6px !important;
+        padding: 10px 14px !important;
+        font-size: 13px !important;
+        color: #334155 !important;
+        line-height: 1.4 !important;
+    }
+    .wizard-info-callout code {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 4px !important;
+        padding: 1px 5px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+    .wizard-action-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-end !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    .wizard-row-btn {
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+        margin: 0 !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        padding: 0 14px !important;
+    }
+    .wizard-inline-btn {
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        width: 100% !important;
+    }
+    .wizard-slider-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 16px !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+    }
+    .wizard-slider-row > * {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+    }
+    .wizard-pool-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 16px !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+    }
+    .wizard-checkbox {
+        margin-top: 4px !important;
+    }
+    .wizard-checkbox label {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #334155 !important;
     }
     .wizard-submit-row {
-        margin-top: 18px !important;
+        margin-top: 20px !important;
         display: flex !important;
         justify-content: center !important;
         width: 100% !important;
     }
     .wizard-submit-btn {
-        min-width: 280px !important;
-        height: 46px !important;
+        min-width: 320px !important;
+        height: 48px !important;
         font-size: 15px !important;
         font-weight: 800 !important;
+        letter-spacing: 0.02em !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 14px rgba(156, 0, 20, 0.25) !important;
+    }
+    .pairwise-penalty-table,
+    .pairwise-penalty-table * {
+        font-family: inherit !important;
     }
     .pairwise-penalty-table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
         background: #ffffff !important;
     }
     .pairwise-penalty-table th, .pairwise-penalty-table td {
-        padding: 10px 14px;
-        border: 1px solid #e2e8f0;
+        padding: 9px 12px;
+        border: 1px solid #f1f5f9;
         text-align: left;
-        font-size: 14px;
+        font-size: 13px;
         color: #0f172a !important;
     }
     .pairwise-penalty-table th {
-        background: #f1f5f9 !important;
-        color: #0f172a !important;
-        font-weight: 700;
+        background: #f8fafc !important;
+        color: #475569 !important;
+        font-weight: 700 !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        border-bottom: 2px solid #e2e8f0 !important;
     }
 
     .agreement-dashboard { width: 100%; margin: 10px 0 24px; color: #0f172a; }

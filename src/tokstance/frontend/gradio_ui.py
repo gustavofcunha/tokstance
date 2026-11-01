@@ -322,21 +322,35 @@ def construir_interface(
                         btn_login = gr.Button("Entrar no Sistema", elem_classes="ufmg-btn", size="lg")
 
                     with gr.Tab("Criar Conta"):
-                        cadastro_usuario = gr.Textbox(label="Escolha seu Nome de Usuário", placeholder="Ex: pesquisador_1")
-                        cadastro_email = gr.Textbox(label="Seu E-mail (obrigatório para recuperação gratuita)", placeholder="Ex: usuario@email.com")
-                        cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres")
-                        cadastro_confirma = gr.Textbox(label="Confirme a Senha", type="password", placeholder="Repita a senha")
+                        cadastro_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Ex: pesquisador_1")
+                        cadastro_email = gr.Textbox(label="Seu E-mail (para recuperação gratuita)", placeholder="Ex: usuario@dominio.com")
+                        with gr.Row():
+                            cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres", scale=1)
+                            cadastro_confirma = gr.Textbox(label="Confirmar Senha", type="password", placeholder="Repita a senha", scale=1)
                         cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
                         btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
 
                     with gr.Tab("Recuperar Senha"):
-                        recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou email")
+                        gr.HTML("""
+                        <div style="margin-bottom: 8px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #9c0014; text-transform: uppercase; letter-spacing: 0.05em; background: #fff0f2; border: 1px solid #ffd6dc; padding: 2px 8px; border-radius: 10px;">Etapa 1</span>
+                            <span style="font-size: 13px; font-weight: 700; color: #0f172a; margin-left: 6px;">Solicitar Código</span>
+                        </div>
+                        """)
+                        recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou e-mail")
                         btn_solicitar_recuperacao = gr.Button("Gerar Código de Recuperação Gratuito", elem_classes="ufmg-btn")
                         recuperar_mensagem = gr.Markdown()
+
+                        gr.HTML("""
+                        <div style="margin: 16px 0 8px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #9c0014; text-transform: uppercase; letter-spacing: 0.05em; background: #fff0f2; border: 1px solid #ffd6dc; padding: 2px 8px; border-radius: 10px;">Etapa 2</span>
+                            <span style="font-size: 13px; font-weight: 700; color: #0f172a; margin-left: 6px;">Definir Nova Senha</span>
+                        </div>
+                        """)
+                        recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456")
                         with gr.Row():
-                            recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456", scale=1)
-                            recuperar_nova_senha = gr.Textbox(label="Nova Senha", type="password", placeholder="Mínimo 6 caracteres", scale=2)
-                            recuperar_confirma_senha = gr.Textbox(label="Confirmar Nova Senha", type="password", placeholder="Repita a nova senha", scale=2)
+                            recuperar_nova_senha = gr.Textbox(label="Nova Senha", type="password", placeholder="Mínimo 6 caracteres", scale=1)
+                            recuperar_confirma_senha = gr.Textbox(label="Confirmar Nova Senha", type="password", placeholder="Repita a nova senha", scale=1)
                         btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
 
                     mensagem_acesso = gr.Markdown()
@@ -410,87 +424,127 @@ def construir_interface(
 
                 with gr.Column(elem_classes="form-wizard-card"):
                     with gr.Row(elem_classes="wizard-grid"):
-                        # Coluna Esquerda: Questoes da pesquisa, rotulos e vagas
+                        # Coluna Esquerda: Cartoes 1 e 3
                         with gr.Column(scale=1, elem_classes="wizard-col"):
-                            gr.Markdown("### 1. Definição da Pergunta e Rótulos")
-                            wizard_titulo = gr.Textbox(
-                                label="Título da Tarefa",
-                                value=NOME_TAREFA_PADRAO,
-                                placeholder="Ex: Detecção de Posição em Eleições",
-                            )
-                            wizard_pergunta = gr.Textbox(
-                                label="Pergunta Norteadora da Anotação (use {target} para interpolar o tema)",
-                                value=PERGUNTA_TAREFA_PADRAO,
-                                placeholder='Com relação ao target "{target}", como você classifica a posição deste vídeo?',
-                            )
-                            wizard_opcoes = gr.Textbox(
-                                label="Opções de Resposta (uma por linha)",
-                                value="\n".join(OPCOES_TAREFA_PADRAO),
-                                lines=4,
-                            )
-                            btn_atualizar_pares = gr.Button("Atualizar Matriz de Combinações", elem_classes="error-btn")
-
-                            gr.Markdown("### 3. Vagas, Sobreposição e Código de Convite")
-                            with gr.Row():
-                                wizard_vagas = gr.Slider(
-                                    label="Número de Vagas de Rotuladores",
-                                    minimum=1,
-                                    maximum=20,
-                                    value=3,
-                                    step=1,
+                            with gr.Column(elem_classes="wizard-section-card"):
+                                gr.HTML("""
+                                <div class="wizard-section-header">
+                                    <span class="wizard-badge">1</span>
+                                    <div>
+                                        <h4 class="wizard-section-title">Definição da Pergunta e Rótulos</h4>
+                                        <p class="wizard-section-subtitle">Configure o tema da rodada e as categorias de anotação</p>
+                                    </div>
+                                </div>
+                                """)
+                                wizard_titulo = gr.Textbox(
+                                    label="Título da Tarefa",
+                                    value=NOME_TAREFA_PADRAO,
+                                    placeholder="Ex: Detecção de Posição em Eleições",
                                 )
-                                wizard_overlap = gr.Slider(
-                                    label="Percentual de Sobreposição (Overlap %)",
-                                    minimum=0.0,
-                                    maximum=100.0,
-                                    value=20.0,
-                                    step=5.0,
+                                wizard_pergunta = gr.Textbox(
+                                    label="Pergunta Norteadora da Anotação (use {target} para interpolar o tema)",
+                                    value=PERGUNTA_TAREFA_PADRAO,
+                                    placeholder='Com relação ao target "{target}", como você classifica a posição deste vídeo?',
                                 )
-                            with gr.Row():
-                                wizard_convite = gr.Textbox(
-                                    label="Código de Convite da Tarefa",
-                                    value=gerar_codigo_convite(),
-                                    scale=3,
+                                wizard_opcoes = gr.Textbox(
+                                    label="Opções de Resposta (uma por linha)",
+                                    value="\n".join(OPCOES_TAREFA_PADRAO),
+                                    lines=4,
                                 )
-                                btn_copiar_codigo = gr.Button("📋 Copiar Código", elem_classes="error-btn", scale=1)
-                                btn_gerar_novo_codigo = gr.Button("Gerar Novo Código", elem_classes="error-btn", scale=1)
+                                btn_atualizar_pares = gr.Button("🔄 Atualizar Matriz de Combinações", elem_classes=["ufmg-btn", "wizard-inline-btn"])
 
-                            wizard_admin_como_rotulador = gr.Checkbox(
-                                label="Inscrever-me automaticamente como rotulador na Vaga 1 desta tarefa",
-                                value=True,
-                            )
+                            with gr.Column(elem_classes="wizard-section-card"):
+                                gr.HTML("""
+                                <div class="wizard-section-header">
+                                    <span class="wizard-badge">3</span>
+                                    <div>
+                                        <h4 class="wizard-section-title">Vagas, Sobreposição e Código de Convite</h4>
+                                        <p class="wizard-section-subtitle">Dimensione a equipe de anotação e gere o acesso</p>
+                                    </div>
+                                </div>
+                                """)
+                                with gr.Row(elem_classes="wizard-slider-row"):
+                                    wizard_vagas = gr.Slider(
+                                        label="Número de Vagas de Rotuladores",
+                                        minimum=1,
+                                        maximum=20,
+                                        value=3,
+                                        step=1,
+                                        scale=1,
+                                    )
+                                    wizard_overlap = gr.Slider(
+                                        label="Percentual de Sobreposição (Overlap %)",
+                                        minimum=0.0,
+                                        maximum=100.0,
+                                        value=20.0,
+                                        step=5.0,
+                                        scale=1,
+                                    )
+                                with gr.Row(elem_classes="wizard-action-row"):
+                                    wizard_convite = gr.Textbox(
+                                        label="Código de Convite da Tarefa",
+                                        value=gerar_codigo_convite(),
+                                        scale=3,
+                                    )
+                                    btn_copiar_codigo = gr.Button("📋 Copiar", elem_classes=["ufmg-btn", "wizard-row-btn"], scale=1)
+                                    btn_gerar_novo_codigo = gr.Button("🔄 Novo", elem_classes=["ufmg-btn", "wizard-row-btn"], scale=1)
 
-                        # Coluna Direita: Matriz par-a-par de distancias ordinais e pool de videos
+                                wizard_admin_como_rotulador = gr.Checkbox(
+                                    label="Inscrever-me automaticamente como rotulador na Vaga 1 desta tarefa",
+                                    value=True,
+                                    elem_classes="wizard-checkbox",
+                                )
+
+                        # Coluna Direita: Cartoes 2 e 4
                         with gr.Column(scale=1, elem_classes="wizard-col"):
-                            gr.Markdown("### 2. Matriz Par-a-Par de Penalidades (Distâncias)")
-                            gr.Markdown("Edite os pesos de discordância para o cálculo do Alfa de Krippendorff ordinal:")
-                            tabela_penalidades_inicial = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
-                            wizard_tabela_penalidades = gr.Dataframe(
-                                value=tabela_penalidades_inicial,
-                                headers=["Opção A", "Opção B", "Penalidade"],
-                                datatype=["str", "str", "number"],
-                                interactive=True,
-                                elem_classes="pairwise-penalty-table",
-                                max_height=220,
-                            )
+                            with gr.Column(elem_classes="wizard-section-card"):
+                                gr.HTML("""
+                                <div class="wizard-section-header">
+                                    <span class="wizard-badge">2</span>
+                                    <div>
+                                        <h4 class="wizard-section-title">Matriz Par-a-Par de Penalidades (Distâncias)</h4>
+                                        <p class="wizard-section-subtitle">Pesos de discordância para o cálculo do Alfa de Krippendorff ordinal</p>
+                                    </div>
+                                </div>
+                                """)
+                                tabela_penalidades_inicial = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
+                                wizard_tabela_penalidades = gr.Dataframe(
+                                    value=tabela_penalidades_inicial,
+                                    headers=["Opção A", "Opção B", "Penalidade"],
+                                    datatype=["str", "str", "number"],
+                                    interactive=True,
+                                    elem_classes="pairwise-penalty-table",
+                                    max_height=210,
+                                )
 
-                            gr.Markdown("### 4. Pool de Vídeos e Divisão Principal / Reserva")
-                            with gr.Row():
-                                wizard_arquivo_videos = gr.File(
-                                    label="Upload do Arquivo CSV de Vídeos (opcional: se vazio, utiliza a coleção padrão do sistema)",
-                                    file_types=[".csv"],
-                                    scale=2,
-                                )
-                                wizard_qtd_principal = gr.Number(
-                                    label="Quantidade de Vídeos para Anotação Principal (0 = automático)",
-                                    info="Define a quantidade de vídeos únicos da rodada que serão distribuídos para os rotuladores. Deixe 0 para calcular automaticamente o máximo possível com base no pool e na taxa de sobreposição (overlap).",
-                                    value=0,
-                                    precision=0,
-                                    scale=1,
-                                )
+                            with gr.Column(elem_classes="wizard-section-card"):
+                                gr.HTML("""
+                                <div class="wizard-section-header">
+                                    <span class="wizard-badge">4</span>
+                                    <div>
+                                        <h4 class="wizard-section-title">Pool de Vídeos e Divisão Principal / Reserva</h4>
+                                        <p class="wizard-section-subtitle">Carregue sua base ou utilize a coleção nativa do sistema</p>
+                                    </div>
+                                </div>
+                                <div class="wizard-info-callout" style="margin-bottom: 12px;">
+                                    💡 <strong>Distribuição:</strong> Os vídeos são divididos entre o <em>pool principal</em> (distribuído aos rotuladores) e o <em>pool de reserva</em> (usado para substituição imediata quando um vídeo é reportado com erro). Deixe <code>0</code> para dimensionamento automático ideal.
+                                </div>
+                                """)
+                                with gr.Row(elem_classes="wizard-pool-row"):
+                                    wizard_arquivo_videos = gr.File(
+                                        label="Upload CSV de Vídeos (opcional)",
+                                        file_types=[".csv"],
+                                        scale=2,
+                                    )
+                                    wizard_qtd_principal = gr.Number(
+                                        label="Qtd. Vídeos Principal (0 = automático)",
+                                        value=0,
+                                        precision=0,
+                                        scale=1,
+                                    )
 
                     with gr.Row(elem_classes="wizard-submit-row"):
-                        btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"])
+                        btn_submeter_tarefa = gr.Button("🚀 Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"])
                     wizard_mensagem = gr.Markdown()
 
             # ==================================================================
