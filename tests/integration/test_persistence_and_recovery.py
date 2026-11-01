@@ -69,7 +69,7 @@ def _pool_videos_exemplo() -> pd.DataFrame:
 
 
 @pytest.mark.integration
-def test_esquema_sqlite_cria_oito_tabelas_relacionais_e_ativa_chaves_estrangeiras(
+def test_esquema_sqlite_cria_nove_tabelas_relacionais_e_ativa_chaves_estrangeiras(
     tmp_path: Path,
 ) -> None:
     banco = BancoDadosSQLite(tmp_path / "esquema.db")
@@ -83,6 +83,7 @@ def test_esquema_sqlite_cria_oito_tabelas_relacionais_e_ativa_chaves_estrangeira
         "erros_videos",
         "logs_acesso",
         "membros_tarefa",
+        "recuperacao_senha",
         "tarefas",
         "usuarios",
         "videos_tarefa",

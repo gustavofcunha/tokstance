@@ -493,3 +493,143 @@ def test_regressao_tiktok_player_altura_contida():
     assert "height: 500px;" in player_html
     assert "width: min(100%, 330px);" in player_html
     assert "scrolling=\"no\"" in player_html
+
+
+# ==============================================================================
+# 9. RECUPERACAO DE SENHA GRATUITA E VALIDACAO DE E-MAIL
+# ==============================================================================
+
+@pytest.mark.unit
+def test_validar_email_valido_e_invalido():
+    """Valida formato de e-mail e rejeita cadeias mal formatadas."""
+    from tokstance.backend.security.validators import validar_email
+
+    assert validar_email("usuario@dominio.com") == "usuario@dominio.com"
+    assert validar_email("  GUSTAVO@dcc.ufmg.br  ") == "gustavo@dcc.ufmg.br"
+    assert validar_email("pesquisador+rotulo@sub.dominio.org") == "pesquisador+rotulo@sub.dominio.org"
+
+    with pytest.raises(ValueError, match="Informe um endereço de e-mail válido"):
+        validar_email("email_sem_arroba.com")
+
+    with pytest.raises(ValueError, match="Informe um endereço de e-mail válido"):
+        validar_email("@dominio.com")
+
+    with pytest.raises(ValueError, match="Informe um endereço de e-mail válido"):
+        validar_email("usuario@")
+
+    with pytest.raises(ValueError, match="Informe um endereço de e-mail válido"):
+        validar_email("usuario@dominio")
+
+
+@pytest.mark.unit
+def test_recuperacao_senha_gratuita_fluxo_completo_e_caminhos_infelizes(servicos_teste: Dict[str, Any]):
+    """Testa recuperacao de senha gratuita via codigo de 6 digitos e prevencao de falhas."""
+    auth = servicos_teste["auth"]
+    # 1. Cadastro com email
+    u = auth.cadastrar_usuario("pesquisador_rec", "SenhaAntiga123", email="recupera@exemplo.org")
+    assert u["email"] == "recupera@exemplo.org"
+
+    # 2. Caminho infeliz: solicitacao com identificador inexistente
+    with pytest.raises(ValueError, match="Nenhum usuário cadastrado encontrado"):
+        auth.solicitar_recuperacao_senha("usuario_fantasma_xyz")
+
+    # 3. Solicitacao valida por nome de usuario e por e-mail
+    solic1 = auth.solicitar_recuperacao_senha("pesquisador_rec")
+    assert solic1["sucesso"] is True
+    assert len(solic1["codigo"]) == 6
+    assert solic1["codigo"].isdigit()
+
+    solic2 = auth.solicitar_recuperacao_senha("recupera@exemplo.org")
+    assert solic2["sucesso"] is True
+    assert len(solic2["codigo"]) == 6
+
+    codigo_valido = solic2["codigo"]
+
+    # 4. Caminho infeliz: codigo incorreto
+    with pytest.raises(ValueError, match="Código de recuperação inválido ou expirado"):
+        auth.redefinir_senha_com_codigo("pesquisador_rec", "999999", "NovaSenha123")
+
+    # 5. Caminho infeliz: senha muito curta (< 6 caracteres)
+    with pytest.raises(ValueError, match="pelo menos 6 caracteres"):
+        auth.redefinir_senha_com_codigo("pesquisador_rec", codigo_valido, "123")
+
+    # 6. Caminho feliz: redefinicao com codigo valido
+    res = auth.redefinir_senha_com_codigo("recupera@exemplo.org", codigo_valido, "NovaSenhaSegura123")
+    assert res["sucesso"] is True
+
+    # 7. Login com nova senha deve funcionar; login com senha antiga deve ser rejeitado
+    auth_nova = auth.autenticar_usuario("pesquisador_rec", "NovaSenhaSegura123")
+    assert auth_nova["usuario_id"] == u["usuario_id"]
+
+    with pytest.raises(ValueError, match="Credenciais inválidas"):
+        auth.autenticar_usuario("pesquisador_rec", "SenhaAntiga123")
+
+    # 8. Caminho infeliz: codigo ja consumido nao pode ser reutilizado
+    with pytest.raises(ValueError, match="Código de recuperação inválido ou expirado"):
+        auth.redefinir_senha_com_codigo("pesquisador_rec", codigo_valido, "OutraSenha123")
+
+
+# ==============================================================================
+# 10. TABELAS MODERNAS DO HUB E BOTOES DINAMICOS DE ROTULACAO
+# ==============================================================================
+
+@pytest.mark.unit
+def test_renderizar_hub_tabelas_botoes_dinamicos_progresso():
+    """Garante que os botoes mudam dinamicamente entre Iniciar, Continuar e Ver Concluida."""
+    from tokstance.frontend.gradio_ui import renderizar_hub_tabelas_html
+
+    # Caso 1: Nenhuma anotação iniciada (pos = 0)
+    t_rot_zero = [{"tarefa_id": 10, "titulo": "Tarefa Nova", "posicao_concluida": 0, "total_videos": 15}]
+    _, h_rot_zero = renderizar_hub_tabelas_html([], t_rot_zero)
+    assert "▶ Iniciar Rotulação" in h_rot_zero
+    assert "Não iniciada" in h_rot_zero
+    assert "hub-table-btn primary" in h_rot_zero
+
+    # Caso 2: Em andamento (0 < pos < tot)
+    t_rot_meio = [{"tarefa_id": 10, "titulo": "Tarefa Em Andamento", "posicao_concluida": 7, "total_videos": 15}]
+    _, h_rot_meio = renderizar_hub_tabelas_html([], t_rot_meio)
+    assert "▶ Continuar Rotulação" in h_rot_meio
+    assert "Em andamento" in h_rot_meio
+    assert "hub-table-btn in-progress" in h_rot_meio
+
+    # Caso 3: Concluída (pos >= tot)
+    t_rot_fim = [{"tarefa_id": 10, "titulo": "Tarefa Finalizada", "posicao_concluida": 15, "total_videos": 15}]
+    _, h_rot_fim = renderizar_hub_tabelas_html([], t_rot_fim)
+    assert "✓ Ver Concluída" in h_rot_fim
+    assert "Concluída" in h_rot_fim
+    assert "hub-table-btn completed" in h_rot_fim
+
+
+@pytest.mark.unit
+def test_renderizar_hub_tabelas_acoes_administrador():
+    """Garante presenca dos botoes de Abrir Console e Excluir nas tarefas administradas."""
+    from tokstance.frontend.gradio_ui import renderizar_hub_tabelas_html
+
+    t_adm = [{
+        "tarefa_id": 42,
+        "titulo": "Pesquisa Política 2026",
+        "codigo_convite": "TOK-ABCD1234",
+        "vagas_ocupadas": 2,
+        "numero_vagas": 5,
+        "progresso_percentual": 40.0,
+    }]
+    h_adm, _ = renderizar_hub_tabelas_html(t_adm, [])
+    assert "Abrir Console" in h_adm
+    assert "🗑️ Excluir" in h_adm
+    assert "TOK-ABCD1234" in h_adm
+    assert "2 de 5" in h_adm
+    assert "40%" in h_adm
+    assert "tokstanceAcao('admin', '42')" in h_adm
+    assert "tokstanceAcao('excluir', '42')" in h_adm
+    assert "<select" not in h_adm  # Sem menus suspensos na tabela
+
+
+@pytest.mark.unit
+def test_regressao_modal_sensivel_altura_contida_css():
+    """Garante que a folha de estilo restringe a altura do modal sensivel evitando o bug de esticamento vertical."""
+    assert ".sensitive-warning-wrapper" in APP_CSS
+    assert "overflow: hidden !important;" in APP_CSS
+    assert ".sensitive-warning-card" in APP_CSS
+    assert "height: fit-content !important;" in APP_CSS
+    assert "max-height: fit-content !important;" in APP_CSS
+    assert "flex: 0 0 auto !important;" in APP_CSS
