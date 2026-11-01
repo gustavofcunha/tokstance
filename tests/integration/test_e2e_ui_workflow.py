@@ -299,3 +299,94 @@ def test_e2e_tentativa_codigo_duplicado_lanca_erro_amigavel(ambiente_e2e: Dict[s
             titulo="Estudo Duplicado",
             codigo_convite="CODIGO-UNICO",
         )
+
+
+@pytest.mark.integration
+def test_e2e_reassumir_sessao_sem_lockout(ambiente_e2e: Dict[str, Any]):
+    """Verifica que o usuario pode logar novamente sem ser bloqueado por sessao ativa anterior."""
+    auth = ambiente_e2e["auth"]
+    auth.cadastrar_usuario("usuario_relogin", "senhaForte123")
+
+    # Primeiro login
+    sessao1 = auth.autenticar_usuario("usuario_relogin", "senhaForte123", exigir_sessao_unica=True)
+    assert sessao1["nome_usuario"] == "usuario_relogin"
+
+    # Segundo login imediato sem logout previo com permitir_reassumir (comportamento da interface UI)
+    sessao2 = auth.autenticar_usuario(
+        "usuario_relogin", "senhaForte123", exigir_sessao_unica=True, permitir_reassumir=True
+    )
+    assert sessao2["nome_usuario"] == "usuario_relogin"
+
+
+@pytest.mark.integration
+def test_e2e_excluir_tarefa_pelo_administrador(ambiente_e2e: Dict[str, Any]):
+    """Verifica a exclusao completa de uma tarefa e registros associados pelo administrador."""
+    auth = ambiente_e2e["auth"]
+    admin = ambiente_e2e["admin"]
+    repo_e = ambiente_e2e["repo_estudo"]
+    pool = _criar_pool_teste()
+
+    admin_user = auth.cadastrar_usuario("admin_exclusao", "senhaAdmin123")
+    rotulador_user = auth.cadastrar_usuario("rotulador_outro", "senhaRot123")
+
+    tarefa = admin.criar_nova_tarefa(
+        usuario_administrador_id=int(admin_user["usuario_id"]),
+        pool_videos=pool,
+        quantidade_videos_principal=4,
+        titulo="Tarefa Para Excluir",
+        codigo_convite="CONVITE-DEL-1",
+        permitir_admin_como_rotulador=True,
+    )
+    t_id = int(tarefa["tarefa_id"])
+
+    # Rotulador normal nao pode excluir tarefa alheia
+    with pytest.raises(PermissionError, match="Apenas o administrador da tarefa"):
+        admin.excluir_tarefa(tarefa_id=t_id, usuario_administrador_id=int(rotulador_user["usuario_id"]))
+
+    # Administrador exclui com sucesso
+    sucesso = admin.excluir_tarefa(tarefa_id=t_id, usuario_administrador_id=int(admin_user["usuario_id"]))
+    assert sucesso is True
+
+    # Verifica que a tarefa e seus registros sumiram do banco
+    assert repo_e.buscar_tarefa_por_id(t_id) is None
+    assert repo_e.carregar_videos_tarefa_df(t_id).empty
+    assert repo_e.carregar_atribuicoes_tarefa_df(t_id).empty
+
+
+@pytest.mark.integration
+def test_e2e_carregar_logs_acesso_tarefa_df_e_alias_salvar(ambiente_e2e: Dict[str, Any]):
+    """Verifica chamada de logs da tarefa e compatibilidade do alias salvar_anotacao."""
+    auth = ambiente_e2e["auth"]
+    admin = ambiente_e2e["admin"]
+    fila = ambiente_e2e["fila"]
+    repo_e = ambiente_e2e["repo_estudo"]
+    pool = _criar_pool_teste()
+
+    user = auth.cadastrar_usuario("user_alias_test", "senhaAlias123")
+    tarefa = admin.criar_nova_tarefa(
+        usuario_administrador_id=int(user["usuario_id"]),
+        pool_videos=pool,
+        quantidade_videos_principal=2,
+        titulo="Tarefa Teste Logs e Alias",
+        codigo_convite="CONVITE-LOGS-ALIAS",
+        permitir_admin_como_rotulador=True,
+    )
+    t_id = int(tarefa["tarefa_id"])
+
+    # Carregar logs via metodo explicito
+    df_logs = repo_e.carregar_logs_acesso_tarefa_df(t_id)
+    assert isinstance(df_logs, pd.DataFrame)
+
+    # Obter video atual e salvar via alias retrocompativel salvar_anotacao
+    estado = fila.obter_estado_fila(t_id, "user_alias_test", aviso_sensivel_aceito=True)
+    vid = estado["video_atual"]
+    assert vid is not None
+
+    res = fila.salvar_anotacao(
+        tarefa_id=t_id,
+        nome_usuario="user_alias_test",
+        assignment_id=vid["assignment_id"],
+        posicao="A Favor",
+        tempo_analise_segundos=15.0,
+    )
+    assert res["anotacao_salva"]["posicao"] == "A Favor"
