@@ -29,14 +29,19 @@ from tokstance.frontend.components import (
     render_video_card,
     video_outputs,
 )
-from tokstance.frontend.theme import APP_CSS, obter_tema_branco
+from tokstance.frontend.theme import (
+    APP_CSS,
+    COR_PRIMARIA,
+    JS_FORCAR_MODO_CLARO,
+    obter_tema_branco,
+)
 
 
 def renderizar_hub_cards_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotulador: List[Dict[str, Any]]) -> Tuple[str, str]:
     """Gera o HTML dos cartoes do Hub Inicial para tarefas de administrador e de rotulador."""
     #cartoes de administrador
     if not tarefas_admin:
-        html_admin = "<p class='muted'>Você ainda não criou nenhuma tarefa. Clique em '+ Criar Nova Tarefa' acima para iniciar.</p>"
+        html_admin = "<p class='muted'>Você ainda não criou nenhuma tarefa. Clique no botão '+ Criar Nova Tarefa' acima para iniciar.</p>"
     else:
         cards_admin = []
         for t in tarefas_admin:
@@ -48,14 +53,14 @@ def renderizar_hub_cards_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotul
             prog = t.get("progresso_percentual", 0.0)
             cards_admin.append(f"""
             <div class='hub-card admin'>
-                <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <div style='display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;'>
                     <h4>{titulo}</h4>
                     <span class='hub-badge admin'>Administrador</span>
                 </div>
                 <div class='hub-card-meta'>
                     <div>Código de Convite: <code>{convite}</code></div>
                     <div>Vagas preenchidas: <strong>{vagas} de {total_v}</strong></div>
-                    <div>Progresso geral: <strong>{prog:.0f}%</strong></div>
+                    <div>Progresso da rodada: <strong>{prog:.0f}%</strong></div>
                 </div>
             </div>
             """)
@@ -63,7 +68,7 @@ def renderizar_hub_cards_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotul
 
     #cartoes de rotulador
     if not tarefas_rotulador:
-        html_rotulador = "<p class='muted'>Você ainda não está inscrito em nenhuma tarefa para rotular. Use o código de convite abaixo para entrar.</p>"
+        html_rotulador = "<p class='muted'>Você ainda não está inscrito em nenhuma tarefa para rotular. Use o campo de código de convite abaixo para entrar.</p>"
     else:
         cards_rot = []
         for t in tarefas_rotulador:
@@ -75,7 +80,7 @@ def renderizar_hub_cards_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotul
             status_txt = "Concluída" if pos >= tot and tot > 0 else f"{pos} de {tot} vídeos ({pct}%)"
             cards_rot.append(f"""
             <div class='hub-card'>
-                <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <div style='display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;'>
                     <h4>{titulo}</h4>
                     <span class='hub-badge rotulador'>Rotulador</span>
                 </div>
@@ -182,9 +187,11 @@ def construir_interface(
         with gr.Column(elem_classes="shell"):
             gr.HTML("""
             <div class='brand-header'>
-                <h1>TokStance!</h1>
-                <p>Desenvolvido por Gustavo Cunha<br>
-                Plataforma Colaborativa de Anotação de Vídeos Curtos</p>
+                <div style='display: flex; align-items: baseline; gap: 12px;'>
+                    <h1>TokStance!</h1>
+                    <span style='font-size: 13px; font-weight: 700; color: #9c0014; background: #fff0f2; border: 1px solid #ffd6dc; padding: 2px 8px; border-radius: 12px;'>v1.0</span>
+                </div>
+                <p>Plataforma de Anotação e Concordância em Posicionamento de Vídeos Curtos (UFMG)</p>
             </div>
             """)
 
@@ -192,20 +199,26 @@ def construir_interface(
             # 1. TELA DE ACESSO (LOGIN E CADASTRO)
             # ==================================================================
             with gr.Column(visible=True) as painel_acesso:
-                with gr.Column(elem_classes="center-form"):
-                    gr.HTML("<div style='text-align:center; margin-bottom: 20px;'><h3 style='margin:0; color:#333;'>Acesso ao Sistema</h3><p style='color:#666;'>Entre com suas credenciais ou crie uma conta gratuita.</p></div>")
+                with gr.Column(elem_classes="auth-card"):
+                    gr.HTML("""
+                    <div style='text-align: center; margin-bottom: 22px;'>
+                        <div style='display: inline-block; padding: 4px 12px; background: #fff0f2; border: 1px solid #ffd6dc; border-radius: 20px; color: #9c0014; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;'>Acesso Restrito</div>
+                        <h2 style='margin: 0 0 6px 0; color: #0f172a; font-size: 24px; font-weight: 800; letter-spacing: -0.02em;'>Bem-vindo ao TokStance</h2>
+                        <p style='color: #475569; font-size: 14px; margin: 0;'>Entre com suas credenciais ou cadastre-se para participar</p>
+                    </div>
+                    """)
 
                     with gr.Tab("Entrar"):
-                        login_usuario = gr.Textbox(label="Usuário", placeholder="Seu nome de usuário", autofocus=True)
-                        login_senha = gr.Textbox(label="Senha", type="password", placeholder="Sua senha")
-                        btn_login = gr.Button("Entrar", elem_classes="ufmg-btn")
+                        login_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Digite seu usuário", autofocus=True)
+                        login_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Digite sua senha")
+                        btn_login = gr.Button("Entrar no Sistema", elem_classes="ufmg-btn", size="lg")
 
                     with gr.Tab("Criar Conta"):
-                        cadastro_usuario = gr.Textbox(label="Novo Usuário", placeholder="Escolha seu nome de usuário")
-                        cadastro_senha = gr.Textbox(label="Senha", type="password", placeholder="Mínimo 6 caracteres")
+                        cadastro_usuario = gr.Textbox(label="Escolha seu Nome de Usuário", placeholder="Ex: pesquisador_1")
+                        cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres")
                         cadastro_confirma = gr.Textbox(label="Confirme a Senha", type="password", placeholder="Repita a senha")
                         cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
-                        btn_cadastrar = gr.Button("Cadastrar e Entrar", elem_classes="ufmg-btn")
+                        btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
 
                     mensagem_acesso = gr.Markdown()
 
@@ -213,32 +226,66 @@ def construir_interface(
             # 2. HUB INICIAL DE TAREFAS (MULTI-ROLE)
             # ==================================================================
             with gr.Column(visible=False) as painel_hub:
-                with gr.Row(elem_classes="admin-header"):
-                    hub_saudacao = gr.Markdown("## Painel de Tarefas")
-                    with gr.Row(elem_classes="admin-actions"):
-                        btn_logout = gr.Button("Sair", elem_classes="error-btn")
+                with gr.Row(elem_classes="hub-header-bar"):
+                    hub_saudacao = gr.HTML()
+                    with gr.Row(scale=0):
+                        btn_ir_criar_tarefa = gr.Button("+ Criar Nova Tarefa", elem_classes="ufmg-btn")
+                        btn_logout = gr.Button("Encerrar Sessão", elem_classes="error-btn")
 
-                with gr.Row():
-                    btn_ir_criar_tarefa = gr.Button("+ Criar Nova Tarefa", elem_classes="ufmg-btn")
+                #secao de tarefas de administrador
+                with gr.Column(elem_classes="hub-section-box"):
+                    gr.HTML("""
+                    <div style="margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">Tarefas sob sua Administração</h3>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #475569;">Rodadas de anotação criadas e coordenadas por você</p>
+                    </div>
+                    """)
+                    hub_admin_cards_html = gr.HTML()
+                    with gr.Row(elem_classes="hub-action-row"):
+                        select_tarefa_admin = gr.Dropdown(
+                            label="Selecionar Tarefa para Gerenciar",
+                            choices=[],
+                            value=None,
+                            interactive=True,
+                            scale=4,
+                        )
+                        btn_abrir_admin = gr.Button("Abrir Console de Administração", elem_classes="ufmg-btn", scale=2)
 
-                gr.Markdown("### Tarefas que você administra")
-                hub_admin_cards_html = gr.HTML()
-                with gr.Row():
-                    select_tarefa_admin = gr.Dropdown(label="Selecionar Tarefa para Gerenciar", choices=[], value=None, interactive=True)
-                    btn_abrir_admin = gr.Button("Abrir Console de Administração", elem_classes="ufmg-btn")
+                #secao de tarefas de rotulador
+                with gr.Column(elem_classes="hub-section-box"):
+                    gr.HTML("""
+                    <div style="margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">Tarefas Atribuídas a Você para Rotular</h3>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #475569;">Fila individual de vídeos atribuídos para sua análise</p>
+                    </div>
+                    """)
+                    hub_rotulador_cards_html = gr.HTML()
+                    with gr.Row(elem_classes="hub-action-row"):
+                        select_tarefa_rotulador = gr.Dropdown(
+                            label="Selecionar Tarefa para Rotular",
+                            choices=[],
+                            value=None,
+                            interactive=True,
+                            scale=4,
+                        )
+                        btn_abrir_rotulacao = gr.Button("Rotular Vídeos da Tarefa", elem_classes="ufmg-btn", scale=2)
 
-                gr.Markdown("### Tarefas atribuídas a você para rotular")
-                hub_rotulador_cards_html = gr.HTML()
-                with gr.Row():
-                    select_tarefa_rotulador = gr.Dropdown(label="Selecionar Tarefa para Rotular", choices=[], value=None, interactive=True)
-                    btn_abrir_rotulacao = gr.Button("Rotular Vídeos da Tarefa", elem_classes="ufmg-btn")
-
-                gr.Markdown("### Ingressar em Nova Tarefa")
-                with gr.Row():
-                    input_codigo_convite = gr.Textbox(label="Código de Convite", placeholder="Cole o código de convite aqui", scale=3)
-                    btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes="ufmg-btn", scale=1)
-
-                hub_mensagem = gr.Markdown()
+                #secao de ingresso por codigo de convite
+                with gr.Column(elem_classes="hub-section-box"):
+                    gr.HTML("""
+                    <div style="margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">Ingressar em Nova Tarefa</h3>
+                        <p style="margin: 4px 0 0; font-size: 14px; color: #475569;">Insira o código compartilhado pelo administrador para assumir uma vaga</p>
+                    </div>
+                    """)
+                    with gr.Row(elem_classes="hub-action-row"):
+                        input_codigo_convite = gr.Textbox(
+                            label="Código de Convite",
+                            placeholder="Ex: TOKSTANCE-2026",
+                            scale=4,
+                        )
+                        btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes="ufmg-btn", scale=2)
+                    hub_mensagem = gr.Markdown()
 
             # ==================================================================
             # 3. TELA DE CRIACAO DE TAREFA (WIZARD)
@@ -247,7 +294,7 @@ def construir_interface(
                 with gr.Row(elem_classes="admin-header"):
                     gr.Markdown("## Criador de Nova Tarefa de Pesquisa")
                     with gr.Row(elem_classes="admin-actions"):
-                        btn_voltar_hub_wizard = gr.Button("Voltar ao Hub", elem_classes="error-btn")
+                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Hub", elem_classes="error-btn")
 
                 with gr.Column(elem_classes="form-wizard-card"):
                     gr.Markdown("### 1. Definição da Pergunta e Rótulos")
@@ -328,7 +375,7 @@ def construir_interface(
             # ==================================================================
             with gr.Column(visible=False, elem_classes="labeler-panel") as painel_rotulador:
                 with gr.Row(elem_classes="labeler-actions"):
-                    btn_voltar_hub_rotulacao = gr.Button("Salvar e sair", elem_classes="ufmg-btn")
+                    btn_voltar_hub_rotulacao = gr.Button("← Salvar e Sair do Workspace", elem_classes="error-btn")
 
                 with gr.Column(elem_classes="labeler-workspace-container"):
                     with gr.Column(visible=False, elem_classes="sensitive-warning-wrapper") as painel_aviso_sensivel:
@@ -373,7 +420,7 @@ def construir_interface(
                 with gr.Row(elem_classes="admin-header"):
                     admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="admin-actions"):
-                        btn_voltar_hub_admin = gr.Button("Voltar ao Hub", elem_classes="error-btn")
+                        btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes="error-btn")
 
                 admin_configuracao_view = gr.Markdown(elem_classes="admin-configuration")
                 admin_status_view = gr.Markdown(elem_classes="admin-status")
@@ -414,7 +461,8 @@ def construir_interface(
             val_rot = opcoes_rot[0][1] if opcoes_rot else None
 
             html_admin, html_rot = renderizar_hub_cards_html(admin_tarefas, rot_tarefas)
-            saudacao = f"## Olá, **{escape(sessao.get('nome_usuario', ''))}**! Selecione ou crie uma tarefa abaixo:"
+            nome_display = escape(sessao.get("nome_usuario", ""))
+            saudacao = f"<div><span style='font-size:12px; font-weight:700; color:#9c0014; text-transform:uppercase; letter-spacing:0.06em;'>Painel Principal</span><h2 style='margin:2px 0 0; color:#0f172a; font-size:24px; font-weight:800;'>Olá, {nome_display}!</h2><p style='color:#475569; font-size:14px; margin:4px 0 0;'>Gerencie suas rodadas de pesquisa ou rotule vídeos atribuídos à sua fila.</p></div>"
             return (
                 gr.update(choices=opcoes_admin, value=val_admin),
                 gr.update(choices=opcoes_rot, value=val_rot),

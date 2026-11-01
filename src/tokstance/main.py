@@ -15,6 +15,11 @@ import uvicorn
 
 from tokstance.backend.api.routes import roteador_api
 from tokstance.frontend.gradio_ui import construir_interface
+from tokstance.frontend.theme import (
+    APP_CSS,
+    JS_FORCAR_MODO_CLARO,
+    obter_tema_branco,
+)
 
 
 def criar_aplicacao() -> FastAPI:
@@ -27,7 +32,15 @@ def criar_aplicacao() -> FastAPI:
     app_fastapi.include_router(roteador_api)
 
     demo = construir_interface()
-    app_montada = gr.mount_gradio_app(app_fastapi, demo, path="/")
+    app_montada = gr.mount_gradio_app(
+        app_fastapi,
+        demo,
+        path="/",
+        theme=obter_tema_branco(),
+        css=APP_CSS,
+        js=JS_FORCAR_MODO_CLARO,
+        footer_links=[],
+    )
     return app_montada
 
 
