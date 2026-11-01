@@ -390,3 +390,48 @@ def test_e2e_carregar_logs_acesso_tarefa_df_e_alias_salvar(ambiente_e2e: Dict[st
         tempo_analise_segundos=15.0,
     )
     assert res["anotacao_salva"]["posicao"] == "A Favor"
+
+
+@pytest.mark.integration
+def test_e2e_caminhos_infelizes_interface_rotulacao(ambiente_e2e: Dict[str, Any]):
+    """Valida prevencao de falhas do usuario no fluxo de rotulacao: sem opcao e erro precoce."""
+    auth = ambiente_e2e["auth"]
+    admin = ambiente_e2e["admin"]
+    fila = ambiente_e2e["fila"]
+    pool = _criar_pool_teste()
+
+    user = auth.cadastrar_usuario("rot_infeliz_e2e", "SenhaForte123")
+    tarefa = admin.criar_nova_tarefa(
+        usuario_administrador_id=int(user["usuario_id"]),
+        pool_videos=pool,
+        quantidade_videos_principal=2,
+        permitir_admin_como_rotulador=True,
+    )
+    t_id = int(tarefa["tarefa_id"])
+    estado = fila.obter_estado_fila(t_id, "rot_infeliz_e2e", aviso_sensivel_aceito=True)
+    vid = estado["video_atual"]
+    assert vid is not None
+
+    # Caminho infeliz 1: tentar salvar sem selecionar posicao
+    with pytest.raises(ValueError, match="Selecione uma opção de resposta antes de salvar"):
+        fila.salvar_anotacao_e_avancar(
+            tarefa_id=t_id,
+            nome_usuario="rot_infeliz_e2e",
+            assignment_id=vid["assignment_id"],
+            posicao="",
+            tempo_analise_segundos=15.0,
+        )
+
+    # Caminho infeliz 2: tentar reportar erro antes dos 10 segundos
+    with pytest.raises(ValueError, match="Aguarde pelo menos 10 segundos"):
+        fila.reportar_erro_video(
+            tarefa_id=t_id,
+            nome_usuario="rot_infeliz_e2e",
+            assignment_id=vid["assignment_id"],
+            tempo_analise_segundos=3.0,
+        )
+
+    # Estado da fila permanece intacto e pronto para resposta valida
+    estado_pos = fila.obter_estado_fila(t_id, "rot_infeliz_e2e", aviso_sensivel_aceito=True)
+    assert estado_pos["video_atual"]["assignment_id"] == vid["assignment_id"]
+    assert estado_pos["posicao_concluida"] == 0
