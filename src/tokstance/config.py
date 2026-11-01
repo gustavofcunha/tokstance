@@ -6,6 +6,30 @@ import os
 from pathlib import Path
 
 DIRETORIO_PROJETO = Path(__file__).resolve().parent.parent.parent
+
+
+def carregar_arquivo_env(caminho_env: Path | None = None) -> None:
+    """Carrega variaveis de configuracao de um arquivo .env sem exigir bibliotecas externas."""
+    arquivo = caminho_env or (DIRETORIO_PROJETO / ".env")
+    if not arquivo.exists() or not arquivo.is_file():
+        return
+    try:
+        with open(arquivo, "r", encoding="utf-8") as f:
+            for linha in f:
+                linha = linha.strip()
+                if not linha or linha.startswith("#") or "=" not in linha:
+                    continue
+                chave, valor = linha.split("=", 1)
+                chave = chave.strip()
+                valor = valor.strip().strip("'\"")
+                if chave and chave not in os.environ:
+                    os.environ[chave] = valor
+    except Exception:
+        pass
+
+
+carregar_arquivo_env()
+
 #fuso horario oficial de brasilia utc menos 3
 FUSO_BRT = timezone(timedelta(hours=-3))
 
