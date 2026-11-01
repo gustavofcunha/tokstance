@@ -37,61 +37,140 @@ from tokstance.frontend.theme import (
 )
 
 
-def renderizar_hub_cards_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotulador: List[Dict[str, Any]]) -> Tuple[str, str]:
-    """Gera o HTML dos cartoes do Hub Inicial para tarefas de administrador e de rotulador."""
-    #cartoes de administrador
+def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotulador: List[Dict[str, Any]]) -> Tuple[str, str]:
+    """Renderiza tabelas modernas e responsivas para o Hub Inicial com botoes diretos de acao."""
+    # Tabela de Administracao
     if not tarefas_admin:
-        html_admin = "<p class='muted'>Você ainda não criou nenhuma tarefa. Clique no botão '+ Criar Nova Tarefa' acima para iniciar.</p>"
+        html_admin = (
+            "<div class='hub-table-empty'>"
+            "Você ainda não criou nenhuma tarefa. Clique no botão '+ Criar Nova Tarefa' acima para iniciar."
+            "</div>"
+        )
     else:
-        cards_admin = []
+        linhas_admin = []
         for t in tarefas_admin:
             t_id = t.get("tarefa_id", "")
             titulo = escape(str(t.get("titulo", f"Tarefa #{t_id}")))
             convite = escape(str(t.get("codigo_convite", "")))
             vagas = t.get("vagas_ocupadas", 0)
             total_v = t.get("numero_vagas", 0)
-            prog = t.get("progresso_percentual", 0.0)
-            cards_admin.append(f"""
-            <div class='hub-card admin'>
-                <div style='display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;'>
-                    <h4>{titulo}</h4>
-                    <span class='hub-badge admin'>Administrador</span>
-                </div>
-                <div class='hub-card-meta'>
-                    <div>Código de Convite: <span class='config-val-badge convite'>{convite}</span></div>
-                    <div>Vagas preenchidas: <strong>{vagas} de {total_v}</strong></div>
-                    <div>Progresso da rodada: <strong>{prog:.0f}%</strong></div>
-                </div>
-            </div>
+            prog = float(t.get("progresso_percentual", 0.0))
+            prog_clamped = min(100.0, max(0.0, prog))
+            linhas_admin.append(f"""
+            <tr>
+                <td>
+                    <strong style="color: #0f172a; font-size: 14px;">{titulo}</strong>
+                    <div style="font-size: 12px; color: #64748b;">ID #{t_id}</div>
+                </td>
+                <td>
+                    <span class="config-val-badge convite">{convite}</span>
+                </td>
+                <td>
+                    <span style="font-weight: 700; color: #334155;">{vagas} de {total_v}</span>
+                </td>
+                <td>
+                    <span class="table-bar-track"><span class="table-bar-fill" style="width: {prog_clamped:.0f}%;"></span></span>
+                    <span style="font-weight: 700; font-size: 13px; color: #334155;">{prog:.0f}%</span>
+                </td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button type="button" class="hub-table-btn primary" onclick="window.tokstanceAcao('admin', '{t_id}')">Abrir Console</button>
+                    <button type="button" class="hub-table-btn danger" onclick="window.tokstanceAcao('excluir', '{t_id}')">🗑️ Excluir</button>
+                </td>
+            </tr>
             """)
-        html_admin = f"<div class='hub-grid'>{''.join(cards_admin)}</div>"
+        html_admin = f"""
+        <div class="hub-table-wrapper">
+            <table class="hub-table">
+                <thead>
+                    <tr>
+                        <th>Tarefa</th>
+                        <th>Código Convite</th>
+                        <th>Vagas</th>
+                        <th>Progresso</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(linhas_admin)}
+                </tbody>
+            </table>
+        </div>
+        """
 
-    #cartoes de rotulador
+    # Tabela de Rotulador
     if not tarefas_rotulador:
-        html_rotulador = "<p class='muted'>Você ainda não está inscrito em nenhuma tarefa para rotular. Use o campo de código de convite abaixo para entrar.</p>"
+        html_rotulador = (
+            "<div class='hub-table-empty'>"
+            "Você ainda não está inscrito em nenhuma tarefa para rotular. Use o campo de código de convite abaixo para entrar."
+            "</div>"
+        )
     else:
-        cards_rot = []
+        linhas_rot = []
         for t in tarefas_rotulador:
             t_id = t.get("tarefa_id", "")
             titulo = escape(str(t.get("titulo", f"Tarefa #{t_id}")))
-            pos = t.get("posicao_concluida", 0)
-            tot = t.get("total_videos", 0)
+            pos = int(t.get("posicao_concluida", 0))
+            tot = int(t.get("total_videos", 0))
             pct = int((pos / tot) * 100) if tot > 0 else 100
-            status_txt = "Concluída" if pos >= tot and tot > 0 else f"{pos} de {tot} vídeos ({pct}%)"
-            cards_rot.append(f"""
-            <div class='hub-card'>
-                <div style='display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;'>
-                    <h4>{titulo}</h4>
-                    <span class='hub-badge rotulador'>Rotulador</span>
-                </div>
-                <div class='hub-card-meta'>
-                    <div>Status da sua fila: <strong>{status_txt}</strong></div>
-                </div>
-            </div>
+
+            if pos == 0 or tot == 0:
+                status_class = "pending"
+                status_label = "Não iniciada"
+                btn_class = "primary"
+                btn_texto = "▶ Iniciar Rotulação"
+            elif pos < tot:
+                status_class = "in-progress"
+                status_label = "Em andamento"
+                btn_class = "in-progress"
+                btn_texto = "▶ Continuar Rotulação"
+            else:
+                status_class = "completed"
+                status_label = "Concluída"
+                btn_class = "completed"
+                btn_texto = "✓ Ver Concluída"
+
+            prog_txt = f"{pos} de {tot} vídeos ({pct}%)"
+            linhas_rot.append(f"""
+            <tr>
+                <td>
+                    <strong style="color: #0f172a; font-size: 14px;">{titulo}</strong>
+                    <div style="font-size: 12px; color: #64748b;">ID #{t_id}</div>
+                </td>
+                <td>
+                    <span class="table-bar-track"><span class="table-bar-fill" style="width: {pct}%;"></span></span>
+                    <span style="font-weight: 700; font-size: 13px; color: #334155;">{prog_txt}</span>
+                </td>
+                <td>
+                    <span class="status-pill {status_class}">{status_label}</span>
+                </td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button type="button" class="hub-table-btn {btn_class}" onclick="window.tokstanceAcao('rotular', '{t_id}')">{btn_texto}</button>
+                </td>
+            </tr>
             """)
-        html_rotulador = f"<div class='hub-grid'>{''.join(cards_rot)}</div>"
+        html_rotulador = f"""
+        <div class="hub-table-wrapper">
+            <table class="hub-table">
+                <thead>
+                    <tr>
+                        <th>Tarefa</th>
+                        <th>Progresso da Fila</th>
+                        <th>Status</th>
+                        <th style="text-align: right;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(linhas_rot)}
+                </tbody>
+            </table>
+        </div>
+        """
 
     return html_admin, html_rotulador
+
+
+# Alias retrocompativel com a versao anterior
+renderizar_hub_cards_html = renderizar_hub_tabelas_html
 
 
 def renderizar_configuracao_admin_html(tarefa_meta: Dict[str, Any]) -> str:
@@ -193,7 +272,12 @@ def construir_interface(
 
     with gr.Blocks(title="TokStance!") as app:
         #estilos css globais injetados para compatibilidade com gradio 5 e 6
-        gr.HTML(f"<style>{APP_CSS}</style>")
+        gr.HTML(f"""
+        <style>{APP_CSS}</style>
+        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}};"
+             style="display:none;" />
+        """)
 
         #estado completo da sessao do usuario
         estado_sessao = gr.State({
@@ -220,7 +304,7 @@ def construir_interface(
             """)
 
             # ==================================================================
-            # 1. TELA DE ACESSO (LOGIN E CADASTRO)
+            # 1. TELA DE ACESSO (LOGIN, CADASTRO E RECUPERACAO GRATUITA)
             # ==================================================================
             with gr.Column(visible=True) as painel_acesso:
                 with gr.Column(elem_classes="auth-card"):
@@ -239,15 +323,26 @@ def construir_interface(
 
                     with gr.Tab("Criar Conta"):
                         cadastro_usuario = gr.Textbox(label="Escolha seu Nome de Usuário", placeholder="Ex: pesquisador_1")
+                        cadastro_email = gr.Textbox(label="Seu E-mail (obrigatório para recuperação gratuita)", placeholder="Ex: usuario@email.com")
                         cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres")
                         cadastro_confirma = gr.Textbox(label="Confirme a Senha", type="password", placeholder="Repita a senha")
                         cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
                         btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
 
+                    with gr.Tab("Recuperar Senha"):
+                        recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou email")
+                        btn_solicitar_recuperacao = gr.Button("Gerar Código de Recuperação Gratuito", elem_classes="ufmg-btn")
+                        recuperar_mensagem = gr.Markdown()
+                        with gr.Row():
+                            recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456", scale=1)
+                            recuperar_nova_senha = gr.Textbox(label="Nova Senha", type="password", placeholder="Mínimo 6 caracteres", scale=2)
+                            recuperar_confirma_senha = gr.Textbox(label="Confirmar Nova Senha", type="password", placeholder="Repita a nova senha", scale=2)
+                        btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
+
                     mensagem_acesso = gr.Markdown()
 
             # ==================================================================
-            # 2. HUB INICIAL DE TAREFAS (MULTI-ROLE)
+            # 2. HUB INICIAL DE TAREFAS (MULTI-ROLE SEM MENUS SUSPENSOS)
             # ==================================================================
             with gr.Column(visible=False) as painel_hub:
                 with gr.Row(elem_classes="hub-header-bar"):
@@ -256,7 +351,7 @@ def construir_interface(
                         btn_ir_criar_tarefa = gr.Button("+ Criar Nova Tarefa", elem_classes="ufmg-btn")
                         btn_logout = gr.Button("Encerrar Sessão", elem_classes="error-btn")
 
-                # Secoes de tarefas organizadas lado a lado em duas colunas responsivas
+                # Secoes de tarefas organizadas lado a lado em duas colunas responsivas em formato de tabela
                 with gr.Row(elem_classes="hub-two-col"):
                     # Secao de tarefas de administrador
                     with gr.Column(scale=1, elem_classes="hub-section-box"):
@@ -267,16 +362,6 @@ def construir_interface(
                         </div>
                         """)
                         hub_admin_cards_html = gr.HTML()
-                        with gr.Row(elem_classes="hub-action-row"):
-                            select_tarefa_admin = gr.Dropdown(
-                                label="Selecionar Tarefa para Gerenciar",
-                                choices=[],
-                                value=None,
-                                interactive=True,
-                                scale=4,
-                            )
-                            btn_abrir_admin = gr.Button("Abrir Console de Administração", elem_classes=["ufmg-btn", "hub-btn"], scale=2)
-                            btn_excluir_tarefa_hub = gr.Button("🗑️ Excluir Tarefa", elem_classes=["error-btn", "hub-btn"], scale=1)
 
                     # Secao de tarefas de rotulador
                     with gr.Column(scale=1, elem_classes="hub-section-box"):
@@ -287,15 +372,13 @@ def construir_interface(
                         </div>
                         """)
                         hub_rotulador_cards_html = gr.HTML()
-                        with gr.Row(elem_classes="hub-action-row"):
-                            select_tarefa_rotulador = gr.Dropdown(
-                                label="Selecionar Tarefa para Rotular",
-                                choices=[],
-                                value=None,
-                                interactive=True,
-                                scale=4,
-                            )
-                            btn_abrir_rotulacao = gr.Button("Rotular Vídeos da Tarefa", elem_classes=["ufmg-btn", "hub-btn"], scale=2)
+
+                # Trigger invisivel para disparar as acoes das tabelas via JS
+                tokstance_hub_trigger = gr.Textbox(
+                    elem_id="tokstance_hub_trigger",
+                    elem_classes=["hidden-action-trigger"],
+                    visible=True,
+                )
 
                 # Secao de ingresso por codigo de convite (barra horizontal compacta para widescreen)
                 with gr.Column(elem_classes="hub-join-box"):
@@ -504,32 +587,26 @@ def construir_interface(
         # ======================================================================
         # FUNCOES DE CONTROLE E TRANSICAO DE TELAS
         # ======================================================================
-        def atualizar_visoes_hub(sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str]:
+        def atualizar_visoes_hub(sessao: Dict[str, Any]) -> Tuple[str, str, str]:
             u_id = sessao.get("usuario_id")
             if not u_id:
-                return gr.update(choices=[], value=None), gr.update(choices=[], value=None), "", "", ""
+                return "", "", ""
             painel = auth.obter_painel_usuario(int(u_id))
             admin_tarefas = painel["tarefas_administrador"]
             rot_tarefas = painel["tarefas_rotulador"]
 
-            opcoes_admin = [(f"{t['titulo']} (ID: {t['tarefa_id']})", str(t["tarefa_id"])) for t in admin_tarefas]
-            opcoes_rot = [(f"{t['titulo']} (ID: {t['tarefa_id']})", str(t["tarefa_id"])) for t in rot_tarefas]
-
-            val_admin = opcoes_admin[0][1] if opcoes_admin else None
-            val_rot = opcoes_rot[0][1] if opcoes_rot else None
-
-            html_admin, html_rot = renderizar_hub_cards_html(admin_tarefas, rot_tarefas)
+            html_admin, html_rot = renderizar_hub_tabelas_html(admin_tarefas, rot_tarefas)
             nome_display = escape(sessao.get("nome_usuario", ""))
-            saudacao = f"<div><span style='font-size:12px; font-weight:700; color:#9c0014; text-transform:uppercase; letter-spacing:0.06em;'>Painel Principal</span><h2 style='margin:2px 0 0; color:#0f172a; font-size:24px; font-weight:800;'>Olá, {nome_display}!</h2><p style='color:#475569; font-size:14px; margin:4px 0 0;'>Gerencie suas rodadas de pesquisa ou rotule vídeos atribuídos à sua fila.</p></div>"
-            return (
-                gr.update(choices=opcoes_admin, value=val_admin),
-                gr.update(choices=opcoes_rot, value=val_rot),
-                html_admin,
-                html_rot,
-                saudacao,
+            saudacao = (
+                f"<div>"
+                f"<span style='font-size:12px; font-weight:700; color:#9c0014; text-transform:uppercase; letter-spacing:0.06em;'>Painel Principal</span>"
+                f"<h2 style='margin:2px 0 0; color:#0f172a; font-size:24px; font-weight:800;'>Olá, {nome_display}!</h2>"
+                f"<p style='color:#475569; font-size:14px; margin:4px 0 0;'>Gerencie suas rodadas de pesquisa ou rotule vídeos atribuídos à sua fila.</p>"
+                f"</div>"
             )
+            return html_admin, html_rot, saudacao
 
-        def executar_login(usuario: str, senha: str) -> Tuple[Any, Any, str, Dict[str, Any], Any, Any, str, str, str]:
+        def executar_login(usuario: str, senha: str) -> Tuple[Any, Any, str, Dict[str, Any], str, str, str]:
             try:
                 dados = auth.autenticar_usuario(usuario, senha, permitir_reassumir=True)
                 sessao = {
@@ -543,14 +620,12 @@ def construir_interface(
                     "opcoes_posicao": [],
                     "previous_target": "",
                 }
-                opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
                 return (
                     gr.update(visible=False),
                     gr.update(visible=True),
                     "",
                     sessao,
-                    opt_admin,
-                    opt_rot,
                     h_adm,
                     h_rot,
                     saudacao,
@@ -561,28 +636,34 @@ def construir_interface(
                     gr.update(visible=False),
                     f"⚠️ {str(exc)}",
                     {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""},
-                    gr.update(),
-                    gr.update(),
                     "",
                     "",
                     "",
                 )
 
-        def executar_cadastro(usuario: str, senha: str, confirma: str, convite: str) -> Tuple[Any, Any, str, Dict[str, Any], Any, Any, str, str, str]:
+        def executar_cadastro(usuario: str, email: str, senha: str, confirma: str, convite: str) -> Tuple[Any, Any, str, Dict[str, Any], str, str, str]:
+            if not email or not str(email).strip():
+                return (
+                    gr.update(visible=True),
+                    gr.update(visible=False),
+                    "⚠️ O preenchimento do e-mail é obrigatório para possibilitar a recuperação gratuita de senha.",
+                    {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""},
+                    "",
+                    "",
+                    "",
+                )
             if senha != confirma:
                 return (
                     gr.update(visible=True),
                     gr.update(visible=False),
                     "⚠️ As senhas digitadas não coincidem.",
                     {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""},
-                    gr.update(),
-                    gr.update(),
                     "",
                     "",
                     "",
                 )
             try:
-                auth.cadastrar_usuario(usuario, senha, codigo_convite=convite or None)
+                auth.cadastrar_usuario(usuario, senha, email=email, codigo_convite=convite or None)
                 return executar_login(usuario, senha)
             except Exception as exc:
                 return (
@@ -590,12 +671,35 @@ def construir_interface(
                     gr.update(visible=False),
                     f"⚠️ {str(exc)}",
                     {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""},
-                    gr.update(),
-                    gr.update(),
                     "",
                     "",
                     "",
                 )
+
+        def executar_solicitar_recuperacao(identificador: str) -> str:
+            try:
+                res = auth.solicitar_recuperacao_senha(identificador)
+                cod = res["codigo"]
+                email = res.get("email", "")
+                if res.get("disparado_smtp"):
+                    return f"✅ Código gratuito de recuperação enviado para o e-mail `{email}`. Válido por 15 minutos."
+                else:
+                    return (
+                        f"✅ **Código gerado com sucesso!**  \n"
+                        f"Seu código gratuito de recuperação é: `<strong>{cod}</strong>` (válido por 15 minutos).  \n"
+                        f"Copie o código acima e preencha os campos abaixo com a sua nova senha."
+                    )
+            except Exception as exc:
+                return f"⚠️ {str(exc)}"
+
+        def executar_redefinir_senha(identificador: str, codigo: str, nova_senha: str, confirma: str) -> str:
+            if nova_senha != confirma:
+                return "⚠️ A nova senha e a confirmação não coincidem."
+            try:
+                res = auth.redefinir_senha_com_codigo(identificador, codigo, nova_senha)
+                return f"✅ {res['mensagem']} Você já pode retornar à aba 'Entrar' e fazer login."
+            except Exception as exc:
+                return f"⚠️ {str(exc)}"
 
         def executar_logout(sessao: Dict[str, Any]) -> Tuple[Any, Any, Any, Any, Any, str, Dict[str, Any]]:
             nome_u = sessao.get("nome_usuario", "")
@@ -612,17 +716,17 @@ def construir_interface(
                 nova_sessao,
             )
 
-        def executar_entrar_convite(codigo: str, sessao: Dict[str, Any]) -> Tuple[str, Any, Any, str, str]:
+        def executar_entrar_convite(codigo: str, sessao: Dict[str, Any]) -> Tuple[str, str, str, str]:
             u_id = sessao.get("usuario_id")
             if not u_id:
-                return "⚠️ Sessão inválida.", gr.update(), gr.update(), "", ""
+                return "⚠️ Sessão inválida.", "", "", ""
             try:
                 auth.entrar_na_tarefa_por_convite(int(u_id), codigo)
-                opt_admin, opt_rot, h_adm, h_rot, _ = atualizar_visoes_hub(sessao)
-                return "✅ Você entrou na tarefa com sucesso!", opt_admin, opt_rot, h_adm, h_rot
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return "✅ Você entrou na tarefa com sucesso!", h_adm, h_rot, saudacao
             except Exception as exc:
-                opt_admin, opt_rot, h_adm, h_rot, _ = atualizar_visoes_hub(sessao)
-                return f"⚠️ {str(exc)}", opt_admin, opt_rot, h_adm, h_rot
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return f"⚠️ {str(exc)}", h_adm, h_rot, saudacao
 
         #funcoes do wizard de criacao de tarefa
         def abrir_wizard_criacao() -> Tuple[Any, Any, str, Any]:
@@ -630,13 +734,11 @@ def construir_interface(
             tabela_df = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
             return gr.update(visible=False), gr.update(visible=True), novo_codigo, tabela_df
 
-        def voltar_hub_de_wizard(sessao: Dict[str, Any]) -> Tuple[Any, Any, Any, Any, str, str, str]:
-            opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+        def voltar_hub_de_wizard(sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str]:
+            h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
             return (
                 gr.update(visible=True),
                 gr.update(visible=False),
-                opt_admin,
-                opt_rot,
                 h_adm,
                 h_rot,
                 saudacao,
@@ -817,19 +919,17 @@ def construir_interface(
             sessao_atualizada["start_time"] = time.time()
             return gr.update(visible=False), gr.update(visible=True), sessao_atualizada
 
-        def parar_rotulacao_sensivel(sessao: Dict[str, Any]) -> Tuple[Any, Any, Any, Any, str, str, str, Dict[str, Any]]:
+        def parar_rotulacao_sensivel(sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str, Dict[str, Any]]:
             t_id = sessao.get("tarefa_ativa_id")
             nome_u = sessao.get("nome_usuario", "")
             if t_id and nome_u:
                 fila.parar_rotulacao(tarefa_id=int(t_id), nome_usuario=nome_u)
             sessao_atualizada = dict(sessao)
             sessao_atualizada["tarefa_ativa_id"] = None
-            opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao_atualizada)
+            h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao_atualizada)
             return (
                 gr.update(visible=True), #painel_hub
                 gr.update(visible=False), #painel_rotulador
-                opt_admin,
-                opt_rot,
                 h_adm,
                 h_rot,
                 saudacao,
@@ -1036,52 +1136,133 @@ def construir_interface(
                 sessao_atualizada,
             )
 
+        def voltar_hub_de_admin(sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str, Dict[str, Any]]:
+            sessao_atualizada = dict(sessao)
+            sessao_atualizada["tarefa_ativa_id"] = None
+            h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao_atualizada)
+            return (
+                gr.update(visible=True),
+                gr.update(visible=False),
+                h_adm,
+                h_rot,
+                saudacao,
+                sessao_atualizada,
+            )
+
         def excluir_tarefa_pelo_hub(
             tarefa_id_str: str,
             sessao: Dict[str, Any],
-        ) -> Tuple[str, Any, Any, str, str, str]:
+        ) -> Tuple[str, str, str, str]:
             u_id = sessao.get("usuario_id")
             if not u_id or not tarefa_id_str:
-                return "⚠️ Selecione uma tarefa na lista acima para excluir.", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return "⚠️ Tarefa inválida para exclusão.", h_adm, h_rot, saudacao
             try:
                 t_id = int(tarefa_id_str)
                 admin.excluir_tarefa(tarefa_id=t_id, usuario_administrador_id=int(u_id))
-                opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
-                return f"✅ Tarefa #{t_id} excluída com sucesso.", opt_admin, opt_rot, h_adm, h_rot, saudacao
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return f"✅ Tarefa #{t_id} excluída com sucesso.", h_adm, h_rot, saudacao
             except Exception as exc:
-                return f"⚠️ Erro ao excluir tarefa: {str(exc)}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return f"⚠️ Erro ao excluir tarefa: {str(exc)}", h_adm, h_rot, saudacao
 
         def excluir_tarefa_pelo_admin(
             sessao: Dict[str, Any],
-        ) -> Tuple[Any, Any, str, Any, Any, str, str, str]:
+        ) -> Tuple[Any, Any, str, str, str, str, Dict[str, Any]]:
             u_id = sessao.get("usuario_id")
             t_id = sessao.get("tarefa_ativa_id")
             if not u_id or not t_id:
-                return gr.update(visible=True), gr.update(visible=False), "⚠️ Sessão inválida para exclusão.", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                return gr.update(visible=True), gr.update(visible=False), "⚠️ Sessão inválida para exclusão.", "", "", "", sessao
             try:
                 admin.excluir_tarefa(tarefa_id=int(t_id), usuario_administrador_id=int(u_id))
-                opt_admin, opt_rot, h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                sessao_atualizada = dict(sessao)
+                sessao_atualizada["tarefa_ativa_id"] = None
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao_atualizada)
                 return (
                     gr.update(visible=True),
                     gr.update(visible=False),
                     f"✅ Tarefa #{t_id} excluída com sucesso.",
-                    opt_admin,
-                    opt_rot,
                     h_adm,
                     h_rot,
                     saudacao,
+                    sessao_atualizada,
                 )
             except Exception as exc:
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
                 return (
                     gr.update(),
                     gr.update(),
                     f"⚠️ Erro ao excluir tarefa: {str(exc)}",
-                    gr.update(),
-                    gr.update(),
-                    gr.update(),
-                    gr.update(),
-                    gr.update(),
+                    h_adm,
+                    h_rot,
+                    saudacao,
+                    sessao,
                 )
+
+        def processar_acao_hub(comando: str, sessao: Dict[str, Any]):
+            if not comando or ":" not in comando:
+                return (
+                    gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(),
+                    sessao,
+                )
+            partes = comando.split(":")
+            acao = partes[0].strip()
+            tarefa_id_str = partes[1].strip()
+
+            if acao == "rotular":
+                (
+                    p_hub, p_rot, p_aviso, p_ctrl, r_radio,
+                    r_cab, v_html, p_html, pb, sessao_nova
+                ) = abrir_rotulacao_tarefa(tarefa_id_str, sessao)
+                return (
+                    p_hub, p_rot, gr.update(visible=False),
+                    p_aviso, p_ctrl, r_radio, r_cab, v_html, p_html, pb,
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(),
+                    sessao_nova,
+                )
+
+            elif acao == "admin":
+                (
+                    p_hub, p_adm, a_tit, a_cfg, a_stat, a_dash,
+                    d_res, d_log, d_err, d_agr, df_atrib, sessao_nova
+                ) = abrir_admin_console(tarefa_id_str, sessao)
+                return (
+                    p_hub, gr.update(visible=False), p_adm,
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    a_tit, a_cfg, a_stat, a_dash, d_res, d_log, d_err, d_agr, df_atrib,
+                    gr.update(), gr.update(), gr.update(), gr.update(),
+                    sessao_nova,
+                )
+
+            elif acao == "excluir":
+                u_id = sessao.get("usuario_id")
+                msg = ""
+                if u_id and tarefa_id_str:
+                    try:
+                        admin.excluir_tarefa(tarefa_id=int(tarefa_id_str), usuario_administrador_id=int(u_id))
+                        msg = f"✅ Tarefa #{tarefa_id_str} excluída com sucesso."
+                    except Exception as exc:
+                        msg = f"⚠️ Erro ao excluir tarefa: {str(exc)}"
+                h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
+                return (
+                    gr.update(visible=True), gr.update(visible=False), gr.update(visible=False),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    h_adm, h_rot, saudacao, msg,
+                    sessao,
+                )
+
+            return (
+                gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(),
+                sessao,
+            )
 
         # ======================================================================
         # CONEXOES DE EVENTOS (WIRING)
@@ -1094,8 +1275,6 @@ def construir_interface(
                 painel_hub,
                 mensagem_acesso,
                 estado_sessao,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
@@ -1107,14 +1286,12 @@ def construir_interface(
 
         handler_cadastro_params = {
             "fn": executar_cadastro,
-            "inputs": [cadastro_usuario, cadastro_senha, cadastro_confirma, cadastro_convite],
+            "inputs": [cadastro_usuario, cadastro_email, cadastro_senha, cadastro_confirma, cadastro_convite],
             "outputs": [
                 painel_acesso,
                 painel_hub,
                 mensagem_acesso,
                 estado_sessao,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
@@ -1122,9 +1299,29 @@ def construir_interface(
         }
         btn_cadastrar.click(**handler_cadastro_params)
         cadastro_usuario.submit(**handler_cadastro_params)
+        cadastro_email.submit(**handler_cadastro_params)
         cadastro_senha.submit(**handler_cadastro_params)
         cadastro_confirma.submit(**handler_cadastro_params)
         cadastro_convite.submit(**handler_cadastro_params)
+
+        btn_solicitar_recuperacao.click(
+            executar_solicitar_recuperacao,
+            inputs=[recuperar_identificador],
+            outputs=[recuperar_mensagem],
+        )
+        recuperar_identificador.submit(
+            executar_solicitar_recuperacao,
+            inputs=[recuperar_identificador],
+            outputs=[recuperar_mensagem],
+        )
+
+        handler_redefinir_params = {
+            "fn": executar_redefinir_senha,
+            "inputs": [recuperar_identificador, recuperar_codigo, recuperar_nova_senha, recuperar_confirma_senha],
+            "outputs": [recuperar_mensagem],
+        }
+        btn_redefinir_senha.click(**handler_redefinir_params)
+        recuperar_confirma_senha.submit(**handler_redefinir_params)
 
         btn_logout.click(
             executar_logout,
@@ -1145,14 +1342,45 @@ def construir_interface(
             "inputs": [input_codigo_convite, estado_sessao],
             "outputs": [
                 hub_mensagem,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
+                hub_saudacao,
             ],
         }
         btn_entrar_convite.click(**handler_convite_params)
         input_codigo_convite.submit(**handler_convite_params)
+
+        # Disparador unificado das acoes de linha das tabelas (Abrir Console, Iniciar/Continuar Rotulacao, Excluir)
+        tokstance_hub_trigger.change(
+            processar_acao_hub,
+            inputs=[tokstance_hub_trigger, estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_rotulador,
+                painel_admin,
+                painel_aviso_sensivel,
+                painel_controles_anotacao,
+                rotulador_radio,
+                rotulador_cabecalho,
+                rotulador_video_html,
+                rotulador_pergunta_html,
+                rotulador_progresso,
+                admin_titulo_tarefa,
+                admin_configuracao_view,
+                admin_status_view,
+                admin_dashboard_html,
+                admin_download_resultados,
+                admin_download_logs,
+                admin_download_erros,
+                admin_download_concordancia,
+                admin_tabela_atribuicoes,
+                hub_admin_cards_html,
+                hub_rotulador_cards_html,
+                hub_saudacao,
+                hub_mensagem,
+                estado_sessao,
+            ],
+        )
 
         btn_ir_criar_tarefa.click(
             abrir_wizard_criacao,
@@ -1166,8 +1394,6 @@ def construir_interface(
             outputs=[
                 painel_hub,
                 painel_wizard,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
@@ -1233,23 +1459,6 @@ def construir_interface(
         )
 
         #eventos da tela de rotulacao
-        btn_abrir_rotulacao.click(
-            abrir_rotulacao_tarefa,
-            inputs=[select_tarefa_rotulador, estado_sessao],
-            outputs=[
-                painel_hub,
-                painel_rotulador,
-                painel_aviso_sensivel,
-                painel_controles_anotacao,
-                rotulador_radio,
-                rotulador_cabecalho,
-                rotulador_video_html,
-                rotulador_pergunta_html,
-                rotulador_progresso,
-                estado_sessao,
-            ],
-        )
-
         btn_continuar_sensivel.click(
             continuar_aviso_sensivel,
             inputs=[estado_sessao],
@@ -1262,8 +1471,6 @@ def construir_interface(
             outputs=[
                 painel_hub,
                 painel_rotulador,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
@@ -1277,8 +1484,6 @@ def construir_interface(
             outputs=[
                 painel_hub,
                 painel_rotulador,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
@@ -1315,49 +1520,16 @@ def construir_interface(
         )
 
         #eventos do console de administracao
-        btn_abrir_admin.click(
-            abrir_admin_console,
-            inputs=[select_tarefa_admin, estado_sessao],
-            outputs=[
-                painel_hub,
-                painel_admin,
-                admin_titulo_tarefa,
-                admin_configuracao_view,
-                admin_status_view,
-                admin_dashboard_html,
-                admin_download_resultados,
-                admin_download_logs,
-                admin_download_erros,
-                admin_download_concordancia,
-                admin_tabela_atribuicoes,
-                estado_sessao,
-            ],
-        )
-
         btn_voltar_hub_admin.click(
-            voltar_hub_de_wizard,
+            voltar_hub_de_admin,
             inputs=[estado_sessao],
             outputs=[
                 painel_hub,
                 painel_admin,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
-            ],
-        )
-
-        btn_excluir_tarefa_hub.click(
-            excluir_tarefa_pelo_hub,
-            inputs=[select_tarefa_admin, estado_sessao],
-            outputs=[
-                hub_mensagem,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
-                hub_admin_cards_html,
-                hub_rotulador_cards_html,
-                hub_saudacao,
+                estado_sessao,
             ],
         )
 
@@ -1368,12 +1540,13 @@ def construir_interface(
                 painel_hub,
                 painel_admin,
                 hub_mensagem,
-                select_tarefa_admin,
-                select_tarefa_rotulador,
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
+                estado_sessao,
             ],
         )
+
+    return app
 
     return app
