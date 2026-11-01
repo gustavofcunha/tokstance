@@ -95,6 +95,7 @@ class ServicoAutenticacao:
         nome_usuario: str,
         senha: str,
         exigir_sessao_unica: bool = True,
+        permitir_reassumir: bool = False,
     ) -> dict[str, Any]:
         """Autentica o usuario verificando bloqueio temporario, senha bcrypt e sessao ativa."""
         chave_bruta = str(nome_usuario or "").strip()
@@ -132,9 +133,13 @@ class ServicoAutenticacao:
         if exigir_sessao_unica and not self.gerenciador_sessoes.reivindicar_sessao(
             nome_limpo
         ):
-            raise RuntimeError(
-                f"O usuário '{nome_limpo}' já possui uma sessão ativa em andamento."
-            )
+            if permitir_reassumir:
+                self.gerenciador_sessoes.liberar_sessao(nome_limpo)
+                self.gerenciador_sessoes.reivindicar_sessao(nome_limpo)
+            else:
+                raise RuntimeError(
+                    f"O usuário '{nome_limpo}' já possui uma sessão ativa em andamento."
+                )
 
         self.limitador_tentativas.registrar_sucesso(nome_limpo)
         self.repo_estudo.registrar_log_acesso(

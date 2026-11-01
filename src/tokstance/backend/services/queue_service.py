@@ -152,6 +152,7 @@ class ServicoFilaAnotacao:
         assignment_id: str,
         posicao: str | None,
         tempo_analise_segundos: float,
+        login_time_segundos: float = 0.0,
     ) -> dict[str, Any]:
         """Valida a resposta selecionada, salva a anotacao no SQLite e avanca para o proximo video."""
         if posicao is None or not str(posicao).strip():
@@ -189,12 +190,34 @@ class ServicoFilaAnotacao:
             "estado_fila": proximo_estado,
         }
 
+    def salvar_anotacao(
+        self,
+        tarefa_id: int,
+        nome_usuario: str,
+        assignment_id: str,
+        posicao: str | None = None,
+        tempo_analise_segundos: float = 0.0,
+        stance: str | None = None,
+        login_time_segundos: float = 0.0,
+    ) -> dict[str, Any]:
+        """Alias retrocompativel para salvar_anotacao_e_avancar."""
+        escolha = posicao if posicao is not None else stance
+        return self.salvar_anotacao_e_avancar(
+            tarefa_id=tarefa_id,
+            nome_usuario=nome_usuario,
+            assignment_id=assignment_id,
+            posicao=escolha,
+            tempo_analise_segundos=tempo_analise_segundos,
+            login_time_segundos=login_time_segundos,
+        )
+
     def reportar_erro_video(
         self,
         tarefa_id: int,
         nome_usuario: str,
         assignment_id: str,
         tempo_analise_segundos: float,
+        login_time_segundos: float = 0.0,
     ) -> dict[str, Any]:
         """Valida a espera minima de 10s, registra o erro e aciona substituicao por reserva."""
         tempo_decorrido = float(tempo_analise_segundos or 0.0)
