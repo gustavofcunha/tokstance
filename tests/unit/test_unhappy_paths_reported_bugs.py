@@ -22,10 +22,13 @@ from tokstance.backend.repositories.user_repo import RepositorioUsuarios
 from tokstance.backend.services.admin_service import ServicoAdministracao
 from tokstance.backend.services.auth_service import ServicoAutenticacao
 from tokstance.backend.services.queue_service import ServicoFilaAnotacao
+from tokstance.frontend.components import render_tiktok
 from tokstance.frontend.gradio_ui import (
     converter_df_para_distancias,
     gerar_tabela_penalidades_df,
+    renderizar_configuracao_admin_html,
 )
+from tokstance.frontend.theme import APP_CSS
 
 
 def _criar_pool_minimo() -> pd.DataFrame:
@@ -430,3 +433,59 @@ def test_ui_gerar_tabela_penalidades_df_texto_insuficiente_retorna_vazio():
 
     df_um = gerar_tabela_penalidades_df("Apenas Uma Opção")
     assert df_um.empty
+
+
+# ==============================================================================
+# 8. PREVENCAO DE REGRESSAO DE BUGS ESPECIFICOS REPORTADOS PELO USUARIO
+# ==============================================================================
+
+@pytest.mark.unit
+def test_regressao_configuracao_admin_alto_contraste_sem_black_box():
+    """Garante que a configuracao vigente do admin utiliza HTML com pills e classes dedicadas sem crases de markdown."""
+    meta = {
+        "tarefa_id": 42,
+        "codigo_convite": "TOK-99887766",
+        "pergunta": 'Qual a posição sobre "{target}"?',
+        "opcoes_posicao": ["Contra", "A favor", "Neutro"],
+        "numero_vagas": 3,
+        "percentual_sobreposicao": 20.0,
+    }
+    html = renderizar_configuracao_admin_html(meta)
+    # Nao deve conter marcacoes de crase de markdown que geram caixas escuras opacas
+    assert "`" not in html
+    # Deve conter componentes estruturados de alto contraste
+    assert "admin-config-card" in html
+    assert "config-val-badge convite" in html
+    assert "TOK-99887766" in html
+    assert "#42" in html
+    assert "config-val-text" in html
+
+
+@pytest.mark.unit
+def test_regressao_tema_css_alinhamento_hub_e_overlay_sensivel():
+    """Garante regras CSS criticas para alinhamento de botoes, duas colunas e overlay sem rolagem."""
+    # Verificacao do layout em duas colunas lado a lado
+    assert ".hub-two-col" in APP_CSS
+    assert "display: flex !important;" in APP_CSS
+    # Verificacao de alinhamento inferior dos botoes e inputs no hub
+    assert ".hub-action-row" in APP_CSS
+    assert "align-items: flex-end !important;" in APP_CSS
+    assert ".hub-btn" in APP_CSS
+    assert "height: 42px !important;" in APP_CSS
+    # Verificacao do modal sensivel como overlay fixo sem esticar a arvore DOM
+    assert ".sensitive-warning-wrapper" in APP_CSS
+    assert "position: fixed !important;" in APP_CSS
+    assert "z-index: 99999 !important;" in APP_CSS
+    # Verificacao do botao de sair do workspace
+    assert ".labeler-exit-btn" in APP_CSS
+    assert "margin-left: auto !important;" in APP_CSS
+    assert "#9c0014" in APP_CSS
+
+
+@pytest.mark.unit
+def test_regressao_tiktok_player_altura_contida():
+    """Garante que o iframe do TikTok usa altura compacta de 530px evitando scrollbar vertical desnecessaria."""
+    player_html = render_tiktok("https://www.tiktok.com/@canal/video/7123456789")
+    assert "height: 530px;" in player_html
+    assert "width: min(100%, 340px);" in player_html
+    assert "scrolling=\"no\"" in player_html
