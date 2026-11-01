@@ -110,6 +110,23 @@ class RepositorioEstudo:
         resultado["distancias_rotulos"] = {
             str(par): float(peso) for par, peso in distancias.items()
         }
+        t_id = linha.get("tarefa_id")
+        if t_id is not None:
+            contagem = self.banco.consultar_um(
+                """
+                SELECT
+                    SUM(CASE WHEN tipo_pool = 'principal' THEN 1 ELSE 0 END) AS qtd_p,
+                    SUM(CASE WHEN tipo_pool = 'reserva' THEN 1 ELSE 0 END) AS qtd_r
+                FROM videos_tarefa
+                WHERE tarefa_id = ?;
+                """,
+                (int(t_id),),
+            )
+            resultado["quantidade_videos_principal"] = int(contagem["qtd_p"] or 0) if contagem else 0
+            resultado["quantidade_videos_reserva"] = int(contagem["qtd_r"] or 0) if contagem else 0
+        else:
+            resultado["quantidade_videos_principal"] = 0
+            resultado["quantidade_videos_reserva"] = 0
         return resultado
 
     def criar_tarefa(
