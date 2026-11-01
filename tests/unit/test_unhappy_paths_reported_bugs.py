@@ -480,12 +480,16 @@ def test_regressao_tema_css_alinhamento_hub_e_overlay_sensivel():
     assert ".labeler-exit-btn" in APP_CSS
     assert "margin-left: auto !important;" in APP_CSS
     assert "#9c0014" in APP_CSS
+    # Verificacao do suporte e harmonia para resolucoes Widescreen
+    assert ".wizard-grid" in APP_CSS
+    assert ".hub-join-box" in APP_CSS
+    assert "width: min(98%, 1880px)" in APP_CSS
 
 
 @pytest.mark.unit
 def test_regressao_tiktok_player_altura_contida():
-    """Garante que o iframe do TikTok usa altura compacta de 530px evitando scrollbar vertical desnecessaria."""
+    """Garante que o iframe do TikTok usa altura compacta de 500px evitando scrollbar vertical desnecessaria."""
     player_html = render_tiktok("https://www.tiktok.com/@canal/video/7123456789")
-    assert "height: 530px;" in player_html
-    assert "width: min(100%, 340px);" in player_html
+    assert "height: 500px;" in player_html
+    assert "width: min(100%, 330px);" in player_html
     assert "scrolling=\"no\"" in player_html
