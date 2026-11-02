@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import re
 import shutil
 import socket
 import subprocess
@@ -220,6 +221,23 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
     pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
 
+    #act tentativa de cadastro com senha sem cumprir requisitos de complexidade
+    pagina_navegador.get_by_role("tab", name="Criar Conta").click()
+    pagina_navegador.get_by_label("Nome de Usuário").nth(1).fill("usuario_falha_senha")
+    pagina_navegador.get_by_label("E-mail (usado na recuperação de senha)").fill("falha@exemplo.org")
+    pagina_navegador.get_by_label("Senha de Acesso").nth(1).fill("somenteletras")
+    pagina_navegador.get_by_label("Confirmar Senha").fill("somenteletras")
+    pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
+
+    #assert erro de requisitos de senha exibido inline e no toast
+    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    texto_erro_cad = pagina_navegador.locator(".auth-inline-error").inner_text()
+    assert "letra" in texto_erro_cad.lower() and "número" in texto_erro_cad.lower()
+
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", state="attached", timeout=8000)
+    texto_toast_cad = pagina_navegador.locator(".tokstance-toast.toast-erro").last.text_content() or ""
+    assert "letra" in texto_toast_cad.lower() and "número" in texto_toast_cad.lower()
+
 
 def _cadastrar_e_entrar_na_tarefa(
     pagina: Page, url_base: str, usuario: str, codigo_convite: str
@@ -309,7 +327,7 @@ def test_e2e_anotacao_completa_e_avanco_da_barra_de_progresso(
     pagina_navegador.get_by_role("button", name="Salvar Resposta e Avançar").click()
 
     #assert progress bar advances
-    pagina_navegador.wait_for_selector("text=1 de ", timeout=10000)
+    pagina_navegador.locator(".labeler-controls-column").get_by_text(re.compile(r"1 de ")).wait_for(timeout=10000)
     texto_progresso = pagina_navegador.locator(".labeler-controls-column").inner_text()
     assert "1 de " in texto_progresso
 
@@ -396,11 +414,41 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
     pagina_navegador.get_by_role("button", name="Verificar Código").click()
 
     #aguarda passo de redefinicao de senha
-    pagina_navegador.get_by_label("Nova Senha", exact=True).wait_for(state="visible", timeout=10000)
+    campo_nova_senha = pagina_navegador.get_by_label("Nova Senha").first
+    campo_confirma_senha = pagina_navegador.get_by_label("Confirmar Nova Senha")
+    campo_nova_senha.wait_for(state="visible", timeout=10000)
+
+    #act submeter senha curta sem cumprir tamanho minimo
+    campo_nova_senha.fill("123")
+    campo_confirma_senha.fill("123")
+    pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
+
+    #assert erro de requisitos de tamanho minimo exibido inline e no toast
+    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    texto_inline_curta = pagina_navegador.locator(".auth-inline-error").inner_text()
+    assert "mínimo" in texto_inline_curta.lower() and "6" in texto_inline_curta
+
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", state="attached", timeout=8000)
+    texto_toast_curta = pagina_navegador.locator(".tokstance-toast.toast-erro").last.text_content() or ""
+    assert "mínimo" in texto_toast_curta.lower() and "6" in texto_toast_curta
+
+    #act submeter senha sem numeros violando complexidade
+    campo_nova_senha.fill("somenteletras")
+    campo_confirma_senha.fill("somenteletras")
+    pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
+
+    #assert erro de requisitos de letra e numero exibido inline e no toast
+    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    texto_inline_sn = pagina_navegador.locator(".auth-inline-error").inner_text()
+    assert "letra" in texto_inline_sn.lower() and "número" in texto_inline_sn.lower()
+
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", state="attached", timeout=8000)
+    texto_toast_sn = pagina_navegador.locator(".tokstance-toast.toast-erro").last.text_content() or ""
+    assert "letra" in texto_toast_sn.lower() and "número" in texto_toast_sn.lower()
 
     #act preencher nova senha com confirmacao diferente
-    pagina_navegador.get_by_label("Nova Senha", exact=True).fill("novaSenhaForte123")
-    pagina_navegador.get_by_label("Confirmar Nova Senha", exact=True).fill("senhaDiferente456")
+    campo_nova_senha.fill("novaSenhaForte123")
+    campo_confirma_senha.fill("senhaDiferente456")
     pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
 
     #assert erro de confirmacao diferente exibido inline no card e no toast
@@ -413,7 +461,7 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
     assert "não coincidem" in texto_toast.lower() or "diferente" in texto_toast.lower()
 
     #act corrigir a confirmacao de senha para coincidir
-    pagina_navegador.get_by_label("Confirmar Nova Senha", exact=True).fill("novaSenhaForte123")
+    campo_confirma_senha.fill("novaSenhaForte123")
     pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
 
     #assert toast de sucesso na redefinicao
