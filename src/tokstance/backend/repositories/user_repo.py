@@ -71,6 +71,23 @@ class RepositorioUsuarios:
             (email.strip().lower(),),
         )
 
+    def buscar_por_nome_ou_email_case_insensitive(
+        self, identificador: str
+    ) -> dict[str, Any] | None:
+        """Busca um usuario por nome de usuario ou email sem diferenciacao de maiusculas e minusculas."""
+        if not isinstance(identificador, str) or not identificador.strip():
+            return None
+        limpo = identificador.strip()
+        return self.banco.consultar_um(
+            """
+            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
+            FROM usuarios
+            WHERE nome_usuario = ? COLLATE NOCASE OR email = ? COLLATE NOCASE
+            LIMIT 1;
+            """,
+            (limpo, limpo),
+        )
+
     def buscar_por_id(self, usuario_id: int) -> dict[str, Any] | None:
         """Busca um usuario pela chave primaria usuario_id."""
         return self.banco.consultar_um(
@@ -318,21 +335,36 @@ class RepositorioUsuarios:
         usuario_id: int,
         papel: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Retorna todas as tarefas vinculadas ao usuario, com filtro opcional de papel."""
+        """Retorna todas as tarefas vinculadas ao usuario garantindo preservacao de administracao e atribuicoes."""
+        u_id = int(usuario_id)
         if papel is not None:
+            p_limpo = str(papel).strip().lower()
             linhas = self.banco.consultar_todos(
                 """
                 SELECT t.tarefa_id, t.slug_tarefa, t.titulo, t.pergunta,
                        t.opcoes_json, t.distancias_rotulos_json,
                        t.numero_vagas, t.videos_por_rotulador, t.percentual_sobreposicao,
                        t.codigo_convite, t.versao_atribuicao, t.criado_em,
-                       m.papel, m.vaga_atribuida, m.entrou_em
-                FROM membros_tarefa m
-                JOIN tarefas t ON t.tarefa_id = m.tarefa_id
-                WHERE m.usuario_id = ? AND m.papel = ?
+                       COALESCE(m.papel, ?) AS papel,
+                       COALESCE(m.vaga_atribuida, '') AS vaga_atribuida,
+                       COALESCE(m.entrou_em, t.criado_em) AS entrou_em
+                FROM tarefas t
+                LEFT JOIN membros_tarefa m ON m.tarefa_id = t.tarefa_id AND m.usuario_id = ? AND m.papel = ?
+                WHERE m.papel = ?
+                   OR (t.criado_por_usuario_id = ? AND ? = 'administrador')
+                   OR (? = 'rotulador' AND t.tarefa_id IN (
+                       SELECT DISTINCT tarefa_id FROM atribuicoes
+                       WHERE usuario_id = ? OR labeler = (SELECT nome_usuario FROM usuarios WHERE usuario_id = ?)
+                   ))
                 ORDER BY t.tarefa_id DESC;
                 """,
-                (int(usuario_id), str(papel).strip().lower()),
+                (
+                    p_limpo,
+                    u_id, p_limpo,
+                    p_limpo,
+                    u_id, p_limpo,
+                    p_limpo, u_id, u_id,
+                ),
             )
             return [self._deserializar_item_tarefa(linha) for linha in linhas]
         linhas = self.banco.consultar_todos(
@@ -345,8 +377,20 @@ class RepositorioUsuarios:
             FROM membros_tarefa m
             JOIN tarefas t ON t.tarefa_id = m.tarefa_id
             WHERE m.usuario_id = ?
-            ORDER BY t.tarefa_id DESC, m.membro_id ASC;
+            UNION
+            SELECT t.tarefa_id, t.slug_tarefa, t.titulo, t.pergunta,
+                   t.opcoes_json, t.distancias_rotulos_json,
+                   t.numero_vagas, t.videos_por_rotulador, t.percentual_sobreposicao,
+                   t.codigo_convite, t.versao_atribuicao, t.criado_em,
+                   'administrador' AS papel, '' AS vaga_atribuida, t.criado_em AS entrou_em
+            FROM tarefas t
+            WHERE t.criado_por_usuario_id = ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM membros_tarefa m2
+                  WHERE m2.tarefa_id = t.tarefa_id AND m2.usuario_id = ? AND m2.papel = 'administrador'
+              )
+            ORDER BY tarefa_id DESC;
             """,
-            (int(usuario_id),),
+            (u_id, u_id, u_id),
         )
         return [self._deserializar_item_tarefa(linha) for linha in linhas]

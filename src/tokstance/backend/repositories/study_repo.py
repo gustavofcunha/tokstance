@@ -439,15 +439,19 @@ class RepositorioEstudo:
     ) -> pd.DataFrame:
         """Retorna as atribuicoes da tarefa ordenadas pela posicao na fila."""
         if rotulador is not None:
+            rot_limpo = str(rotulador).strip()
             linhas = self.banco.consultar_todos(
                 """
                 SELECT assignment_version, assignment_id, labeler, video_id, url,
                        target, video_description, voice_to_text, video_duration
                 FROM atribuicoes
-                WHERE tarefa_id = ? AND labeler = ?
+                WHERE tarefa_id = ? AND (
+                    labeler = ? COLLATE NOCASE
+                    OR usuario_id = (SELECT usuario_id FROM usuarios WHERE nome_usuario = ? COLLATE NOCASE)
+                )
                 ORDER BY ordem_fila ASC, atribuicao_pk ASC;
                 """,
-                (int(tarefa_id), str(rotulador).strip()),
+                (int(tarefa_id), rot_limpo, rot_limpo),
             )
         else:
             linhas = self.banco.consultar_todos(
@@ -648,15 +652,19 @@ class RepositorioEstudo:
     ) -> pd.DataFrame:
         """Retorna as anotacoes concluidas da tarefa no formato de resultados_anotacao.csv."""
         if rotulador is not None:
+            rot_limpo = str(rotulador).strip()
             linhas = self.banco.consultar_todos(
                 """
                 SELECT timestamp, labeler, video_id, url, target, stance,
                        tempo_analise_segundos, video_duration, assignment_id
                 FROM anotacoes
-                WHERE tarefa_id = ? AND labeler = ?
+                WHERE tarefa_id = ? AND (
+                    labeler = ? COLLATE NOCASE
+                    OR usuario_id = (SELECT usuario_id FROM usuarios WHERE nome_usuario = ? COLLATE NOCASE)
+                )
                 ORDER BY anotacao_id ASC;
                 """,
-                (int(tarefa_id), str(rotulador).strip()),
+                (int(tarefa_id), rot_limpo, rot_limpo),
             )
         else:
             linhas = self.banco.consultar_todos(

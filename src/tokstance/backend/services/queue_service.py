@@ -47,9 +47,26 @@ class ServicoFilaAnotacao:
         fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
             int(tarefa_id), rotulador=nome_limpo
         )
+        vaga_rot = ""
+        u_info = self.repo_usuarios.buscar_por_nome_usuario(nome_limpo)
+        if u_info:
+            membro = self.repo_usuarios.buscar_membro_tarefa(
+                int(tarefa_id), int(u_info["usuario_id"]), papel="rotulador"
+            )
+            if membro and membro.get("vaga_atribuida"):
+                vaga_rot = str(membro["vaga_atribuida"]).strip()
+                if fila_df.empty and vaga_rot:
+                    fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
+                        int(tarefa_id), rotulador=vaga_rot
+                    )
+
         anotadas_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
             int(tarefa_id), rotulador=nome_limpo
         )
+        if anotadas_df.empty and vaga_rot:
+            anotadas_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
+                int(tarefa_id), rotulador=vaga_rot
+            )
         erros_df = self.repo_estudo.carregar_erros_videos_tarefa_df(int(tarefa_id))
 
         ids_anotados = (
@@ -168,6 +185,16 @@ class ServicoFilaAnotacao:
         fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
             int(tarefa_id), rotulador=nome_limpo
         )
+        if fila_df.empty:
+            u_info = self.repo_usuarios.buscar_por_nome_usuario(nome_limpo)
+            if u_info:
+                membro = self.repo_usuarios.buscar_membro_tarefa(
+                    int(tarefa_id), int(u_info["usuario_id"]), papel="rotulador"
+                )
+                if membro and membro.get("vaga_atribuida"):
+                    fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
+                        int(tarefa_id), rotulador=str(membro["vaga_atribuida"]).strip()
+                    )
         correspondentes = fila_df[
             fila_df["assignment_id"].astype(str).eq(str(assignment_id).strip())
         ]
@@ -238,6 +265,16 @@ class ServicoFilaAnotacao:
         fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
             int(tarefa_id), rotulador=nome_limpo
         )
+        if fila_df.empty:
+            u_info = self.repo_usuarios.buscar_por_nome_usuario(nome_limpo)
+            if u_info:
+                membro = self.repo_usuarios.buscar_membro_tarefa(
+                    int(tarefa_id), int(u_info["usuario_id"]), papel="rotulador"
+                )
+                if membro and membro.get("vaga_atribuida"):
+                    fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
+                        int(tarefa_id), rotulador=str(membro["vaga_atribuida"]).strip()
+                    )
         correspondentes = fila_df[
             fila_df["assignment_id"].astype(str).eq(str(assignment_id).strip())
         ]
