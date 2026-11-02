@@ -276,3 +276,30 @@ def test_e2e_confirmacao_aviso_sensivel_revela_workspace_rotulacao(
     pagina_navegador.wait_for_selector(".annotation-controls", state="visible", timeout=10000)
     assert pagina_navegador.locator("iframe").count() > 0
     assert pagina_navegador.locator(".annotation-controls").is_visible()
+
+
+@pytest.mark.e2e
+def test_e2e_anotacao_completa_e_avanco_da_barra_de_progresso(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange
+    url_base, codigo_convite, _ = servidor_e2e
+    usuario_novo = f"rot_anot_{int(time.time() * 1000) % 100000}"
+
+    #act register with invite and reach hub
+    _cadastrar_e_entrar_na_tarefa(pagina_navegador, url_base, usuario_novo, codigo_convite)
+
+    #act open task labeling and accept warning
+    pagina_navegador.locator(".hub-table-btn", has_text="Rotulação").first.click()
+    pagina_navegador.wait_for_selector(".sensitive-warning-wrapper", timeout=10000)
+    pagina_navegador.get_by_role("button", name="Continuar").click()
+    pagina_navegador.wait_for_selector(".annotation-controls", state="visible", timeout=10000)
+
+    #act select stance option and save
+    pagina_navegador.locator("label", has_text="A Favor").click()
+    pagina_navegador.get_by_role("button", name="Salvar Resposta e Avançar").click()
+
+    #assert progress bar advances
+    pagina_navegador.wait_for_selector("text=1 de ", timeout=10000)
+    texto_progresso = pagina_navegador.locator(".labeler-controls-column").inner_text()
+    assert "1 de " in texto_progresso
