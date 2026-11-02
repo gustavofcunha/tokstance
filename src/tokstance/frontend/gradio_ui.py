@@ -27,6 +27,7 @@ from tokstance.backend.services.queue_service import ServicoFilaAnotacao
 from tokstance.config import ARQUIVO_VIDEOS, ARQUIVO_VIDEOS_RESERVA
 from tokstance.frontend.components import (
     agreement_summary,
+    formatar_pergunta_com_target,
     generate_progress_bar,
     render_video_card,
     renderizar_toast_html,
@@ -958,16 +959,11 @@ def construir_interface(
                 return html_fim, "", pb, previous_target
 
             target = str(video_item.get("target", "") or "").strip()
-            if "{target}" in pergunta_template:
-                texto_pergunta = escape(pergunta_template.replace("{target}", target))
-            elif pergunta_template:
-                texto_pergunta = escape(pergunta_template)
-            else:
-                texto_pergunta = f'Com relação ao target <strong>"{escape(target)}"</strong>, como você classifica a posição deste vídeo?'
-
-            pergunta_html = f'<div class="target-question"><strong>{texto_pergunta}</strong></div>'
+            texto_pergunta = formatar_pergunta_com_target(pergunta_template, target)
+            target_mudou = (posicao == 0) or bool(previous_target and previous_target != target)
+            transicao_classe = " target-transition" if target_mudou else ""
+            pergunta_html = f'<div class="target-question{transicao_classe}"><strong>{texto_pergunta}</strong></div>'
             pb = generate_progress_bar(posicao, total)
-            target_mudou = bool(previous_target and previous_target != target)
             v_html = render_video_card(video_item, target_mudou)
             return v_html, pergunta_html, pb, target
 
@@ -984,13 +980,14 @@ def construir_interface(
             vid = estado_f["video_atual"]
             opcoes = estado_f["opcoes_posicao"]
             pergunta = estado_f["pergunta"]
+            prev_target = str(estado_f.get("target_anterior", "") or "")
 
             v_html, p_html, pb, novo_target = renderizar_video_rotulador(
                 video_item=vid,
                 posicao=pos,
                 total=tot,
                 pergunta_template=pergunta,
-                previous_target="",
+                previous_target=prev_target,
             )
 
             cabecalho_txt = (
