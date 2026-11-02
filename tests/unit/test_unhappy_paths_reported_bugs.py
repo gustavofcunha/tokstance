@@ -77,18 +77,25 @@ def test_criar_tarefa_quantidade_principal_invalida_lanca_erro(servicos_teste: D
     u = auth.cadastrar_usuario("admin_val", "SenhaForte123")
     pool = _criar_pool_minimo()
 
-    with pytest.raises(ValueError, match="quantidade de vídeos principais deve ser maior que zero"):
+    with pytest.raises(ValueError, match=r"quantidade de vídeos .*deve ser maior que zero"):
         admin.criar_nova_tarefa(
             usuario_administrador_id=int(u["usuario_id"]),
             pool_videos=pool,
             quantidade_videos_principal=0,
         )
 
-    with pytest.raises(ValueError, match="quantidade de vídeos principais deve ser maior que zero"):
+    with pytest.raises(ValueError, match=r"quantidade de vídeos .*deve ser maior que zero"):
         admin.criar_nova_tarefa(
             usuario_administrador_id=int(u["usuario_id"]),
             pool_videos=pool,
             quantidade_videos_principal=-3,
+        )
+
+    with pytest.raises(ValueError, match=r"não pode ser maior que o total disponível"):
+        admin.criar_nova_tarefa(
+            usuario_administrador_id=int(u["usuario_id"]),
+            pool_videos=pool,
+            quantidade_videos_principal=len(pool) + 10,
         )
 
 

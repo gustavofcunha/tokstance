@@ -116,6 +116,38 @@ class ServicoAdministracao:
         configuracao = self.repo_estudo.obter_configuracao_tarefa(int(tarefa_id))
         concordancia = calcular_concordancia(anotacoes, configuracao)
 
+        #distribuicao tematica por target
+        targets_principais = (
+            principais["target"].dropna().astype(str).str.strip().tolist()
+            if not principais.empty and "target" in principais.columns
+            else []
+        )
+        targets_reservas = (
+            reservas["target"].dropna().astype(str).str.strip().tolist()
+            if not reservas.empty and "target" in reservas.columns
+            else []
+        )
+        todos_targets = sorted(list(set(targets_principais + targets_reservas)))
+        total_acervo = len(principais) + len(reservas)
+
+        distribuicao_targets: list[dict[str, Any]] = []
+        for alvo in todos_targets:
+            if not alvo:
+                continue
+            qtd_p = targets_principais.count(alvo)
+            qtd_r = targets_reservas.count(alvo)
+            qtd_t = qtd_p + qtd_r
+            pct = round((qtd_t / total_acervo) * 100.0, 1) if total_acervo > 0 else 0.0
+            distribuicao_targets.append(
+                {
+                    "target": alvo,
+                    "principais": qtd_p,
+                    "reservas": qtd_r,
+                    "total": qtd_t,
+                    "percentual": pct,
+                }
+            )
+
         #progresso individual por rotulador
         progresso_rotuladores: list[dict[str, Any]] = []
         if not atribuicoes.empty:
@@ -138,8 +170,10 @@ class ServicoAdministracao:
         return {
             "tarefa_id": int(tarefa["tarefa_id"]),
             "titulo": str(tarefa["titulo"]),
+            "total_videos_acervo": total_acervo,
             "total_videos_principais": len(principais),
             "total_videos_reservas": len(reservas),
+            "distribuicao_targets": distribuicao_targets,
             "total_atribuicoes": total_atribuicoes,
             "total_anotacoes": total_anotacoes,
             "progresso_percentual": progresso_pct,

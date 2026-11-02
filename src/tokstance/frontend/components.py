@@ -447,7 +447,6 @@ def agreement_summary(
         </table>
         """
 
-    access = access_statistics(logs_df)
     daily_chart = annotation_daily_chart(df_results)
     alfa_val = agreement_data.get("alfa")
     alfa_str = "ainda não calculável" if alfa_val is None else f"{float(alfa_val):.3f}"
@@ -508,18 +507,6 @@ def agreement_summary(
                 {daily_chart}
             </section>
         </section>
-        <section class='analytics-grid'>
-            <section class='dashboard-card'>
-                <h3>Logins por dia</h3>
-                <p class='metric-note'>Barras representam a quantidade diária de entradas.</p>
-                {access['daily_rows']}
-            </section>
-            <section class='dashboard-card'>
-                <h3>Sessões por anotador</h3>
-                <p class='metric-note'>Média geral: {access['avg_minutes']:.1f} min por sessão.</p>
-                {access['session_rows']}
-            </section>
-        </section>
     </section>
     """
 
@@ -565,3 +552,124 @@ def renderizar_toast_html(
         f"<span class='toast-icone'>{_ICONES_TOAST.get(tipo, 'i')}</span>"
         f"<div class='toast-texto'>{corpo}</div>{botao}</div>"
     )
+
+
+def renderizar_visao_geral_acervo_html(
+    metricas: Dict[str, Any],
+    tarefa_meta: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Renderiza a visao geral oficial do acervo de videos da tarefa e a distribuicao por target."""
+    tot_p = int(metricas.get("total_videos_principais", 0))
+    tot_r = int(metricas.get("total_videos_reservas", 0))
+    tot_acervo = int(metricas.get("total_videos_acervo", tot_p + tot_r))
+    tot_atrib = int(metricas.get("total_atribuicoes", 0))
+    distribuicao = metricas.get("distribuicao_targets", [])
+
+    kpi_cards = f"""
+    <div class="collection-kpis-grid">
+        <div class="collection-kpi-card">
+            <span class="collection-kpi-label">Total no Acervo</span>
+            <strong class="collection-kpi-value">{tot_acervo}</strong>
+            <small class="collection-kpi-note">vídeos englobados na tarefa</small>
+        </div>
+        <div class="collection-kpi-card highlight-principal">
+            <span class="collection-kpi-label">Vídeos a Distribuir</span>
+            <strong class="collection-kpi-value">{tot_p}</strong>
+            <small class="collection-kpi-note">pool principal para rotulação</small>
+        </div>
+        <div class="collection-kpi-card highlight-reserva">
+            <span class="collection-kpi-label">Vídeos de Reserva</span>
+            <strong class="collection-kpi-value">{tot_r}</strong>
+            <small class="collection-kpi-note">reserva técnica balanceada</small>
+        </div>
+        <div class="collection-kpi-card">
+            <span class="collection-kpi-label">Atribuições Geradas</span>
+            <strong class="collection-kpi-value">{tot_atrib}</strong>
+            <small class="collection-kpi-note">alocações nesta rodada</small>
+        </div>
+    </div>
+    """
+
+    if distribuicao:
+        linhas_tabela = []
+        for item in distribuicao:
+            alvo = escape(str(item.get("target", "")))
+            qtd_p = int(item.get("principais", 0))
+            qtd_r = int(item.get("reservas", 0))
+            qtd_t = int(item.get("total", 0))
+            pct = float(item.get("percentual", 0.0))
+            linhas_tabela.append(
+                f"""
+                <tr>
+                    <td class="td-target"><span class="target-name-badge-table">{alvo}</span></td>
+                    <td class="td-num">{qtd_p}</td>
+                    <td class="td-num">{qtd_r}</td>
+                    <td class="td-num"><strong>{qtd_t}</strong></td>
+                    <td class="td-pct">
+                        <div class="target-pct-bar-wrap">
+                            <span class="target-pct-text">{pct:.1f}%</span>
+                            <div class="target-pct-track">
+                                <div class="target-pct-fill" style="width: {pct:.1f}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                """
+            )
+        corpo_tabela = "".join(linhas_tabela)
+        total_p_sum = sum(int(it.get("principais", 0)) for it in distribuicao)
+        total_r_sum = sum(int(it.get("reservas", 0)) for it in distribuicao)
+        total_t_sum = sum(int(it.get("total", 0)) for it in distribuicao)
+        tfoot_tabela = f"""
+        <tfoot>
+            <tr>
+                <td><strong>Total Geral</strong></td>
+                <td class="td-num"><strong>{total_p_sum}</strong></td>
+                <td class="td-num"><strong>{total_r_sum}</strong></td>
+                <td class="td-num"><strong>{total_t_sum}</strong></td>
+                <td class="td-pct"><strong>100.0%</strong></td>
+            </tr>
+        </tfoot>
+        """
+    else:
+        corpo_tabela = "<tr><td colspan='5' class='muted' style='text-align:center; padding:16px;'>Nenhum vídeo cadastrado nesta tarefa.</td></tr>"
+        tfoot_tabela = ""
+
+    tabela_html = f"""
+    <div class="target-distribution-section">
+        <div class="target-distribution-heading">
+            <h4>Distribuição Temática por Target</h4>
+            <span class="target-distribution-count">{len(distribuicao)} targets</span>
+        </div>
+        <table class="target-distribution-table">
+            <thead>
+                <tr>
+                    <th class="th-target">Target (Tema)</th>
+                    <th class="th-num">Vídeos Principais</th>
+                    <th class="th-num">Vídeos Reserva</th>
+                    <th class="th-num">Total no Acervo</th>
+                    <th class="th-pct">Proporção no Acervo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {corpo_tabela}
+            </tbody>
+            {tfoot_tabela}
+        </table>
+    </div>
+    """
+
+    return f"""
+    <section class="admin-collection-overview">
+        <div class="collection-overview-header">
+            <div>
+                <span class="section-eyebrow">Acervo da Tarefa</span>
+                <h3>Visão Geral do Acervo e Distribuição Temática</h3>
+            </div>
+            <span class="collection-overview-badge">Visão Oficial</span>
+        </div>
+        {kpi_cards}
+        {tabela_html}
+    </section>
+    """
+

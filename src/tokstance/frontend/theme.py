@@ -1170,6 +1170,33 @@ APP_CSS = """
     .duration-alert table { width: 100%; border-collapse: collapse; background: #fefce8 !important; }
     .duration-alert th, .duration-alert td { padding: 10px 12px; border-bottom: 1px solid #fef08a; text-align: left; background: #fefce8 !important; color: #713f12 !important; font-size: 15px; }
     .duration-alert th { font-weight: 700; }
+    .admin-collection-overview { margin: 0 0 20px; padding: 22px; border: 1px solid #d8dde3; border-top: 5px solid #9c0014; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
+    .collection-overview-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .collection-overview-header h3 { margin: 3px 0 0; color: #0f172a; font-size: 20px; font-weight: 800; }
+    .collection-overview-badge { padding: 5px 11px; border: 1px solid #fecaca; color: #9c0014; background: #fff1f2; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; border-radius: 4px; }
+    .collection-kpis-grid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 12px; margin-bottom: 22px; }
+    .collection-kpi-card { padding: 14px 16px; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .collection-kpi-card.highlight-principal { border-color: #cbd5e1; background: #ffffff; border-left: 4px solid #176b87; }
+    .collection-kpi-card.highlight-reserva { border-color: #cbd5e1; background: #ffffff; border-left: 4px solid #b56b00; }
+    .collection-kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #475569; }
+    .collection-kpi-value { font-size: 28px; line-height: 1.1; font-weight: 800; color: #0f172a; }
+    .collection-kpi-note { font-size: 12px; color: #64748b; }
+    .target-distribution-section { border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; background: #ffffff; }
+    .target-distribution-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .target-distribution-heading h4 { margin: 0; font-size: 14px; font-weight: 700; color: #0f172a; }
+    .target-distribution-count { font-size: 11px; font-weight: 700; color: #475569; background: #e2e8f0; padding: 2px 8px; border-radius: 12px; }
+    .target-distribution-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    .target-distribution-table th { background: #f1f5f9; color: #334155; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 10px 14px; border-bottom: 1px solid #cbd5e1; }
+    .target-distribution-table td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+    .target-distribution-table tfoot td { background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700; color: #0f172a; padding: 12px 14px; }
+    .target-distribution-table tr:hover td { background: #fbfcfe; }
+    .target-distribution-table .th-num, .target-distribution-table .td-num { text-align: right !important; }
+    .target-distribution-table .th-pct, .target-distribution-table .td-pct { text-align: right !important; width: 220px; }
+    .target-name-badge-table { display: inline-block; font-weight: 700; color: #0f172a; }
+    .target-pct-bar-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+    .target-pct-text { font-size: 12px; font-weight: 700; color: #334155; min-width: 44px; text-align: right; }
+    .target-pct-track { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; min-width: 60px; max-width: 120px; }
+    .target-pct-fill { height: 100%; background: #176b87; border-radius: 4px; transition: width .3s ease; }
     .admin-command-center { margin: 0 0 22px; padding: 22px; border: 1px solid #d8dde3; border-top: 5px solid #176b87; background: #f8fafc; border-radius: 8px; }
     .admin-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
     .admin-section-heading h3 { margin: 3px 0 0; color: #0f172a; font-size: 22px; }
