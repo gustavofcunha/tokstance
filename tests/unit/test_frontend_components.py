@@ -206,10 +206,10 @@ def test_construir_interface_and_hub_cards() -> None:
     assert "Você ainda não está inscrito" in h_rot_vazio
 
     t_adm = [{"tarefa_id": 1, "titulo": "Tarefa Teste", "codigo_convite": "TOK-123", "vagas_ocupadas": 2, "numero_vagas": 3, "progresso_percentual": 66.7}]
-    t_rot = [{"tarefa_id": 1, "titulo": "Tarefa Teste", "posicao_concluida": 5, "total_videos": 10}]
+    t_rot = [{"tarefa_id": 1, "titulo": "Tarefa Teste", "videos_concluidos": 5, "total_videos_fila": 10}]
     h_adm, h_rot = renderizar_hub_cards_html(t_adm, t_rot)
     assert "TOK-123" in h_adm
-    assert "5 de 10 vídeos (50%)" in h_rot
+    assert "5 de 10 (50%)" in h_rot
 
     #teste de geracao de matriz de penalidades
     df_pares = gerar_tabela_penalidades_df("Contra\nA Favor\nNeutro")

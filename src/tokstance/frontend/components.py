@@ -1,6 +1,8 @@
 """Componentes visuais e renderizadores HTML (versao inicial do frontend)."""
 
 from html import escape
+import re
+import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 import gradio as gr
 import pandas as pd
@@ -15,7 +17,7 @@ def render_tiktok(url: str) -> str:
     return f"""
     <div style="display: flex; justify-content: center; width: 100%; margin: 0; padding: 0;">
         <iframe
-            style="width: min(100%, 330px); height: 500px; border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+            style="width: min(100%, calc(var(--altura-player, 500px) * 0.5625)); height: var(--altura-player, 500px); border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
             scrolling="no"
             src="{player_url}"
             title="Player do vídeo TikTok"
@@ -475,3 +477,46 @@ def agreement_summary(
         </section>
     </section>
     """
+
+
+_ICONES_TOAST = {"sucesso": "✓", "erro": "!", "info": "i"}
+
+
+def renderizar_toast_html(
+    mensagem: str,
+    tipo: Optional[str] = None,
+    acao_rotulo: str = "",
+    acao_tipo: str = "",
+    acao_tarefa_id: Any = "",
+) -> str:
+    """Renderiza um aviso efemero no canto da tela que some sozinho por animacao CSS.
+
+    O tipo e inferido pelo prefixo da mensagem quando nao informado. Quando ha acao, o botao
+    dispara o mesmo canal usado pelas tabelas do hub.
+    """
+    texto = str(mensagem or "").strip()
+    if not texto:
+        return ""
+    if tipo is None:
+        tipo = "sucesso" if texto.startswith("✅") else "erro" if texto.startswith("⚠️") else "info"
+    for prefixo in ("✅", "⚠️"):
+        if texto.startswith(prefixo):
+            texto = texto[len(prefixo):].strip()
+    corpo = escape(texto).replace("\n", "<br>")
+    for trecho in sorted(set(re.findall(r"\*\*(.+?)\*\*", corpo))):
+        corpo = corpo.replace(f"**{trecho}**", f"<strong>{trecho}</strong>")
+    botao = ""
+    classe_vida = "toast-curto"
+    if acao_rotulo and acao_tipo:
+        classe_vida = "toast-longo"
+        botao = (
+            f"<button type='button' class='toast-acao' "
+            f"onclick=\"window.tokstanceAcao('{escape(acao_tipo)}', '{escape(str(acao_tarefa_id))}')\">"
+            f"{escape(acao_rotulo)}</button>"
+        )
+    nonce = f"{time.time_ns()}"
+    return (
+        f"<div class='tokstance-toast toast-{tipo} {classe_vida}' role='status' data-nonce='{nonce}'>"
+        f"<span class='toast-icone'>{_ICONES_TOAST.get(tipo, 'i')}</span>"
+        f"<div class='toast-texto'>{corpo}</div>{botao}</div>"
+    )

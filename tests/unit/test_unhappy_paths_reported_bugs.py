@@ -488,16 +488,14 @@ def test_regressao_tema_css_alinhamento_hub_e_overlay_sensivel():
 
 @pytest.mark.unit
 def test_regressao_tiktok_player_altura_contida():
-    """Garante que o iframe do TikTok usa altura compacta de 500px evitando scrollbar vertical desnecessaria."""
+    """Garante que o iframe do TikTok acompanha a altura da janela em proporcao 9:16 sem rolagem."""
     player_html = render_tiktok("https://www.tiktok.com/@canal/video/7123456789")
-    assert "height: 500px;" in player_html
-    assert "width: min(100%, 330px);" in player_html
+    assert "height: var(--altura-player, 500px);" in player_html
+    assert "* 0.5625" in player_html
     assert "scrolling=\"no\"" in player_html
 
 
-# ==============================================================================
-# 9. RECUPERACAO DE SENHA GRATUITA E VALIDACAO DE E-MAIL
-# ==============================================================================
+#password recovery and email validation
 
 @pytest.mark.unit
 def test_validar_email_valido_e_invalido():
@@ -522,8 +520,8 @@ def test_validar_email_valido_e_invalido():
 
 
 @pytest.mark.unit
-def test_recuperacao_senha_gratuita_fluxo_completo_e_caminhos_infelizes(servicos_teste: Dict[str, Any]):
-    """Testa recuperacao de senha gratuita via codigo de 6 digitos e prevencao de falhas."""
+def test_recuperacao_senha_fluxo_completo_e_caminhos_infelizes(servicos_teste: Dict[str, Any]):
+    """Testa recuperacao de senha via codigo de 6 digitos e prevencao de falhas."""
     auth = servicos_teste["auth"]
     # 1. Cadastro com email
     u = auth.cadastrar_usuario("pesquisador_rec", "SenhaAntiga123", email="recupera@exemplo.org")
@@ -579,21 +577,21 @@ def test_renderizar_hub_tabelas_botoes_dinamicos_progresso():
     from tokstance.frontend.gradio_ui import renderizar_hub_tabelas_html
 
     # Caso 1: Nenhuma anotação iniciada (pos = 0)
-    t_rot_zero = [{"tarefa_id": 10, "titulo": "Tarefa Nova", "posicao_concluida": 0, "total_videos": 15}]
+    t_rot_zero = [{"tarefa_id": 10, "titulo": "Tarefa Nova", "videos_concluidos": 0, "total_videos_fila": 15}]
     _, h_rot_zero = renderizar_hub_tabelas_html([], t_rot_zero)
     assert "▶ Iniciar Rotulação" in h_rot_zero
     assert "Não iniciada" in h_rot_zero
     assert "hub-table-btn primary" in h_rot_zero
 
     # Caso 2: Em andamento (0 < pos < tot)
-    t_rot_meio = [{"tarefa_id": 10, "titulo": "Tarefa Em Andamento", "posicao_concluida": 7, "total_videos": 15}]
+    t_rot_meio = [{"tarefa_id": 10, "titulo": "Tarefa Em Andamento", "videos_concluidos": 7, "total_videos_fila": 15}]
     _, h_rot_meio = renderizar_hub_tabelas_html([], t_rot_meio)
     assert "▶ Continuar Rotulação" in h_rot_meio
     assert "Em andamento" in h_rot_meio
     assert "hub-table-btn in-progress" in h_rot_meio
 
     # Caso 3: Concluída (pos >= tot)
-    t_rot_fim = [{"tarefa_id": 10, "titulo": "Tarefa Finalizada", "posicao_concluida": 15, "total_videos": 15}]
+    t_rot_fim = [{"tarefa_id": 10, "titulo": "Tarefa Finalizada", "videos_concluidos": 15, "total_videos_fila": 15}]
     _, h_rot_fim = renderizar_hub_tabelas_html([], t_rot_fim)
     assert "✓ Ver Concluída" in h_rot_fim
     assert "Concluída" in h_rot_fim
@@ -615,7 +613,7 @@ def test_renderizar_hub_tabelas_acoes_administrador():
     }]
     h_adm, _ = renderizar_hub_tabelas_html(t_adm, [])
     assert "Abrir Console" in h_adm
-    assert "🗑️ Excluir" in h_adm
+    assert "Excluir</button>" in h_adm
     assert "TOK-ABCD1234" in h_adm
     assert "2 de 5" in h_adm
     assert "40%" in h_adm

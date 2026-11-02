@@ -1330,6 +1330,139 @@ APP_CSS = """
         flex-wrap: wrap !important;
     }
 
+    /* =========================================================================
+       7. AJUSTES FINAIS: AVISOS EFEMEROS, BOTOES COMPACTOS, HUB, POPUP, CONSOLE E WORKSPACE
+       ========================================================================= */
+    html, body, .gradio-container { overflow-x: hidden !important; }
+    .shell { overflow-x: hidden !important; }
+
+    /* Avisos efemeros: surgem em destaque no canto e somem sozinhos */
+    .toast-slot, .toast-slot.block, .toast-slot > div:not(.tokstance-toast) {
+        padding: 0 !important; margin: 0 !important; border: none !important; min-height: 0 !important;
+        height: 0 !important; background: transparent !important; box-shadow: none !important; overflow: visible !important;
+    }
+    .tokstance-toast {
+        position: fixed !important; top: 20px !important; right: 20px !important; z-index: 100000 !important;
+        display: flex !important; align-items: center !important; gap: 14px !important;
+        min-width: 320px !important; max-width: min(480px, calc(100vw - 40px)) !important;
+        padding: 16px 20px !important; border-radius: 12px !important; background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important; border-left: 6px solid #176b87 !important;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22) !important;
+        font-size: 15px !important; font-weight: 600 !important; line-height: 1.45 !important; color: #0f172a !important;
+        opacity: 0; visibility: hidden; pointer-events: none;
+    }
+    .tokstance-toast.toast-curto { animation: toast-vida 5s ease forwards; }
+    .tokstance-toast.toast-longo { animation: toast-vida 12s ease forwards; }
+    @keyframes toast-vida {
+        0% { opacity: 0; visibility: visible; pointer-events: auto; transform: translateX(32px); }
+        5%, 90% { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
+        100% { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(32px); }
+    }
+    .tokstance-toast .toast-icone {
+        flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; display: inline-flex;
+        align-items: center; justify-content: center; font-weight: 900; font-size: 16px; color: #ffffff; background: #176b87;
+    }
+    .tokstance-toast.toast-sucesso { border-left-color: #2e7d32 !important; }
+    .tokstance-toast.toast-sucesso .toast-icone { background: #2e7d32; }
+    .tokstance-toast.toast-erro { border-left-color: #9c0014 !important; background: #fffafa !important; }
+    .tokstance-toast.toast-erro .toast-icone { background: #9c0014; }
+    .tokstance-toast .toast-texto { flex: 1 1 auto; min-width: 0; }
+    .tokstance-toast .toast-acao {
+        flex: 0 0 auto; background: #9c0014; color: #ffffff; border: none; border-radius: 8px; padding: 9px 14px;
+        font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .tokstance-toast .toast-acao:hover { background: #7a0010; }
+
+    /* Botoes compactos e alinhados em linha */
+    .compact-actions {
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 10px !important;
+        width: auto !important; flex: 0 0 auto !important; align-items: center !important; justify-content: flex-end !important;
+        background: transparent !important; border: none !important; padding: 0 !important; min-width: 0 !important;
+    }
+    .compact-actions > * { flex: 0 0 auto !important; min-width: 0 !important; width: auto !important; }
+    .compact-actions button, button.hub-btn {
+        height: 40px !important; min-height: 40px !important; max-height: 40px !important; padding: 0 18px !important;
+        font-size: 14px !important; font-weight: 700 !important; white-space: nowrap !important; width: auto !important;
+    }
+    button.hub-plus-btn {
+        width: 40px !important; min-width: 40px !important; height: 40px !important; min-height: 40px !important;
+        max-height: 40px !important; padding: 0 !important; font-size: 24px !important; line-height: 1 !important;
+        border-radius: 10px !important;
+    }
+    .auth-card .compact-actions { justify-content: flex-start !important; width: 100% !important; }
+    .auth-card .compact-actions > * { flex: 1 1 0 !important; }
+
+    /* Hub */
+    .hub-header-bar { margin-bottom: 14px !important; padding-bottom: 12px !important; align-items: center !important; flex-wrap: nowrap !important; }
+    .hub-header-bar > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
+    .hub-two-col { align-items: flex-start !important; gap: 18px !important; }
+    .hub-section-box { justify-content: flex-start !important; padding: 16px 18px !important; gap: 8px !important; min-width: 0 !important; }
+    .hub-box-header h3 { font-size: 18px !important; }
+    .hub-box-header p { font-size: 13px !important; }
+    .hub-box-header-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: flex-start !important; justify-content: space-between !important; gap: 10px !important; background: transparent !important; border: none !important; padding: 0 !important; }
+    .hub-box-header-row > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
+    .hub-box-header-row > button { flex: 0 0 auto !important; }
+    .hub-section-box .block, .hub-section-box .prose { padding: 0 !important; border: none !important; }
+    .hub-table-wrapper { overflow-x: visible !important; margin: 4px 0 0 0 !important; }
+    .hub-table { table-layout: auto !important; }
+    .hub-table th { padding: 9px 10px !important; font-size: 11px !important; white-space: nowrap !important; }
+    .hub-table td { padding: 10px !important; }
+    .hub-table .config-val-badge { white-space: nowrap !important; font-size: 13px !important; padding: 3px 8px !important; }
+    .hub-table-btn { padding: 7px 12px !important; font-size: 12.5px !important; margin-left: 4px !important; }
+
+    /* Popup de codigo de convite */
+    .modal-overlay {
+        position: fixed !important; inset: 0 !important; z-index: 99998 !important; display: flex !important;
+        align-items: center !important; justify-content: center !important; padding: 16px !important;
+        background: rgba(15, 23, 42, 0.5) !important; backdrop-filter: blur(6px) !important; border: none !important;
+        width: 100vw !important; height: 100vh !important; max-width: none !important; min-width: 0 !important;
+    }
+    .modal-card {
+        width: min(440px, 100%) !important; max-width: 440px !important; flex: 0 0 auto !important; height: auto !important;
+        background: #ffffff !important; border-radius: 14px !important; border: 1px solid #e2e8f0 !important;
+        border-top: 5px solid #9c0014 !important; padding: 22px 24px !important; gap: 12px !important;
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3) !important;
+    }
+    .modal-titulo h3 { margin: 0; font-size: 19px; font-weight: 800; color: #0f172a; }
+    .modal-titulo p { margin: 4px 0 0; font-size: 14px; color: #475569; }
+    .modal-card .compact-actions { justify-content: flex-end !important; }
+
+    /* Console do administrador */
+    .admin-header { margin-bottom: 12px !important; padding-bottom: 12px !important; flex-wrap: nowrap !important; }
+    .admin-header > div:first-child, .admin-header > .prose { flex: 1 1 auto !important; min-width: 0 !important; }
+    .config-code-row { display: flex !important; align-items: center !important; gap: 8px !important; }
+    .copy-code-btn {
+        width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+        border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; font-size: 15px; padding: 0;
+    }
+    .copy-code-btn:hover { background: #fff0f2; border-color: #9c0014; }
+
+    /* Assistente de criacao */
+    .wizard-icon-btn { width: 44px !important; min-width: 44px !important; height: 42px !important; min-height: 42px !important; padding: 0 !important; font-size: 17px !important; }
+    .wizard-action-row { align-items: flex-end !important; flex-wrap: nowrap !important; background: transparent !important; border: none !important; padding: 0 !important; }
+    .wizard-action-row > button { flex: 0 0 auto !important; }
+    .wizard-accordion { border: 1px solid #e2e8f0 !important; border-radius: 8px !important; }
+    .wizard-submit-btn { min-width: 280px !important; height: 44px !important; }
+    .form-wizard-card { padding: 16px !important; }
+
+    /* Workspace de rotulacao sem rolagem vertical: o player usa a altura disponivel da janela */
+    .labeler-panel { --altura-player: clamp(420px, calc(100vh - 290px), 820px); }
+    .labeler-layout { align-items: flex-start !important; gap: 18px !important; }
+    .video-column { flex: 1.5 1 0 !important; min-width: 0 !important; max-width: none !important; }
+    .labeler-controls-column { flex: 1 1 0 !important; min-width: 320px !important; max-width: none !important; }
+    .video-content-grid { grid-template-columns: minmax(200px, 1fr) auto !important; gap: 14px !important; }
+    .video-player-column { height: var(--altura-player) !important; min-height: 0 !important; justify-content: center !important; }
+    .video-card iframe { height: var(--altura-player) !important; max-width: none !important; width: calc(var(--altura-player) * 0.5625) !important; }
+    .video-description, .video-transcription { max-height: calc(var(--altura-player) / 2 - 20px) !important; }
+    .video-meta { margin-bottom: 8px !important; padding: 8px 12px !important; }
+    .labeler-header-bar { margin-bottom: 8px !important; padding-bottom: 8px !important; }
+    .labeler-exit-btn { min-width: 190px !important; flex: 0 0 auto !important; width: auto !important; height: 40px !important; white-space: nowrap !important; }
+    .annotation-controls { padding: 12px 16px !important; }
+    .labeler-warning-stack { margin-bottom: 8px !important; padding: 8px 12px !important; }
+    .wrap-radio label { padding: 9px 14px !important; }
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer { display: none !important; }
+
     /* Ocultar footer do Gradio */
     footer, .footer { display: none !important; }
 """
