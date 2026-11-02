@@ -342,3 +342,20 @@ def test_barras_de_progresso_do_painel_principal_renderizam_corretamente() -> No
     assert "table-bar-track" in h_rot
     assert "table-bar-fill" in h_rot
     assert "width:50%" in h_rot or "width: 50%" in h_rot
+
+
+#widescreen labeling layout without vertical scroll
+
+
+@pytest.mark.unit
+def test_workspace_rotulacao_widescreen_sem_rolagem_vertical_e_player_ampliado() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+
+    #assert
+    assert "--altura-player: clamp(480px" in APP_CSS
+    assert "grid-template-columns: 240px 1fr" in APP_CSS
+    assert ".video-context-column" in APP_CSS
+    assert "overflow-y: hidden !important;" in APP_CSS
+    assert "body:has(.labeler-panel:not(.hide):not(.hidden))" in APP_CSS
+

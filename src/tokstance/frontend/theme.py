@@ -1483,20 +1483,195 @@ APP_CSS = """
     .form-wizard-card { padding: 16px !important; }
 
     /* Workspace de rotulacao sem rolagem vertical: o player usa a altura disponivel da janela */
-    .labeler-panel { --altura-player: clamp(420px, calc(100vh - 290px), 820px); }
-    .labeler-layout { align-items: flex-start !important; gap: 18px !important; }
-    .video-column { flex: 1.5 1 0 !important; min-width: 0 !important; max-width: none !important; }
-    .labeler-controls-column { flex: 1 1 0 !important; min-width: 320px !important; max-width: none !important; }
-    .video-content-grid { grid-template-columns: minmax(200px, 1fr) auto !important; gap: 14px !important; }
-    .video-player-column { height: var(--altura-player) !important; min-height: 0 !important; justify-content: center !important; }
-    .video-card iframe { height: var(--altura-player) !important; max-width: none !important; width: calc(var(--altura-player) * 0.5625) !important; }
-    .video-description, .video-transcription { max-height: calc(var(--altura-player) / 2 - 20px) !important; }
-    .video-meta { margin-bottom: 8px !important; padding: 8px 12px !important; }
-    .labeler-header-bar { margin-bottom: 8px !important; padding-bottom: 8px !important; }
-    .labeler-exit-btn { min-width: 190px !important; flex: 0 0 auto !important; width: auto !important; height: 40px !important; white-space: nowrap !important; }
-    .annotation-controls { padding: 12px 16px !important; }
-    .labeler-warning-stack { margin-bottom: 8px !important; padding: 8px 12px !important; }
-    .wrap-radio label { padding: 9px 14px !important; }
+    body:has(.labeler-panel:not(.hide):not(.hidden)),
+    html:has(.labeler-panel:not(.hide):not(.hidden)) {
+        overflow-y: hidden !important;
+        overflow-x: hidden !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+    }
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .gradio-container,
+    body:has(.labeler-panel:not(.hide):not(.hidden)) main.contain {
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        overflow: hidden !important;
+    }
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .shell {
+        width: 100% !important;
+        max-width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        margin: 0 !important;
+        padding: 6px 16px !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer,
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.brand-header),
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.app-footer) {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+    .labeler-panel {
+        --altura-player: clamp(480px, calc(100vh - 190px), 740px);
+        display: flex !important;
+        flex-direction: column !important;
+        height: calc(100vh - 12px) !important;
+        max-height: calc(100vh - 12px) !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .labeler-workspace-container {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 auto !important;
+        height: calc(100% - 42px) !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+    .labeler-header-bar {
+        margin-bottom: 6px !important;
+        padding-bottom: 4px !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        flex: 0 0 auto !important;
+    }
+    .labeler-exit-btn {
+        min-width: 170px !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        height: 34px !important;
+        white-space: nowrap !important;
+    }
+    .labeler-layout {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch !important;
+        gap: 16px !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+    .video-column {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .labeler-controls-column {
+        flex: 0 0 380px !important;
+        width: 380px !important;
+        min-width: 320px !important;
+        max-width: 400px !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
+    }
+    .video-card {
+        height: 100% !important;
+        max-height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 8px 12px !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        box-sizing: border-box !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+    .video-meta {
+        margin-bottom: 6px !important;
+        padding: 6px 12px !important;
+        font-size: 13.5px !important;
+        flex: 0 0 auto !important;
+    }
+    .video-content-grid {
+        display: grid !important;
+        grid-template-columns: 240px 1fr !important;
+        gap: 14px !important;
+        align-items: center !important;
+        flex: 1 1 auto !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+    .video-context-column {
+        width: 240px !important;
+        min-width: 210px !important;
+        max-width: 260px !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+    .video-description, .video-transcription {
+        padding: 10px 12px !important;
+        margin: 0 !important;
+        font-size: 13px !important;
+        line-height: 1.4 !important;
+        border-radius: 6px !important;
+        overflow-y: auto !important;
+        flex: 1 1 50% !important;
+        max-height: 50% !important;
+        box-sizing: border-box !important;
+    }
+    .video-player-column {
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow: hidden !important;
+    }
+    .video-player-column > div {
+        height: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    .video-card iframe {
+        height: var(--altura-player) !important;
+        max-height: calc(100vh - 190px) !important;
+        width: calc(var(--altura-player) * 0.5625) !important;
+        max-width: calc((100vh - 190px) * 0.5625) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    }
+    .annotation-controls {
+        padding: 10px 14px !important;
+    }
+    .labeler-warning-stack {
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+        padding: 6px 10px !important;
+        margin-bottom: 4px !important;
+        gap: 3px !important;
+    }
+    .wrap-radio label {
+        padding: 7px 12px !important;
+        margin-bottom: 3px !important;
+        font-size: 13.5px !important;
+    }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
     body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer { display: none !important; }
 
