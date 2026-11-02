@@ -210,3 +210,69 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     pagina_navegador.get_by_role("button", name="Cancelar").click()
     pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
     pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
+
+
+def _cadastrar_e_entrar_na_tarefa(
+    pagina: Page, url_base: str, usuario: str, codigo_convite: str
+) -> None:
+    pagina.goto(url_base)
+    pagina.wait_for_selector(".auth-card")
+    pagina.get_by_role("tab", name="Criar Conta").click()
+    pagina.get_by_label("Nome de Usuário").nth(1).fill(usuario)
+    pagina.get_by_label("E-mail (usado na recuperação de senha)").fill(f"{usuario}@exemplo.org")
+    pagina.get_by_label("Senha de Acesso").nth(1).fill("senha12345")
+    pagina.get_by_label("Confirmar Senha").fill("senha12345")
+    pagina.get_by_label("Código de Convite (opcional)").fill(codigo_convite)
+    pagina.get_by_role("button", name="Cadastrar e Acessar").click()
+    pagina.wait_for_selector(".hub-header-bar", timeout=10000)
+
+
+@pytest.mark.e2e
+def test_e2e_modal_aviso_conteudo_sensivel_e_saida_segura(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange
+    url_base, codigo_convite, _ = servidor_e2e
+    usuario_novo = f"rot_aviso_{int(time.time() * 1000) % 100000}"
+
+    #act register with invite and reach hub
+    _cadastrar_e_entrar_na_tarefa(pagina_navegador, url_base, usuario_novo, codigo_convite)
+
+    #act open task labeling
+    pagina_navegador.locator(".hub-table-btn", has_text="Rotulação").first.click()
+
+    #assert sensitive warning modal appears
+    pagina_navegador.wait_for_selector(".sensitive-warning-wrapper", timeout=10000)
+    texto_modal = pagina_navegador.locator(".sensitive-warning-wrapper").inner_text()
+    assert "Conteúdo Sensível" in texto_modal or "Aviso" in texto_modal
+
+    #act safe exit
+    pagina_navegador.get_by_role("button", name="Parar de rotular").click()
+
+    #assert return to hub
+    pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
+    assert pagina_navegador.locator(".hub-table").count() > 0
+
+
+@pytest.mark.e2e
+def test_e2e_confirmacao_aviso_sensivel_revela_workspace_rotulacao(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange
+    url_base, codigo_convite, _ = servidor_e2e
+    usuario_novo = f"rot_work_{int(time.time() * 1000) % 100000}"
+
+    #act register with invite and reach hub
+    _cadastrar_e_entrar_na_tarefa(pagina_navegador, url_base, usuario_novo, codigo_convite)
+
+    #act open task labeling
+    pagina_navegador.locator(".hub-table-btn", has_text="Rotulação").first.click()
+    pagina_navegador.wait_for_selector(".sensitive-warning-wrapper", timeout=10000)
+
+    #act accept sensitive warning
+    pagina_navegador.get_by_role("button", name="Continuar").click()
+
+    #assert workspace revealed with tiktok player and stance options
+    pagina_navegador.wait_for_selector(".annotation-controls", state="visible", timeout=10000)
+    assert pagina_navegador.locator("iframe").count() > 0
+    assert pagina_navegador.locator(".annotation-controls").is_visible()
