@@ -12,6 +12,8 @@ import pytest
 
 #isolate default test data directory before config import
 os.environ["TOKSTANCE_DATA_DIR"] = tempfile.mkdtemp(prefix="tokstance_testes_")
+#disable external email dispatch and activate mock smtp for tests
+os.environ["TOKSTANCE_MOCK_SMTP"] = "1"
 #configure browser library paths if present
 _ext_lib1 = Path.home() / ".local/lib/playwright_deps/usr/lib/x86_64-linux-gnu"
 _ext_lib2 = Path.home() / ".local/lib/playwright_deps/lib/x86_64-linux-gnu"
