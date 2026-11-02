@@ -306,3 +306,39 @@ def test_alerta_inline_de_senha_incorreta_renderiza_corretamente() -> None:
     assert "auth-inline-error" in html_erro
     assert "senha incorreta" in html_erro
     assert "role='alert'" in html_erro
+
+
+#hub progress bar rendering and styling
+
+
+@pytest.mark.unit
+def test_barras_de_progresso_do_painel_principal_renderizam_corretamente() -> None:
+    #arrange
+    from tokstance.frontend.gradio_ui import renderizar_hub_tabelas_html
+
+    t_adm = [{
+        "tarefa_id": 1,
+        "titulo": "Tarefa Demo Admin",
+        "codigo_convite": "TOK-DEMO1234",
+        "vagas_ocupadas": 2,
+        "numero_vagas": 4,
+        "progresso_percentual": 50.0,
+    }]
+    t_rot = [{
+        "tarefa_id": 1,
+        "titulo": "Tarefa Demo Rot",
+        "videos_concluidos": 6,
+        "total_videos_fila": 12,
+    }]
+
+    #act
+    h_adm, h_rot = renderizar_hub_tabelas_html(t_adm, t_rot)
+
+    #assert
+    assert "table-bar-track" in h_adm
+    assert "table-bar-fill" in h_adm
+    assert "width:50%" in h_adm or "width: 50%" in h_adm
+
+    assert "table-bar-track" in h_rot
+    assert "table-bar-fill" in h_rot
+    assert "width:50%" in h_rot or "width: 50%" in h_rot

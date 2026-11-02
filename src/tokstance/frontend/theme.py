@@ -1218,20 +1218,25 @@ APP_CSS = """
         border-bottom: none !important;
     }
     .table-bar-track {
-        width: 100% !important;
-        max-width: 110px !important;
-        height: 7px !important;
-        background: #f1f5f9 !important;
-        border-radius: 4px !important;
+        width: 100px !important;
+        min-width: 100px !important;
+        max-width: 100px !important;
+        height: 8px !important;
+        background: #e2e8f0 !important;
+        border-radius: 999px !important;
         overflow: hidden !important;
         display: inline-block !important;
         vertical-align: middle !important;
-        margin-right: 6px !important;
+        margin-right: 8px !important;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08) !important;
     }
     .table-bar-fill {
+        display: block !important;
         height: 100% !important;
+        min-height: 100% !important;
         background: #9c0014 !important;
-        border-radius: 4px !important;
+        border-radius: 999px !important;
+        transition: width 0.3s ease !important;
     }
     .hub-table-btn {
         padding: 6px 14px !important;
