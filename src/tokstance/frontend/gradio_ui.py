@@ -582,10 +582,10 @@ def construir_interface(
                                 btn_parar_sensivel = gr.Button("Parar de rotular", elem_classes=["error-btn", "sensitive-btn-stop"])
 
                     with gr.Row(elem_classes="labeler-layout"):
-                        with gr.Column(scale=6, min_width=320, elem_classes="video-column"):
+                        with gr.Column(scale=8, min_width=320, elem_classes="video-column"):
                             rotulador_video_html = gr.HTML()
 
-                        with gr.Column(scale=5, min_width=280, elem_classes="labeler-controls-column"):
+                        with gr.Column(scale=3, min_width=280, elem_classes="labeler-controls-column"):
                             rotulador_cabecalho = gr.HTML(elem_classes="labeler-header-badge-wrapper")
                             rotulador_progresso = gr.HTML()
 
