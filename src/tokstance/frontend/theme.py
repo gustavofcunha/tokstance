@@ -103,7 +103,14 @@ JS_FORCAR_MODO_CLARO = """
 
 APP_CSS = """
     /* =========================================================================
-       1. FORCAR TEMA CLARO E ALTO CONTRASTE (NEUTRALIZAR MODO ESCURO)
+       1. TIPOGRAFIA UNIFORME DO SISTEMA (SEM MISTURA DE FONTES OU GLIFOS INCOMPLETOS)
+       ========================================================================= */
+    html, body, .gradio-container, .gradio-container *, button, input, textarea, select {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    }
+
+    /* =========================================================================
+       2. FORCAR TEMA CLARO E ALTO CONTRASTE (NEUTRALIZAR MODO ESCURO)
        ========================================================================= */
     :root, html, body, .dark, html.dark, body.dark {
         color-scheme: light !important;
@@ -2268,6 +2275,15 @@ def obter_tema_branco() -> Any:
         neutral_hue="slate",
         text_size=gr.themes.sizes.text_md,
         radius_size=gr.themes.sizes.radius_md,
+        font=(
+            "-apple-system",
+            "BlinkMacSystemFont",
+            "Segoe UI",
+            "Roboto",
+            "Helvetica Neue",
+            "Arial",
+            "sans-serif",
+        ),
     ).set(
         body_background_fill=COR_FUNDO,
         body_background_fill_dark=COR_FUNDO,
