@@ -78,6 +78,7 @@ def servidor_e2e() -> Iterator[Tuple[str, str, str]]:
         PORT=str(porta),
         HOST="127.0.0.1",
         TOKSTANCE_DATA_DIR=dados_temp,
+        TOKSTANCE_MOCK_SMTP="1",
         PYTHONPATH=str(diretorio_base / "src"),
     )
     env_servidor.pop("SMTP_HOST", None)
@@ -407,8 +408,8 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
     texto_inline = pagina_navegador.locator(".auth-inline-error").inner_text()
     assert "não coincidem" in texto_inline.lower() or "diferente" in texto_inline.lower()
 
-    pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", timeout=8000)
-    texto_toast = pagina_navegador.locator(".tokstance-toast.toast-erro").inner_text()
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", state="attached", timeout=8000)
+    texto_toast = pagina_navegador.locator(".tokstance-toast.toast-erro").last.text_content() or ""
     assert "não coincidem" in texto_toast.lower() or "diferente" in texto_toast.lower()
 
     #act corrigir a confirmacao de senha para coincidir
@@ -417,14 +418,23 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
 
     #assert toast de sucesso na redefinicao
     toast_sucesso = pagina_navegador.locator(".tokstance-toast.toast-sucesso").last
-    toast_sucesso.wait_for(state="visible", timeout=10000)
-    texto_sucesso = toast_sucesso.inner_text()
+    toast_sucesso.wait_for(state="attached", timeout=10000)
+    texto_sucesso = toast_sucesso.text_content() or ""
     assert "sucesso" in texto_sucesso.lower() or "redefinida" in texto_sucesso.lower()
 
-    #assert login bem sucedido com a nova senha
-    pagina_navegador.get_by_role("tab", name="Entrar").click()
-    pagina_navegador.get_by_label("Nome de Usuário").first.fill(usuario_recup)
-    pagina_navegador.get_by_label("Senha de Acesso").first.fill("novaSenhaForte123")
+    #assert transicao automatica para a aba entrar com usuario pre-preenchido e aviso de sucesso
+    campo_senha_login = pagina_navegador.get_by_label("Senha de Acesso").first
+    campo_senha_login.wait_for(state="visible", timeout=10000)
+
+    campo_usuario_login = pagina_navegador.get_by_label("Nome de Usuário").first
+    assert campo_usuario_login.input_value() == usuario_recup
+
+    pagina_navegador.wait_for_selector(".auth-inline-success", timeout=8000)
+    texto_inline_sucesso = pagina_navegador.locator(".auth-inline-success").first.inner_text()
+    assert "redefinida com sucesso" in texto_inline_sucesso.lower()
+
+    #act entrar com a nova senha sem precisar redigitar o usuario nem clicar na aba
+    campo_senha_login.fill("novaSenhaForte123")
     pagina_navegador.get_by_role("button", name="Entrar no Sistema").click()
 
     pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)

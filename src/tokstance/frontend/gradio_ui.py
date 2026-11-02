@@ -358,41 +358,42 @@ def construir_interface(
                     </div>
                     """)
 
-                    with gr.Tab("Entrar"):
-                        login_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Digite seu usuário", autofocus=True)
-                        login_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Digite sua senha")
-                        login_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                        btn_login = gr.Button("Entrar no Sistema", elem_classes="ufmg-btn", size="lg")
+                    with gr.Tabs(selected="tab_entrar") as abas_autenticacao:
+                        with gr.Tab("Entrar", id="tab_entrar"):
+                            login_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Digite seu usuário", autofocus=True)
+                            login_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Digite sua senha")
+                            login_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
+                            btn_login = gr.Button("Entrar no Sistema", elem_classes="ufmg-btn", size="lg")
 
-                    with gr.Tab("Criar Conta"):
-                        cadastro_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Ex: pesquisador_1")
-                        cadastro_email = gr.Textbox(label="E-mail (usado na recuperação de senha)", placeholder="Ex: usuario@dominio.com")
-                        with gr.Row():
-                            cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres", scale=1)
-                            cadastro_confirma = gr.Textbox(label="Confirmar Senha", type="password", placeholder="Repita a senha", scale=1)
-                        cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
-                        cadastro_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                        btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
-
-                    with gr.Tab("Recuperar Senha"):
-                        #progressive recovery step
-                        recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou e-mail")
-                        recuperar_aviso_identificador = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                        btn_solicitar_recuperacao = gr.Button("Enviar Código de Recuperação", elem_classes="ufmg-btn", size="lg")
-
-                        with gr.Column(visible=False) as recuperar_passo_codigo:
-                            recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456")
-                            recuperar_aviso_codigo = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                            with gr.Row(elem_classes="compact-actions"):
-                                btn_verificar_codigo = gr.Button("Verificar Código", elem_classes="ufmg-btn", size="lg")
-                                btn_trocar_identificador = gr.Button("Usar outro e-mail", elem_classes="error-btn", size="lg")
-
-                        with gr.Column(visible=False) as recuperar_passo_senha:
+                        with gr.Tab("Criar Conta", id="tab_cadastro"):
+                            cadastro_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Ex: pesquisador_1")
+                            cadastro_email = gr.Textbox(label="E-mail (usado na recuperação de senha)", placeholder="Ex: usuario@dominio.com")
                             with gr.Row():
-                                recuperar_nova_senha = gr.Textbox(label="Nova Senha", type="password", placeholder="Mínimo 6 caracteres", scale=1)
-                                recuperar_confirma_senha = gr.Textbox(label="Confirmar Nova Senha", type="password", placeholder="Repita a nova senha", scale=1)
-                            recuperar_aviso_senha = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                            btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
+                                cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres", scale=1)
+                                cadastro_confirma = gr.Textbox(label="Confirmar Senha", type="password", placeholder="Repita a senha", scale=1)
+                            cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
+                            cadastro_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
+                            btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
+
+                        with gr.Tab("Recuperar Senha", id="tab_recuperar"):
+                            #progressive recovery step
+                            recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou e-mail")
+                            recuperar_aviso_identificador = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
+                            btn_solicitar_recuperacao = gr.Button("Enviar Código de Recuperação", elem_classes="ufmg-btn", size="lg")
+
+                            with gr.Column(visible=False) as recuperar_passo_codigo:
+                                recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456")
+                                recuperar_aviso_codigo = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
+                                with gr.Row(elem_classes="compact-actions"):
+                                    btn_verificar_codigo = gr.Button("Verificar Código", elem_classes="ufmg-btn", size="lg")
+                                    btn_trocar_identificador = gr.Button("Usar outro e-mail", elem_classes="error-btn", size="lg")
+
+                            with gr.Column(visible=False) as recuperar_passo_senha:
+                                with gr.Row():
+                                    recuperar_nova_senha = gr.Textbox(label="Nova Senha", type="password", placeholder="Mínimo 6 caracteres", scale=1)
+                                    recuperar_confirma_senha = gr.Textbox(label="Confirmar Nova Senha", type="password", placeholder="Repita a nova senha", scale=1)
+                                recuperar_aviso_senha = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
+                                btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
 
             #task hub panel
             with gr.Column(visible=False) as painel_hub:
@@ -683,9 +684,11 @@ def construir_interface(
         def sessao_vazia() -> Dict[str, Any]:
             return {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""}
 
-        def formularios_limpos() -> List[Any]:
+        def formularios_limpos(usuario_padrao: str = "") -> List[Any]:
             #reset form inputs and collapse recovery steps
             valores: List[Any] = [""] * len(campos_acesso)
+            if usuario_padrao:
+                valores[0] = usuario_padrao
             valores[7] = gr.update(value="", interactive=True)
             valores[8] = gr.update(value="", interactive=True)
             return valores + [gr.update(visible=False), gr.update(visible=False)]
@@ -824,7 +827,11 @@ def construir_interface(
                 aviso_html = renderizar_aviso_inline(msg_erro, tipo="erro")
                 return (
                     renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    gr.update(),
+                    gr.update(),
                     aviso_html,
+                    gr.update(),
+                    gr.update(),
                     *[gr.update() for _ in range(len(campos_acesso) + 2)],
                 )
             try:
@@ -834,13 +841,24 @@ def construir_interface(
                 aviso_html = renderizar_aviso_inline(msg_erro, tipo="erro")
                 return (
                     renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    gr.update(),
+                    gr.update(),
                     aviso_html,
+                    gr.update(),
+                    gr.update(),
                     *[gr.update() for _ in range(len(campos_acesso) + 2)],
                 )
+            aviso_login_sucesso = renderizar_aviso_inline(
+                "Senha redefinida com sucesso! Você já pode entrar com sua nova senha.", tipo="sucesso"
+            )
             return (
                 renderizar_toast_html(f"✅ {res['mensagem']}"),
                 "",
-                *formularios_limpos(),
+                "",
+                "",
+                gr.update(selected="tab_entrar"),
+                aviso_login_sucesso,
+                *formularios_limpos(usuario_padrao=identificador),
             )
 
         def executar_logout(sessao: Dict[str, Any]) -> Tuple[Any, ...]:
@@ -860,6 +878,7 @@ def construir_interface(
                 "",
                 "",
                 "",
+                gr.update(selected="tab_entrar"),
                 *formularios_limpos(),
             )
 
@@ -1506,7 +1525,14 @@ def construir_interface(
         handler_redefinir_params = {
             "fn": executar_redefinir_senha,
             "inputs": [recuperar_identificador, recuperar_codigo, recuperar_nova_senha, recuperar_confirma_senha],
-            "outputs": [recuperar_mensagem, recuperar_aviso_senha] + saidas_formularios,
+            "outputs": [
+                recuperar_mensagem,
+                recuperar_aviso_identificador,
+                recuperar_aviso_codigo,
+                recuperar_aviso_senha,
+                abas_autenticacao,
+                login_aviso,
+            ] + saidas_formularios,
         }
         btn_redefinir_senha.click(**handler_redefinir_params)
         recuperar_nova_senha.submit(**handler_redefinir_params)
@@ -1528,6 +1554,7 @@ def construir_interface(
                 recuperar_aviso_identificador,
                 recuperar_aviso_codigo,
                 recuperar_aviso_senha,
+                abas_autenticacao,
             ] + saidas_formularios,
         )
 
