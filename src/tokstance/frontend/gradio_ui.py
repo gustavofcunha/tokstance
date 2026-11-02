@@ -544,20 +544,19 @@ def construir_interface(
                                     </div>
                                 </div>
                                 """)
-                                with gr.Row(elem_classes="wizard-pool-row"):
-                                    wizard_arquivo_videos = gr.File(
-                                        label="CSV de Vídeos (opcional)",
-                                        file_types=[".csv"],
-                                        scale=2,
-                                        height=140,
-                                    )
-                                    wizard_qtd_principal = gr.Number(
-                                        label="Vídeos no pool principal",
-                                        info="0 = automático",
-                                        value=0,
-                                        precision=0,
-                                        scale=1,
-                                    )
+                                wizard_arquivo_videos = gr.File(
+                                    label="CSV de Vídeos (opcional)",
+                                    file_types=[".csv"],
+                                    height=110,
+                                    elem_classes=["wizard-file-upload"],
+                                )
+                                wizard_qtd_principal = gr.Number(
+                                    label="Vídeos no pool principal",
+                                    info="0 = automático (inclui todos os vídeos da coleção)",
+                                    value=0,
+                                    precision=0,
+                                    elem_classes=["wizard-number-input"],
+                                )
 
                     with gr.Row(elem_classes="wizard-submit-row"):
                         btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"], scale=0, min_width=280)

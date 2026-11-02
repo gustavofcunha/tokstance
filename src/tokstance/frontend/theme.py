@@ -1056,11 +1056,44 @@ APP_CSS = """
         flex: 1 1 0 !important;
         min-width: 0 !important;
     }
-    .wizard-pool-row {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 16px !important;
-        align-items: flex-start !important;
+    .wizard-file-upload {
+        margin-bottom: 14px !important;
+        border-radius: 8px !important;
+        position: relative !important;
+    }
+    .wizard-file-upload .block-label,
+    .wizard-file-upload label.float,
+    .block-label,
+    label.float {
+        background: #ffffff !important;
+        padding: 2px 8px !important;
+        border-radius: 6px !important;
+        border: 1px solid #cbd5e1 !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        color: #0f172a !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        z-index: 2 !important;
+    }
+    .wizard-file-upload button[aria-label*="upload"] .wrap,
+    .wizard-file-upload button.center .wrap {
+        margin-top: 18px !important;
+        gap: 6px !important;
+    }
+    .wizard-file-upload .icon-wrap {
+        margin-bottom: 4px !important;
+        color: #176b87 !important;
+    }
+    .wizard-file-upload .icon-wrap svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+    .wizard-number-input {
+        margin-top: 4px !important;
+        width: 100% !important;
+    }
+    .wizard-feedback-slot {
+        margin-top: 10px !important;
         width: 100% !important;
     }
     .wizard-checkbox {
