@@ -109,8 +109,8 @@ def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rot
                     <span style="font-weight: 700; font-size: 13px; color: #334155;">{prog:.0f}%</span>
                 </td>
                 <td style="text-align: right; white-space: nowrap;">
-                    <button type="button" class="hub-table-btn primary" onclick="window.tokstanceAcao('admin', '{t_id}')">Abrir Console</button>
-                    <button type="button" class="hub-table-btn danger" onclick="window.tokstanceAcao('excluir', '{t_id}')">Excluir</button>
+                    <button type="button" class="hub-table-btn primary" onclick="window.tokstanceAcao('admin', '{t_id}')"><svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Abrir Console</button>
+                    <button type="button" class="hub-table-btn danger" onclick="window.tokstanceAcao('excluir', '{t_id}')"><svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Excluir</button>
                 </td>
             </tr>
             """)
@@ -153,17 +153,17 @@ def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rot
                 status_class = "pending"
                 status_label = "Não iniciada"
                 btn_class = "primary"
-                btn_texto = "▶ Iniciar Rotulação"
+                btn_texto = '<svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Iniciar Rotulação'
             elif pos < tot:
                 status_class = "in-progress"
                 status_label = "Em andamento"
                 btn_class = "in-progress"
-                btn_texto = "▶ Continuar Rotulação"
+                btn_texto = '<svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Continuar Rotulação'
             else:
                 status_class = "completed"
                 status_label = "Concluída"
                 btn_class = "completed"
-                btn_texto = "✓ Ver Concluída"
+                btn_texto = '<svg class="hub-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Ver Concluída'
 
             prog_txt = f"{pos} de {tot} ({pct}%)"
             linhas_rot.append(f"""
@@ -223,7 +223,7 @@ def renderizar_configuracao_admin_html(tarefa_meta: Dict[str, Any]) -> str:
         <div class="admin-config-title">Configuração Vigente da Rodada (Somente Leitura)</div>
         <div class="admin-config-grid">
             <div class="config-item"><span class="config-label">ID da Tarefa:</span> <span class="config-val-badge">#{t_id}</span></div>
-            <div class="config-item"><span class="config-label">Código de Convite:</span> <div class="config-code-row"><span class="config-val-badge convite">{convite}</span><button type="button" class="copy-code-btn" title="Copiar código" aria-label="Copiar código de convite" onclick="window.tokstanceCopiar('{convite}')">📋</button></div></div>
+            <div class="config-item"><span class="config-label">Código de Convite:</span> <div class="config-code-row"><span class="config-val-badge convite">{convite}</span><button type="button" class="copy-code-btn" title="Copiar código de convite" aria-label="Copiar código de convite" onclick="window.tokstanceCopiar('{convite}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div></div>
             <div class="config-item"><span class="config-label">Vagas de Rotuladores:</span> <span class="config-val-badge">{vagas}</span></div>
             <div class="config-item"><span class="config-label">Sobreposição (Overlap):</span> <span class="config-val-badge">{overlap}%</span></div>
             <div class="config-item full-width"><span class="config-label">Pergunta Norteadora:</span> <div class="config-val-text">{pergunta}</div></div>
@@ -311,7 +311,7 @@ def construir_interface(
         gr.HTML(elem_classes="toast-slot", value=f"""
         <style>{APP_CSS}</style>
         <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>Código '+t+' copiado</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}}; window.tokstanceForcarMaiusculo=function(){{document.addEventListener('input',function(e){{if(e.target&&(e.target.matches('.campo-nome-maiusculo input')||e.target.closest('.campo-nome-maiusculo'))){{var inp=e.target.tagName==='INPUT'?e.target:e.target.querySelector('input');if(inp){{var s=inp.selectionStart,end=inp.selectionEnd;inp.value=inp.value.toUpperCase();if(s!==null&&end!==null){{inp.setSelectionRange(s,end);}}}}}}}},true);}}; window.tokstanceForcarMaiusculo();"
+             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>Código '+t+' copiado</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}}; window.tokstanceForcarMaiusculo=function(){{document.addEventListener('input',function(e){{if(e.target&&(e.target.matches('.campo-nome-maiusculo input')||e.target.closest('.campo-nome-maiusculo'))){{var inp=e.target.tagName==='INPUT'?e.target:e.target.querySelector('input');if(inp){{var s=inp.selectionStart,end=inp.selectionEnd;inp.value=inp.value.toUpperCase();if(s!==null&&end!==null){{inp.setSelectionRange(s,end);}}}}}}}},true);}}; window.tokstanceForcarMaiusculo(); window.tokstanceAcessibilidadeBotoes=function(){{var bCop=document.querySelector('#btn_copiar_codigo_wizard, .btn-icon-copiar'); if(bCop){{bCop.setAttribute('title','Copiar código de convite');bCop.setAttribute('aria-label','Copiar código de convite');}} var bRef=document.querySelector('#btn_gerar_novo_codigo_wizard, .btn-icon-refresh'); if(bRef){{bRef.setAttribute('title','Gerar novo código de convite');bRef.setAttribute('aria-label','Gerar novo código de convite');}}}}; setInterval(window.tokstanceAcessibilidadeBotoes,1500); window.tokstanceAcessibilidadeBotoes();"
              style="display:none;" />
         """)
 
@@ -434,7 +434,7 @@ def construir_interface(
                 with gr.Row(elem_classes="hub-header-bar"):
                     hub_saudacao = gr.HTML()
                     with gr.Row(elem_classes="compact-actions"):
-                        btn_logout = gr.Button("Encerrar Sessão", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=150)
+                        btn_logout = gr.Button("Encerrar Sessão", elem_classes=["error-btn", "hub-btn", "btn-icon-logout"], scale=0, min_width=150)
 
                 with gr.Row(elem_classes="hub-two-col"):
                     with gr.Column(scale=1, min_width=0, elem_classes="hub-section-box"):
@@ -560,8 +560,20 @@ def construir_interface(
                                         value=gerar_codigo_convite(),
                                         scale=1,
                                     )
-                                    btn_copiar_codigo = gr.Button("📋", elem_classes=["error-btn", "wizard-icon-btn"], scale=0, min_width=44)
-                                    btn_gerar_novo_codigo = gr.Button("🔄", elem_classes=["error-btn", "wizard-icon-btn"], scale=0, min_width=44)
+                                    btn_copiar_codigo = gr.Button(
+                                        value="",
+                                        elem_id="btn_copiar_codigo_wizard",
+                                        elem_classes=["error-btn", "wizard-icon-btn", "btn-icon-copiar"],
+                                        scale=0,
+                                        min_width=44,
+                                    )
+                                    btn_gerar_novo_codigo = gr.Button(
+                                        value="",
+                                        elem_id="btn_gerar_novo_codigo_wizard",
+                                        elem_classes=["error-btn", "wizard-icon-btn", "btn-icon-refresh"],
+                                        scale=0,
+                                        min_width=44,
+                                    )
                                 wizard_admin_como_rotulador = gr.Checkbox(
                                     label="Participar também como rotulador (Vaga 1)",
                                     value=True,
@@ -609,7 +621,7 @@ def construir_interface(
                         with gr.Column(elem_classes="sensitive-warning-card"):
                             gr.HTML("""
                                 <div class="sensitive-warning-header">
-                                    <div class="sensitive-warning-badge">⚠️ Aviso de Conteúdo</div>
+                                    <div class="sensitive-warning-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon" style="margin-right: 4px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Aviso de Conteúdo</div>
                                     <h2>Possível Conteúdo Sensível ou Nocivo</h2>
                                 </div>
                                 <div class="sensitive-warning-body">
@@ -636,7 +648,7 @@ def construir_interface(
                                 rotulador_radio = gr.Radio(choices=[], label="Selecione uma opção:", elem_classes="wrap-radio")
 
                                 btn_salvar_resposta = gr.Button("Salvar Resposta e Avançar", elem_classes="ufmg-btn")
-                                btn_erro_video = gr.Button("⚠️ O vídeo não carregou", elem_classes="error-btn")
+                                btn_erro_video = gr.Button("O vídeo não carregou", elem_classes=["error-btn", "btn-icon-alerta"])
 
 
             # ==================================================================
@@ -646,7 +658,7 @@ def construir_interface(
                 with gr.Row(elem_classes="admin-header"):
                     admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
-                        btn_excluir_tarefa_admin = gr.Button("Excluir esta Tarefa", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=170)
+                        btn_excluir_tarefa_admin = gr.Button("Excluir esta Tarefa", elem_classes=["ufmg-btn", "hub-btn", "btn-icon-trash"], scale=0, min_width=170)
                         btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
 
                 admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")
