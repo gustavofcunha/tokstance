@@ -78,6 +78,11 @@ class ServicoFilaAnotacao:
         posicao_concluida = max(0, total_videos - pendentes)
         concluida = total_videos > 0 and pendentes == 0
 
+        #recupera target do video anterior para detectar mudancas na fila
+        target_anterior = ""
+        if posicao_concluida > 0 and len(fila_df) >= posicao_concluida:
+            target_anterior = str(fila_df.iloc[posicao_concluida - 1].get("target", "") or "").strip()
+
         video_atual: dict[str, Any] | None = None
         if pendentes > 0:
             linha = pendentes_df.iloc[0]
@@ -105,6 +110,7 @@ class ServicoFilaAnotacao:
             "concluida": concluida,
             "exibir_aviso_sensivel": bool(pendentes > 0 and not aviso_sensivel_aceito),
             "video_atual": video_atual,
+            "target_anterior": target_anterior,
         }
 
     def aceitar_aviso_conteudo_sensivel(

@@ -383,3 +383,65 @@ def test_pergunta_em_negrito_e_alternativas_sem_negrito() -> None:
     assert "font-weight: 400 !important;" in APP_CSS
 
 
+#target visual prominence and embedding in question
+
+
+@pytest.mark.unit
+def test_destaque_target_vermelho_e_embedado_na_pergunta() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+    from tokstance.frontend.components import formatar_pergunta_com_target, render_video_card
+
+    item = {"target": "Lula", "url": "https://www.tiktok.com/@u/video/100"}
+
+    #act
+    pergunta_formatada = formatar_pergunta_com_target(
+        "Qual a posição expressa no vídeo em relação ao target?", "Lula"
+    )
+    card_html = render_video_card(item, highlight_target=True)
+
+    #assert target embedded with badge
+    assert 'target-name-badge' in pergunta_formatada
+    assert '"Lula"' in pergunta_formatada
+    assert 'target-name-badge' in card_html
+    assert 'Lula' in card_html
+
+    #assert css styling has intense red accents and animations
+    assert ".target-name-badge" in APP_CSS
+    assert "color: #9c0014 !important;" in APP_CSS
+    assert "target-badge-pulse" in APP_CSS
+    assert "target-highlight" in APP_CSS
+
+
+@pytest.mark.unit
+def test_destaque_target_transicao_primeiro_video_e_mudanca_alvo() -> None:
+    #arrange
+    from tokstance.frontend.components import video_outputs
+
+    fila = [
+        {"target": "AlvoInicial", "url": "https://www.tiktok.com/@u/video/1"},
+        {"target": "AlvoInicial", "url": "https://www.tiktok.com/@u/video/2"},
+        {"target": "NovoAlvo", "url": "https://www.tiktok.com/@u/video/3"},
+    ]
+
+    #act posicao 0 com highlight_first habilitado
+    _, card0, _, perg0, _ = video_outputs(fila, 0, highlight_first=True)
+    #act posicao 1 (mesmo alvo)
+    _, card1, _, perg1, _ = video_outputs(fila, 1)
+    #act posicao 2 (mudanca de alvo)
+    _, card2, _, perg2, _ = video_outputs(fila, 2)
+
+    #assert primeiro video com highlight ativado
+    assert "target-transition" in card0
+    assert "target-transition" in perg0
+
+    #assert segundo video sem transicao
+    assert "target-transition" not in card1
+    assert "target-transition" not in perg1
+
+    #assert terceiro video com mudanca de alvo ativando transicao
+    assert "target-transition" in card2
+    assert "target-transition" in perg2
+
+
+

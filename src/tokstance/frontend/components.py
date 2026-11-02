@@ -28,6 +28,46 @@ def render_tiktok(url: str) -> str:
     """
 
 
+def formatar_pergunta_com_target(pergunta_template: Optional[str], target: str) -> str:
+    """Embuta o nome do target formatado em destaque vermelho dentro da pergunta."""
+    alvo = escape(str(target or "").strip())
+    badge_html = f'<span class="target-name-badge">"{alvo}"</span>'
+    template = str(pergunta_template or "").strip()
+
+    if not template:
+        return f'Com relação ao target {badge_html}, como você classifica a posição deste vídeo?'
+
+    #se o template tiver {target} com ou sem aspas
+    if "{target}" in template:
+        for aspas_target in ['"{target}"', "'{target}'", "“{target}”", "”{target}”"]:
+            if aspas_target in template:
+                template = template.replace(aspas_target, badge_html)
+        return template.replace("{target}", badge_html)
+
+    #se contiver literal ao target
+    padrao_ao_target = re.compile(r'\bao\s+target\b', re.IGNORECASE)
+    if padrao_ao_target.search(template):
+        return padrao_ao_target.sub(f'ao target {badge_html}', template)
+
+    #se contiver literal ao alvo
+    padrao_ao_alvo = re.compile(r'\bao\s+alvo\b', re.IGNORECASE)
+    if padrao_ao_alvo.search(template):
+        return padrao_ao_alvo.sub(f'ao alvo {badge_html}', template)
+
+    #se contiver a palavra target isolada
+    padrao_target = re.compile(r'\btarget\b', re.IGNORECASE)
+    if padrao_target.search(template):
+        return padrao_target.sub(f'target {badge_html}', template)
+
+    #se contiver a palavra alvo isolada
+    padrao_alvo = re.compile(r'\balvo\b', re.IGNORECASE)
+    if padrao_alvo.search(template):
+        return padrao_alvo.sub(f'alvo {badge_html}', template)
+
+    #caso a pergunta nao mencione target nem alvo
+    return f'{template} (Target: {badge_html})'
+
+
 def render_video_card(item: Dict[str, Any], highlight_target: bool = False) -> str:
     """Renderiza o cartao com metadados do target, descricao, transcricao e player TikTok."""
     target = str(item.get("target", "") or "").strip()
@@ -48,10 +88,11 @@ def render_video_card(item: Dict[str, Any], highlight_target: bool = False) -> s
     description_class = "video-description" if description else "video-description unavailable"
     transcription_class = "video-transcription" if transcription else "video-transcription unavailable"
     transicao_classe = " target-transition" if highlight_target else ""
+    target_badge_html = f"<span class='target-name-badge'>{escape(target)}</span>" if target else ""
 
     return f"""
     <div class='video-card'>
-        <div class='video-meta{transicao_classe}'><strong>Target:</strong> {escape(target)}</div>
+        <div class='video-meta{transicao_classe}'><strong>Target:</strong> {target_badge_html}</div>
         <div class='video-content-grid'>
             <div class='video-context-column'>
                 <div class='{description_class}'><strong>Descrição do vídeo</strong><div>{description_html}</div></div>
@@ -83,6 +124,7 @@ def video_outputs(
     position: int,
     username_clean: str = "",
     pergunta_template: Optional[str] = None,
+    highlight_first: bool = False,
 ) -> Tuple[int, str, Any, str, str]:
     """Prepara os outputs visuais do proximo video da fila do rotulador."""
     total = len(queue)
@@ -98,22 +140,19 @@ def video_outputs(
 
     item = queue[position]
     target = str(item.get("target", "") or "").strip()
-    if pergunta_template and "{target}" in pergunta_template:
-        texto_pergunta = escape(pergunta_template.replace("{target}", target))
-    elif pergunta_template:
-        texto_pergunta = escape(pergunta_template)
-    else:
-        texto_pergunta = f'Com relação ao target <strong>"{escape(target)}"</strong>, como você classifica a posição deste vídeo?'
-
-    pergunta_markdown = f'<div class="target-question"><strong>{texto_pergunta}</strong></div>'
-    pb = generate_progress_bar(position, total)
+    texto_pergunta = formatar_pergunta_com_target(pergunta_template, target)
 
     previous_target = (
         str(queue[position - 1].get("target", "") or "").strip()
         if position > 0
         else ""
     )
-    target_changed = position > 0 and previous_target != target
+    target_changed = (position == 0 and highlight_first) or (
+        position > 0 and previous_target != target
+    )
+    transicao_classe = " target-transition" if target_changed else ""
+    pergunta_markdown = f'<div class="target-question{transicao_classe}"><strong>{texto_pergunta}</strong></div>'
+    pb = generate_progress_bar(position, total)
     video_html = render_video_card(item, target_changed)
     return position, video_html, gr.update(visible=True), pergunta_markdown, pb
 

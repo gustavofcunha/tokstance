@@ -1100,14 +1100,78 @@ APP_CSS = """
 
     .video-card { width: 100%; min-width: 0; color: #0f172a; overflow: visible; }
     .video-card iframe { display: block; width: 100% !important; max-width: 330px !important; height: 500px !important; overflow: hidden !important; border-radius: 8px !important; border: 1px solid #e2e8f0 !important; }
-    .video-meta { padding: 10px 14px; margin-bottom: 12px; border-left: 4px solid #9c0014; background: #fffafa; font-size: 15px; border-radius: 0 6px 6px 0; border: 1px solid #ffd6dc; border-left-width: 4px; }
-    .target-transition { animation: target-highlight 12s ease-in-out; will-change: background, border-color, box-shadow, transform; }
+    .video-meta {
+        padding: 8px 14px;
+        margin-bottom: 10px;
+        border-left: 4px solid #9c0014;
+        background: #fffafa;
+        font-size: 15px;
+        border-radius: 0 8px 8px 0;
+        border: 1px solid #ffd6dc;
+        border-left-width: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .target-name-badge {
+        color: #9c0014 !important;
+        font-weight: 800 !important;
+        background: #ffe4e8 !important;
+        border: 1.5px solid #e11d48 !important;
+        border-radius: 6px !important;
+        padding: 2px 8px !important;
+        display: inline-block !important;
+        letter-spacing: 0.2px !important;
+        box-shadow: 0 1px 3px rgba(156, 0, 20, 0.12) !important;
+    }
+    .target-transition {
+        animation: target-highlight 6s ease-in-out !important;
+        will-change: background, border-color, box-shadow, transform;
+    }
+    .target-transition .target-name-badge {
+        animation: target-badge-pulse 6s ease-in-out !important;
+    }
     @keyframes target-highlight {
-        0%, 100% { background: #fffafa; border-left-color: #9c0014; box-shadow: none; transform: translateY(0); }
-        8% { background: #ffd6dc; border-left-color: #d34758; box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.28), 0 8px 20px rgba(156, 0, 20, 0.16); transform: translateY(-3px); }
-        28% { background: #fff0f2; border-left-color: #b51f35; box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.22), 0 5px 14px rgba(156, 0, 20, 0.12); transform: translateY(0); }
-        55% { background: #ffe1e5; border-left-color: #c12d42; box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.24), 0 6px 16px rgba(156, 0, 20, 0.14); }
-        78% { background: #fff1f3; border-left-color: #ae1c32; box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.18), 0 4px 12px rgba(156, 0, 20, 0.1); }
+        0%, 100% {
+            background: #fff8f8 !important;
+            border-color: #fed7da !important;
+            border-left-color: #9c0014 !important;
+            box-shadow: none !important;
+            transform: translateY(0);
+        }
+        10%, 40% {
+            background: #ffe4e8 !important;
+            border-color: #e11d48 !important;
+            border-left-color: #9c0014 !important;
+            box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.35), 0 6px 18px rgba(156, 0, 20, 0.2) !important;
+            transform: scale(1.01);
+        }
+        25%, 65% {
+            background: #fff0f2 !important;
+            border-color: #f43f5e !important;
+            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2), 0 3px 10px rgba(156, 0, 20, 0.12) !important;
+            transform: scale(1.0);
+        }
+    }
+    @keyframes target-badge-pulse {
+        0%, 100% {
+            background: #ffe4e8 !important;
+            color: #9c0014 !important;
+            border-color: #e11d48 !important;
+            box-shadow: 0 1px 3px rgba(156, 0, 20, 0.12) !important;
+        }
+        12%, 42% {
+            background: #9c0014 !important;
+            color: #ffffff !important;
+            border-color: #7f000e !important;
+            box-shadow: 0 0 0 4px rgba(156, 0, 20, 0.45), 0 3px 10px rgba(156, 0, 20, 0.3) !important;
+        }
+        25%, 65% {
+            background: #e11d48 !important;
+            color: #ffffff !important;
+            border-color: #be123c !important;
+            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.25) !important;
+        }
     }
     .video-content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
     .video-player-column, .video-context-column { min-width: 0; }
@@ -1325,16 +1389,24 @@ APP_CSS = """
     .target-question {
         font-weight: 700 !important;
         font-size: 14.5px !important;
-        line-height: 1.4 !important;
+        line-height: 1.5 !important;
         color: #0f172a !important;
         margin-bottom: 6px !important;
-        padding: 8px 12px !important;
+        padding: 9px 12px !important;
         background: #fff8f8 !important;
         border: 1px solid #fed7da !important;
+        border-left: 5px solid #9c0014 !important;
         border-radius: 6px !important;
+        transition: all 0.2s ease !important;
     }
     .target-question, .target-question strong, .target-question b, .target-question * {
         font-weight: 700 !important;
+    }
+    .target-question .target-name-badge {
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        margin: 0 3px !important;
+        vertical-align: baseline !important;
     }
 
     .wrap-radio form, .wrap-radio > div, .wrap-radio fieldset { display: flex !important; flex-direction: column !important; width: 100% !important; }
@@ -1619,9 +1691,12 @@ APP_CSS = """
     }
     .video-meta {
         margin-bottom: 6px !important;
-        padding: 6px 12px !important;
+        padding: 5px 12px !important;
         font-size: 13.5px !important;
         flex: 0 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
     }
     .video-content-grid {
         display: grid !important;
