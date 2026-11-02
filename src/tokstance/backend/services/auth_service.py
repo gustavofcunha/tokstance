@@ -224,6 +224,8 @@ class ServicoAutenticacao:
         if usuario is None:
             usuario = self.repo_usuarios.buscar_por_email(termo)
         if usuario is None:
+            usuario = self.repo_usuarios.buscar_por_nome_ou_email_case_insensitive(termo)
+        if usuario is None:
             raise ValueError("Usuário não encontrado.")
 
         u_id = int(usuario["usuario_id"])
@@ -246,6 +248,9 @@ class ServicoAutenticacao:
         return {
             "sucesso": True,
             "mensagem": "Senha redefinida com sucesso! Você já pode acessar o sistema com sua nova senha.",
+            "usuario_id": u_id,
+            "nome_usuario": str(usuario["nome_usuario"]),
+            "email": str(usuario.get("email", "")),
         }
 
     def autenticar_usuario(
@@ -268,29 +273,29 @@ class ServicoAutenticacao:
                 f"Muitas tentativas falhas. Aguarde {restante:.0f}s antes de tentar novamente."
             )
 
-        try:
-            nome_limpo = validar_nome_usuario(chave_bruta)
-        except ValueError as exc:
-            self.limitador_tentativas.registrar_falha(chave_bruta)
-            raise ValueError("Credenciais inválidas: usuário não encontrado.") from exc
-
-        conta = self.repo_usuarios.buscar_por_nome_usuario(nome_limpo)
+        conta = self.repo_usuarios.buscar_por_nome_usuario(chave_bruta)
         if conta is None:
-            bloqueou = self.limitador_tentativas.registrar_falha(nome_limpo)
+            conta = self.repo_usuarios.buscar_por_email(chave_bruta)
+        if conta is None:
+            conta = self.repo_usuarios.buscar_por_nome_ou_email_case_insensitive(chave_bruta)
+
+        if conta is None:
+            bloqueou = self.limitador_tentativas.registrar_falha(chave_bruta)
             if bloqueou:
                 restante = self.limitador_tentativas.segundos_restantes_bloqueio(
-                    nome_limpo
+                    chave_bruta
                 )
                 raise PermissionError(
                     f"Muitas tentativas falhas. Aguarde {restante:.0f}s antes de tentar novamente."
                 )
             raise ValueError("Credenciais inválidas: usuário não encontrado.")
 
+        nome_limpo = str(conta["nome_usuario"])
         if not verificar_senha(str(senha or ""), str(conta["senha_hash"])):
-            bloqueou = self.limitador_tentativas.registrar_falha(nome_limpo)
+            bloqueou = self.limitador_tentativas.registrar_falha(chave_bruta)
             if bloqueou:
                 restante = self.limitador_tentativas.segundos_restantes_bloqueio(
-                    nome_limpo
+                    chave_bruta
                 )
                 raise PermissionError(
                     f"Muitas tentativas falhas. Aguarde {restante:.0f}s antes de tentar novamente."
@@ -417,12 +422,21 @@ class ServicoAutenticacao:
         resumo_rotulador: list[dict[str, Any]] = []
         for item in tarefas_rot:
             tid = int(item["tarefa_id"])
+            vaga_membro = str(item.get("vaga_atribuida", "") or "").strip()
             fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
                 tid, rotulador=nome_usuario
             )
+            if fila_df.empty and vaga_membro:
+                fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
+                    tid, rotulador=vaga_membro
+                )
             anot_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
                 tid, rotulador=nome_usuario
             )
+            if anot_df.empty and vaga_membro:
+                anot_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
+                    tid, rotulador=vaga_membro
+                )
             erros_df = self.repo_estudo.carregar_erros_videos_tarefa_df(tid)
             ids_anotados = (
                 set(anot_df["assignment_id"].astype(str))
@@ -431,8 +445,11 @@ class ServicoAutenticacao:
             )
             ids_erros_sem_reserva: set[str] = set()
             if not erros_df.empty:
+                alvos_labelers = {nome_usuario.lower()}
+                if vaga_membro:
+                    alvos_labelers.add(vaga_membro.lower())
                 erros_rot = erros_df[
-                    erros_df["labeler"].astype(str).eq(nome_usuario)
+                    erros_df["labeler"].astype(str).str.lower().isin(alvos_labelers)
                     & erros_df["replacement_assignment_id"].astype(str).str.strip().eq("")
                 ]
                 ids_erros_sem_reserva = set(erros_rot["assignment_id"].astype(str))
@@ -442,7 +459,7 @@ class ServicoAutenticacao:
             concluidos = (
                 int(fila_df["assignment_id"].astype(str).isin(ids_processados).sum())
                 if not fila_df.empty
-                else 0
+                else len(ids_anotados)
             )
             resumo_rotulador.append(
                 {

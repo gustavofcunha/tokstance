@@ -482,5 +482,92 @@ def test_estilos_css_auth_inline_error_e_success() -> None:
     assert "border-left: 4px solid #16a34a !important;" in APP_CSS
 
 
+@pytest.mark.unit
+def test_redefinicao_senha_mantem_tarefas_administradas_atribuidas_e_progresso_salvo(
+    servicos: Dict[str, Any],
+) -> None:
+    #arrange cadastro de usuario criador e rotulador
+    auth = servicos["auth"]
+    admin = servicos["admin"]
+    fila = servicos["fila"]
+
+    u_info = auth.cadastrar_usuario("pesquisador_master", "senhaAntiga123", email="master@ufmg.br")
+    u_id = int(u_info["usuario_id"])
+
+    tarefa = admin.criar_nova_tarefa(
+        usuario_administrador_id=u_id,
+        pool_videos=_pool_de_videos(),
+        numero_vagas=2,
+        percentual_sobreposicao=50.0,
+        permitir_admin_como_rotulador=True,
+        titulo="Estudo Eleitoral",
+    )
+    t_id = int(tarefa["tarefa_id"])
+
+    #act anota um video para consolidar progresso
+    estado_ini = fila.obter_estado_fila(t_id, "pesquisador_master")
+    as_id = estado_ini["video_atual"]["assignment_id"]
+    fila.salvar_anotacao_e_avancar(t_id, "pesquisador_master", as_id, "Neutro", 8.5)
+
+    #painel antes da redefinicao de senha
+    painel_antes = auth.obter_painel_usuario(u_id)
+    assert len(painel_antes["tarefas_administrador"]) == 1
+    assert len(painel_antes["tarefas_rotulador"]) == 1
+    assert painel_antes["tarefas_rotulador"][0]["videos_concluidos"] == 1
+
+    #act redefinir senha com sucesso
+    res_recup = auth.solicitar_recuperacao_senha("master@ufmg.br")
+    cod = res_recup["codigo"]
+    auth.verificar_codigo_recuperacao("master@ufmg.br", cod)
+    res_redef = auth.redefinir_senha_com_codigo("master@ufmg.br", cod, "novaSenhaForte456")
+
+    assert res_redef["sucesso"] is True
+    assert res_redef["nome_usuario"] == "pesquisador_master"
+
+    #assert login funciona com email e com nova senha
+    login_res = auth.autenticar_usuario("master@ufmg.br", "novaSenhaForte456", permitir_reassumir=True)
+    assert login_res["usuario_id"] == u_id
+    assert login_res["nome_usuario"] == "pesquisador_master"
+
+    #assert tarefas e progresso permanecem salvos e intactos
+    painel_depois = auth.obter_painel_usuario(u_id)
+    assert len(painel_depois["tarefas_administrador"]) == 1
+    assert painel_depois["tarefas_administrador"][0]["tarefa_id"] == t_id
+    assert len(painel_depois["tarefas_rotulador"]) == 1
+    assert painel_depois["tarefas_rotulador"][0]["tarefa_id"] == t_id
+    assert painel_depois["tarefas_rotulador"][0]["videos_concluidos"] == 1
+    assert painel_depois["tarefas_rotulador"][0]["pendentes"] == painel_depois["tarefas_rotulador"][0]["total_videos_fila"] - 1
+
+    #assert fila de rotulacao continua do ponto onde parou
+    estado_pos = fila.obter_estado_fila(t_id, "pesquisador_master")
+    assert estado_pos["posicao_concluida"] == 1
+    assert estado_pos["video_atual"]["assignment_id"] != as_id
+
+
+@pytest.mark.unit
+def test_autenticar_usuario_aceita_nome_ou_email_case_insensitive(
+    servicos: Dict[str, Any],
+) -> None:
+    auth = servicos["auth"]
+    auth.cadastrar_usuario("cientista_dados", "senhaSegura123", email="cientista@ufmg.br")
+
+    #login exato por nome
+    res_1 = auth.autenticar_usuario("cientista_dados", "senhaSegura123", permitir_reassumir=True)
+    assert res_1["nome_usuario"] == "cientista_dados"
+
+    #login por email
+    res_2 = auth.autenticar_usuario("cientista@ufmg.br", "senhaSegura123", permitir_reassumir=True)
+    assert res_2["nome_usuario"] == "cientista_dados"
+
+    #login case-insensitive por nome
+    res_3 = auth.autenticar_usuario("CIENTISTA_DADOS", "senhaSegura123", permitir_reassumir=True)
+    assert res_3["nome_usuario"] == "cientista_dados"
+
+    #login case-insensitive por email
+    res_4 = auth.autenticar_usuario("CIENTISTA@UFMG.BR", "senhaSegura123", permitir_reassumir=True)
+    assert res_4["nome_usuario"] == "cientista_dados"
+
+
+
 
 

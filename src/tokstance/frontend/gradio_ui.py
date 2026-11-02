@@ -851,6 +851,7 @@ def construir_interface(
             aviso_login_sucesso = renderizar_aviso_inline(
                 "Senha redefinida com sucesso! Você já pode entrar com sua nova senha.", tipo="sucesso"
             )
+            usuario_login = res.get("nome_usuario") or identificador
             return (
                 renderizar_toast_html(f"✅ {res['mensagem']}"),
                 "",
@@ -858,7 +859,7 @@ def construir_interface(
                 "",
                 gr.update(selected="tab_entrar"),
                 aviso_login_sucesso,
-                *formularios_limpos(usuario_padrao=identificador),
+                *formularios_limpos(usuario_padrao=usuario_login),
             )
 
         def executar_logout(sessao: Dict[str, Any]) -> Tuple[Any, ...]:
