@@ -413,6 +413,29 @@ APP_CSS = """
     .auth-inline-error .auth-inline-text {
         flex: 1 1 auto !important;
     }
+    .auth-inline-success {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        background: #f0fdf4 !important;
+        border: 1px solid #bbf7d0 !important;
+        border-left: 4px solid #16a34a !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        margin: 10px 0 12px 0 !important;
+        color: #166534 !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        line-height: 1.4 !important;
+    }
+    .auth-inline-success .auth-inline-icon {
+        font-size: 16px !important;
+        flex: 0 0 auto !important;
+        color: #16a34a !important;
+    }
+    .auth-inline-success .auth-inline-text {
+        flex: 1 1 auto !important;
+    }
 
     /* =========================================================================
        4. BOTOES PRIMARIOS E SECUNDARIOS
