@@ -69,17 +69,34 @@ JS_FORCAR_MODO_CLARO = """
         document.querySelectorAll('input[type="password"], input.tem-olho-senha').forEach(configurarOlhoSenha);
     }
 
-    varrerCamposSenha();
-    const observadorSenha = new MutationObserver(varrerCamposSenha);
-    if (document.body) {
-        observadorSenha.observe(document.body, { childList: true, subtree: true });
-    } else {
-        document.addEventListener('DOMContentLoaded', () => {
-            observadorSenha.observe(document.body, { childList: true, subtree: true });
+    function reiniciarAnimacaoToasts() {
+        document.querySelectorAll('.tokstance-toast').forEach((el) => {
+            const nonce = el.getAttribute('data-nonce') || el.innerText;
+            if (el.dataset.lastNonce !== nonce) {
+                el.dataset.lastNonce = nonce;
+                el.style.animation = 'none';
+                void el.offsetHeight;
+                el.style.animation = '';
+            }
         });
     }
-    if (!window._tokstanceOlhoInterval) {
-        window._tokstanceOlhoInterval = setInterval(varrerCamposSenha, 400);
+
+    function executarRotinasInterface() {
+        varrerCamposSenha();
+        reiniciarAnimacaoToasts();
+    }
+
+    executarRotinasInterface();
+    const observadorGeral = new MutationObserver(executarRotinasInterface);
+    if (document.body) {
+        observadorGeral.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-nonce'] });
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            observadorGeral.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-nonce'] });
+        });
+    }
+    if (!window._tokstanceRotinasInterval) {
+        window._tokstanceRotinasInterval = setInterval(executarRotinasInterface, 300);
     }
 }
 """

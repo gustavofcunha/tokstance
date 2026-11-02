@@ -561,6 +561,7 @@ def construir_interface(
 
                     with gr.Row(elem_classes="wizard-submit-row"):
                         btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"], scale=0, min_width=280)
+                    wizard_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot", "wizard-feedback-slot"])
 
             # ==================================================================
             # 4. TELA DE ROTULACAO (WORKSPACE DO ROTULADOR)
@@ -927,12 +928,12 @@ def construir_interface(
             )
 
         #funcoes do wizard de criacao de tarefa
-        def abrir_wizard_criacao() -> Tuple[Any, Any, str, Any]:
+        def abrir_wizard_criacao() -> Tuple[Any, Any, str, Any, str]:
             novo_codigo = gerar_codigo_convite()
             tabela_df = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
-            return gr.update(visible=False), gr.update(visible=True), novo_codigo, tabela_df
+            return gr.update(visible=False), gr.update(visible=True), novo_codigo, tabela_df, ""
 
-        def voltar_hub_de_wizard(sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str]:
+        def voltar_hub_de_wizard(sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str, str]:
             h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
             return (
                 gr.update(visible=True),
@@ -940,6 +941,7 @@ def construir_interface(
                 h_adm,
                 h_rot,
                 saudacao,
+                "",
             )
 
         def atualizar_matriz_pares(opcoes_txt: str) -> pd.DataFrame:
@@ -960,14 +962,16 @@ def construir_interface(
             admin_como_rotulador: bool,
             arquivo_upload: Any,
             qtd_principal: float,
-        ) -> Tuple[str, Any]:
+        ) -> Tuple[str, Any, str]:
             u_id = sessao.get("usuario_id")
             if not u_id:
-                return renderizar_toast_html("⚠️ Usuário não autenticado."), gr.update()
+                msg = "⚠️ Usuário não autenticado."
+                return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline("Usuário não autenticado.", tipo="erro")
 
             opcoes = limpar_usuarios(opcoes_txt.splitlines())
             if len(opcoes) < 2:
-                return renderizar_toast_html("⚠️ A tarefa precisa conter ao menos duas opções de resposta distintas."), gr.update()
+                msg = "⚠️ A tarefa precisa conter ao menos duas opções de resposta distintas."
+                return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline("A tarefa precisa conter ao menos duas opções de resposta distintas.", tipo="erro")
 
             distancias = converter_df_para_distancias(tabela_df)
 
@@ -977,7 +981,8 @@ def construir_interface(
                     caminho_arq = getattr(arquivo_upload, "name", str(arquivo_upload))
                     pool_videos = pd.read_csv(caminho_arq, dtype=str).fillna("")
                 except Exception as exc:
-                    return renderizar_toast_html(f"⚠️ Erro ao ler arquivo CSV de vídeos: {str(exc)}"), gr.update()
+                    msg = f"⚠️ Erro ao ler arquivo CSV de vídeos: {str(exc)}"
+                    return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline(f"Erro ao ler arquivo CSV de vídeos: {str(exc)}", tipo="erro")
                 reserva_df = None
             else:
                 if ARQUIVO_VIDEOS.exists():
@@ -988,7 +993,8 @@ def construir_interface(
                         else None
                     )
                 else:
-                    return renderizar_toast_html("⚠️ Arquivos de vídeo padrão não encontrados no servidor."), gr.update()
+                    msg = "⚠️ Arquivos de vídeo padrão não encontrados no servidor."
+                    return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline("Arquivos de vídeo padrão não encontrados no servidor.", tipo="erro")
 
             qtd_p = int(qtd_principal) if qtd_principal and int(qtd_principal) > 0 else None
 
@@ -1012,6 +1018,10 @@ def construir_interface(
                 tot_p = tarefa.get("quantidade_videos_principal", len(pool_videos))
                 tot_r = tarefa.get("quantidade_videos_reserva", 0)
                 novo_convite = gerar_codigo_convite()
+                msg_sucesso = (
+                    f"Tarefa criada com sucesso! Código de convite: {c_convite} "
+                    f"({tot_p} vídeos principais e {tot_r} de reserva)."
+                )
                 return (
                     renderizar_toast_html(
                         f"✅ Tarefa criada com sucesso!\nCódigo de convite: **{c_convite}**\n"
@@ -1021,15 +1031,23 @@ def construir_interface(
                         acao_tarefa_id=t_id,
                     ),
                     gr.update(value=novo_convite),
+                    renderizar_aviso_inline(msg_sucesso, tipo="sucesso"),
                 )
             except ValueError as ve:
                 novo_convite = gerar_codigo_convite()
+                msg_erro = f"{str(ve)} Geramos um novo código no campo de convite; tente novamente."
                 return (
-                    renderizar_toast_html(f"⚠️ {str(ve)} Geramos um novo código no campo de convite; tente novamente."),
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
                     gr.update(value=novo_convite),
+                    renderizar_aviso_inline(msg_erro, tipo="erro"),
                 )
             except Exception as exc:
-                return renderizar_toast_html(f"⚠️ Erro ao criar tarefa: {str(exc)}"), gr.update()
+                msg_erro = f"Erro ao criar tarefa: {str(exc)}"
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    gr.update(),
+                    renderizar_aviso_inline(msg_erro, tipo="erro"),
+                )
 
         # ======================================================================
         # CONTROLE DO WORKSPACE DO ROTULADOR
@@ -1579,7 +1597,7 @@ def construir_interface(
         btn_ir_criar_tarefa.click(
             abrir_wizard_criacao,
             inputs=[],
-            outputs=[painel_hub, painel_wizard, wizard_convite, wizard_tabela_penalidades],
+            outputs=[painel_hub, painel_wizard, wizard_convite, wizard_tabela_penalidades, wizard_aviso],
         )
 
         btn_voltar_hub_wizard.click(
@@ -1591,6 +1609,7 @@ def construir_interface(
                 hub_admin_cards_html,
                 hub_rotulador_cards_html,
                 hub_saudacao,
+                wizard_aviso,
             ],
         )
 
@@ -1628,7 +1647,7 @@ def construir_interface(
                 wizard_arquivo_videos,
                 wizard_qtd_principal,
             ],
-            outputs=[wizard_mensagem, wizard_convite],
+            outputs=[wizard_mensagem, wizard_convite, wizard_aviso],
         )
 
         #eventos da tela de rotulacao
