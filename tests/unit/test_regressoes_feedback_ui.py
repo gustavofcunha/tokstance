@@ -289,3 +289,20 @@ def test_cabecalho_da_marca_fica_oculto_durante_a_rotulacao() -> None:
 def test_testes_nao_gravam_no_diretorio_de_dados_do_projeto() -> None:
     assert "tokstance_testes_" in str(resolver_diretorio_dados())
     assert "tokstance_testes_" in str(CAMINHOS_PADRAO.arquivo_videos)
+
+
+#auth feedback and wrong password display
+
+
+@pytest.mark.unit
+def test_alerta_inline_de_senha_incorreta_renderiza_corretamente() -> None:
+    #arrange
+    from tokstance.frontend.gradio_ui import renderizar_aviso_inline
+
+    #act
+    html_erro = renderizar_aviso_inline("Credenciais inválidas: senha incorreta.")
+
+    #assert
+    assert "auth-inline-error" in html_erro
+    assert "senha incorreta" in html_erro
+    assert "role='alert'" in html_erro

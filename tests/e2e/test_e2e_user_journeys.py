@@ -182,7 +182,11 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     pagina_navegador.get_by_label("Senha de Acesso").first.fill("senhaErrada123")
     pagina_navegador.get_by_role("button", name="Entrar no Sistema").click()
 
-    #assert invalid login toast
+    #assert invalid login toast and inline error
+    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    texto_inline = pagina_navegador.locator(".auth-inline-error").inner_text()
+    assert "inválid" in texto_inline.lower() or "não encontrado" in texto_inline.lower() or "incorret" in texto_inline.lower()
+
     pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", timeout=8000)
     texto_toast = pagina_navegador.locator(".tokstance-toast").inner_text()
     assert "inválid" in texto_toast.lower() or "não encontrado" in texto_toast.lower() or "incorret" in texto_toast.lower()
