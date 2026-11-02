@@ -83,7 +83,8 @@ def test_generate_progress_bar_and_video_outputs() -> None:
     assert "Alvo 1" in html0
     assert "target-name-badge" in html0
     assert "target-transition" not in html0
-    assert 'Com relação ao target <span class="target-name-badge">"Alvo 1"</span>' in pergunta0
+    assert 'Com relação ao target "Alvo 1"' in pergunta0
+    assert "target-name-badge" not in pergunta0
     assert "0 de 2 (0%)" in pb0
 
     #posicao 1 (mudanca de target de Alvo 1 para Alvo 2)
@@ -92,7 +93,8 @@ def test_generate_progress_bar_and_video_outputs() -> None:
     assert "Alvo 2" in html1
     assert "target-name-badge" in html1
     assert "target-transition" in html1
-    assert 'Com relação ao target <span class="target-name-badge">"Alvo 2"</span>' in pergunta1
+    assert 'Com relação ao target "Alvo 2"' in pergunta1
+    assert "target-name-badge" not in pergunta1
     assert "target-transition" in pergunta1
 
     #posicao 2 (conclusao da fila)
@@ -108,21 +110,25 @@ def test_formatar_pergunta_com_target_embedado() -> None:
     res_padrao = formatar_pergunta_com_target(
         "Qual a posição expressa no vídeo em relação ao target?", "Inteligência Artificial"
     )
-    assert 'ao target <span class="target-name-badge">"Inteligência Artificial"</span>?' in res_padrao
+    assert 'ao target "Inteligência Artificial"?' in res_padrao
+    assert "target-name-badge" not in res_padrao
 
     #caso com placeholder {target}
     res_placeholder = formatar_pergunta_com_target(
         "O criador apoia {target}?", "Vacina"
     )
-    assert 'apoia <span class="target-name-badge">"Vacina"</span>?' in res_placeholder
+    assert 'apoia "Vacina"?' in res_placeholder
+    assert "target-name-badge" not in res_placeholder
 
     #caso nulo ou vazio
     res_vazio = formatar_pergunta_com_target(None, "Clima")
-    assert 'Com relação ao target <span class="target-name-badge">"Clima"</span>' in res_vazio
+    assert 'Com relação ao target "Clima"' in res_vazio
+    assert "target-name-badge" not in res_vazio
 
     #caso personalizado sem target
     res_custom = formatar_pergunta_com_target("Classifique este post.", "Eleições")
-    assert 'Classifique este post. (Target: <span class="target-name-badge">"Eleições"</span>)' in res_custom
+    assert 'Classifique este post. (Target: "Eleições")' in res_custom
+    assert "target-name-badge" not in res_custom
 
 
 def test_admin_insights_html_and_agreement_summary() -> None:

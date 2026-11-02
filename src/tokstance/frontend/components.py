@@ -29,43 +29,43 @@ def render_tiktok(url: str) -> str:
 
 
 def formatar_pergunta_com_target(pergunta_template: Optional[str], target: str) -> str:
-    """Embuta o nome do target formatado em destaque vermelho dentro da pergunta."""
+    """Formata a pergunta embutindo o nome do target com a mesma formatacao da pergunta."""
     alvo = escape(str(target or "").strip())
-    badge_html = f'<span class="target-name-badge">"{alvo}"</span>'
+    target_formatado = f'"{alvo}"'
     template = str(pergunta_template or "").strip()
 
     if not template:
-        return f'Com relação ao target {badge_html}, como você classifica a posição deste vídeo?'
+        return f'Com relação ao target {target_formatado}, como você classifica a posição deste vídeo?'
 
     #se o template tiver {target} com ou sem aspas
     if "{target}" in template:
         for aspas_target in ['"{target}"', "'{target}'", "“{target}”", "”{target}”"]:
             if aspas_target in template:
-                template = template.replace(aspas_target, badge_html)
-        return template.replace("{target}", badge_html)
+                template = template.replace(aspas_target, target_formatado)
+        return template.replace("{target}", target_formatado)
 
     #se contiver literal ao target
     padrao_ao_target = re.compile(r'\bao\s+target\b', re.IGNORECASE)
     if padrao_ao_target.search(template):
-        return padrao_ao_target.sub(f'ao target {badge_html}', template)
+        return padrao_ao_target.sub(f'ao target {target_formatado}', template)
 
     #se contiver literal ao alvo
     padrao_ao_alvo = re.compile(r'\bao\s+alvo\b', re.IGNORECASE)
     if padrao_ao_alvo.search(template):
-        return padrao_ao_alvo.sub(f'ao alvo {badge_html}', template)
+        return padrao_ao_alvo.sub(f'ao alvo {target_formatado}', template)
 
     #se contiver a palavra target isolada
     padrao_target = re.compile(r'\btarget\b', re.IGNORECASE)
     if padrao_target.search(template):
-        return padrao_target.sub(f'target {badge_html}', template)
+        return padrao_target.sub(f'target {target_formatado}', template)
 
     #se contiver a palavra alvo isolada
     padrao_alvo = re.compile(r'\balvo\b', re.IGNORECASE)
     if padrao_alvo.search(template):
-        return padrao_alvo.sub(f'alvo {badge_html}', template)
+        return padrao_alvo.sub(f'alvo {target_formatado}', template)
 
     #caso a pergunta nao mencione target nem alvo
-    return f'{template} (Target: {badge_html})'
+    return f'{template} (Target: {target_formatado})'
 
 
 def render_video_card(item: Dict[str, Any], highlight_target: bool = False) -> str:
