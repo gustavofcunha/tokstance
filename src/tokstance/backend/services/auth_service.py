@@ -1,9 +1,10 @@
 """Servico de autenticacao, cadastro de usuarios, sessao unica e Hub Inicial de tarefas."""
 
+import logging
 import os
 import secrets
 import smtplib
-from datetime import datetime, timedelta
+from datetime import timedelta
 from email.mime.text import MIMEText
 from typing import Any
 
@@ -21,7 +22,14 @@ from tokstance.backend.security.validators import (
     validar_email,
     validar_nome_usuario,
 )
-from tokstance.config import SENHA_ADMIN_PADRAO, USUARIO_ADMIN_PADRAO
+from tokstance.config import (
+    SENHA_ADMIN_PADRAO,
+    USUARIO_ADMIN_PADRAO,
+    agora_brt,
+    formatar_data_hora_brt,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class ServicoAutenticacao:
@@ -105,7 +113,7 @@ class ServicoAutenticacao:
         }
 
     def solicitar_recuperacao_senha(self, identificador: str) -> dict[str, Any]:
-        """Gera um codigo de recuperacao temporario de 6 digitos sem custo algum para o usuario."""
+        """Gera um codigo de recuperacao temporario de 6 digitos e tenta envia-lo por e-mail."""
         termo = str(identificador or "").strip()
         if not termo:
             raise ValueError("Informe seu nome de usuário ou e-mail cadastrado.")
@@ -117,9 +125,7 @@ class ServicoAutenticacao:
             raise ValueError("Nenhum usuário cadastrado encontrado com este identificador ou e-mail.")
 
         codigo = f"{secrets.randbelow(900000) + 100000}"
-        agora = datetime.now()
-        expira_dt = agora + timedelta(minutes=15)
-        expira_em = expira_dt.strftime("%Y-%m-%d %H:%M:%S")
+        expira_em = formatar_data_hora_brt(agora_brt() + timedelta(minutes=15))
 
         self.repo_usuarios.salvar_codigo_recuperacao(
             usuario_id=int(usuario["usuario_id"]),
@@ -135,6 +141,7 @@ class ServicoAutenticacao:
         email_destino = str(usuario.get("email", "") or "").strip()
         disparado_smtp = False
         smtp_host = os.environ.get("SMTP_HOST")
+        smtp_configurado = bool(smtp_host and email_destino)
         if smtp_host and email_destino:
             try:
                 smtp_port = int(os.environ.get("SMTP_PORT", 587))
@@ -143,7 +150,7 @@ class ServicoAutenticacao:
                 smtp_pass = smtp_pass_raw.replace(" ", "") if "gmail" in (smtp_host or "").lower() else smtp_pass_raw
                 msg = MIMEText(
                     f"Olá, {usuario['nome_usuario']}!\n\n"
-                    f"Seu código gratuito de recuperação de senha no TokStance é: {codigo}\n"
+                    f"Seu código de recuperação de senha no TokStance é: {codigo}\n"
                     f"Ele é válido por 15 minutos.\n\n"
                     f"Atenciosamente,\nEquipe TokStance"
                 )
@@ -173,7 +180,23 @@ class ServicoAutenticacao:
             "email": email_destino,
             "codigo": codigo,
             "disparado_smtp": disparado_smtp,
+            "smtp_configurado": smtp_configurado,
         }
+
+    def verificar_codigo_recuperacao(self, identificador: str, codigo: str) -> bool:
+        """Confere o codigo informado sem consumi-lo, liberando a etapa de nova senha."""
+        termo = str(identificador or "").strip()
+        cod = str(codigo or "").strip()
+        if not cod:
+            raise ValueError("Informe o código de 6 dígitos recebido por e-mail.")
+        usuario = self.repo_usuarios.buscar_por_nome_usuario(termo)
+        if usuario is None:
+            usuario = self.repo_usuarios.buscar_por_email(termo)
+        if usuario is None or not self.repo_usuarios.validar_codigo_recuperacao(
+            usuario_id=int(usuario["usuario_id"]), codigo_recuperacao=cod
+        ):
+            raise ValueError("Código de recuperação inválido ou expirado (limite de 15 minutos).")
+        return True
 
     def redefinir_senha_com_codigo(
         self,
@@ -181,7 +204,7 @@ class ServicoAutenticacao:
         codigo: str,
         nova_senha: str,
     ) -> dict[str, Any]:
-        """Valida o codigo recebido e atualiza a senha de forma segura e 100% gratuita."""
+        """Valida o codigo recebido e atualiza a senha do usuario."""
         termo = str(identificador or "").strip()
         cod = str(codigo or "").strip()
         if not termo:
@@ -360,11 +383,19 @@ class ServicoAutenticacao:
             tid = int(item["tarefa_id"])
             atrib_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(tid)
             anot_df = self.repo_estudo.carregar_anotacoes_tarefa_df(tid)
+            vagas_ocupadas = len(
+                self.repo_usuarios.listar_membros_da_tarefa(tid, papel=PAPEL_ROTULADOR)
+            )
+            progresso = (
+                min(100.0, 100.0 * len(anot_df) / len(atrib_df)) if len(atrib_df) else 0.0
+            )
             resumo_admin.append(
                 {
                     **item,
                     "total_atribuicoes": len(atrib_df),
                     "total_anotacoes": len(anot_df),
+                    "vagas_ocupadas": vagas_ocupadas,
+                    "progresso_percentual": progresso,
                 }
             )
 

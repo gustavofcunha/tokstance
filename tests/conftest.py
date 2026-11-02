@@ -2,11 +2,16 @@
 
 from datetime import datetime, timedelta
 import json
+import os
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import pandas as pd
 import pytest
+
+#isolate default test data directory before config import
+os.environ["TOKSTANCE_DATA_DIR"] = tempfile.mkdtemp(prefix="tokstance_testes_")
 
 from tokstance.config import CaminhosDados, FUSO_BRT, resolver_caminhos_dados
 
@@ -129,3 +134,10 @@ def caminhos_estudo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Caminhos
     diretorio_estudo = tmp_path / "dados_estudo"
     monkeypatch.setenv("TOKSTANCE_DATA_DIR", str(diretorio_estudo))
     return gravar_arquivos_estudo_sinteticos(diretorio_estudo)
+
+
+@pytest.fixture(autouse=True)
+def sem_envio_de_email(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Impede que os testes disparem e-mails reais por variaveis de ambiente locais."""
+    for variavel in ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD"):
+        monkeypatch.delenv(variavel, raising=False)
