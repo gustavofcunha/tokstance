@@ -142,7 +142,13 @@ class ServicoAutenticacao:
         disparado_smtp = False
         smtp_host = os.environ.get("SMTP_HOST")
         smtp_configurado = bool(smtp_host and email_destino)
-        if smtp_host and email_destino:
+        mock_smtp = os.environ.get("TOKSTANCE_MOCK_SMTP") == "1"
+
+        if mock_smtp and email_destino:
+            #modo mock para testes automatizados sem conexao externa
+            disparado_smtp = (smtp_host != "servidor.invalido.local")
+            logger.info("Mock SMTP ativo: simulando envio para %s (disparado=%s)", email_destino, disparado_smtp)
+        elif smtp_host and email_destino:
             try:
                 smtp_port = int(os.environ.get("SMTP_PORT", 587))
                 smtp_user = os.environ.get("SMTP_USER", "").strip()
