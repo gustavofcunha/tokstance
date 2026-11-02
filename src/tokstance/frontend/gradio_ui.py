@@ -56,6 +56,21 @@ def _com_toast(posicao: int):
     return decorador
 
 
+def renderizar_aviso_inline(mensagem: str, tipo: str = "erro") -> str:
+    """Renderiza alerta inline em destaque no card de autenticacao."""
+    if not mensagem:
+        return ""
+    texto = escape(str(mensagem).replace("⚠️", "").replace("✅", "").strip())
+    classe_tipo = "error" if tipo in ("erro", "error") else "success"
+    icone = "⚠️" if classe_tipo == "error" else "✓"
+    return (
+        f"<div class='auth-inline-{classe_tipo}' role='alert'>"
+        f"<span class='auth-inline-icon'>{icone}</span>"
+        f"<span class='auth-inline-text'>{texto}</span>"
+        f"</div>"
+    )
+
+
 def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotulador: List[Dict[str, Any]]) -> Tuple[str, str]:
     """Renderiza tabelas modernas e responsivas para o Hub Inicial com botoes diretos de acao."""
     # Tabela de Administracao
@@ -345,6 +360,7 @@ def construir_interface(
                     with gr.Tab("Entrar"):
                         login_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Digite seu usuário", autofocus=True)
                         login_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Digite sua senha")
+                        login_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                         btn_login = gr.Button("Entrar no Sistema", elem_classes="ufmg-btn", size="lg")
 
                     with gr.Tab("Criar Conta"):
@@ -354,6 +370,7 @@ def construir_interface(
                             cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres", scale=1)
                             cadastro_confirma = gr.Textbox(label="Confirmar Senha", type="password", placeholder="Repita a senha", scale=1)
                         cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
+                        cadastro_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                         btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
 
                     with gr.Tab("Recuperar Senha"):
@@ -670,7 +687,10 @@ def construir_interface(
         def formularios_mantidos() -> List[Any]:
             return [gr.update() for _ in range(len(campos_acesso) + 2)]
 
-        def resposta_acesso_falha(mensagem: str) -> Tuple[Any, ...]:
+        def resposta_acesso_falha(mensagem: str, origem: str = "login") -> Tuple[Any, ...]:
+            aviso_inline_html = renderizar_aviso_inline(mensagem, tipo="erro")
+            aviso_login = aviso_inline_html if origem == "login" else ""
+            aviso_cadastro = aviso_inline_html if origem == "cadastro" else ""
             return (
                 gr.update(visible=True),
                 gr.update(visible=False),
@@ -679,6 +699,8 @@ def construir_interface(
                 "",
                 "",
                 "",
+                aviso_login,
+                aviso_cadastro,
                 *formularios_mantidos(),
             )
 
@@ -686,7 +708,7 @@ def construir_interface(
             try:
                 dados = auth.autenticar_usuario(usuario, senha, permitir_reassumir=True)
             except Exception as exc:
-                return resposta_acesso_falha(str(exc))
+                return resposta_acesso_falha(str(exc), origem="login")
             sessao = {
                 "usuario_id": dados["usuario_id"],
                 "nome_usuario": dados["nome_usuario"],
@@ -707,18 +729,20 @@ def construir_interface(
                 h_adm,
                 h_rot,
                 saudacao,
+                "",
+                "",
                 *formularios_limpos(),
             )
 
         def executar_cadastro(usuario: str, email: str, senha: str, confirma: str, convite: str) -> Tuple[Any, ...]:
             if not email or not str(email).strip():
-                return resposta_acesso_falha("O preenchimento do e-mail é obrigatório para a recuperação de senha.")
+                return resposta_acesso_falha("O preenchimento do e-mail é obrigatório para a recuperação de senha.", origem="cadastro")
             if senha != confirma:
-                return resposta_acesso_falha("As senhas digitadas não coincidem.")
+                return resposta_acesso_falha("As senhas digitadas não coincidem.", origem="cadastro")
             try:
                 auth.cadastrar_usuario(usuario, senha, email=email, codigo_convite=convite or None)
             except Exception as exc:
-                return resposta_acesso_falha(str(exc))
+                return resposta_acesso_falha(str(exc), origem="cadastro")
             return executar_login(usuario, senha)
 
         def executar_solicitar_recuperacao(identificador: str) -> Tuple[Any, ...]:
@@ -778,6 +802,8 @@ def construir_interface(
                 gr.update(visible=False),
                 renderizar_toast_html("✅ Sessão encerrada com sucesso."),
                 sessao_vazia(),
+                "",
+                "",
                 *formularios_limpos(),
             )
 
@@ -1339,7 +1365,17 @@ def construir_interface(
         # ======================================================================
         # CONEXOES DE EVENTOS (WIRING)
         # ======================================================================
-        saidas_acesso = [painel_acesso, painel_hub, mensagem_acesso, estado_sessao, hub_admin_cards_html, hub_rotulador_cards_html, hub_saudacao] + saidas_formularios
+        saidas_acesso = [
+            painel_acesso,
+            painel_hub,
+            mensagem_acesso,
+            estado_sessao,
+            hub_admin_cards_html,
+            hub_rotulador_cards_html,
+            hub_saudacao,
+            login_aviso,
+            cadastro_aviso,
+        ] + saidas_formularios
         handler_login_params = {
             "fn": executar_login,
             "inputs": [login_usuario, login_senha],
@@ -1394,7 +1430,17 @@ def construir_interface(
         btn_logout.click(
             executar_logout,
             inputs=[estado_sessao],
-            outputs=[painel_acesso, painel_hub, painel_wizard, painel_rotulador, painel_admin, mensagem_acesso, estado_sessao] + saidas_formularios,
+            outputs=[
+                painel_acesso,
+                painel_hub,
+                painel_wizard,
+                painel_rotulador,
+                painel_admin,
+                mensagem_acesso,
+                estado_sessao,
+                login_aviso,
+                cadastro_aviso,
+            ] + saidas_formularios,
         )
 
         btn_abrir_convite.click(abrir_modal_convite, inputs=[], outputs=[modal_convite, input_codigo_convite])

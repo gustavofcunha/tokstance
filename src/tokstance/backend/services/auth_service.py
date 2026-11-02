@@ -266,12 +266,10 @@ class ServicoAutenticacao:
             nome_limpo = validar_nome_usuario(chave_bruta)
         except ValueError as exc:
             self.limitador_tentativas.registrar_falha(chave_bruta)
-            raise ValueError("Credenciais inválidas.") from exc
+            raise ValueError("Credenciais inválidas: usuário não encontrado.") from exc
 
         conta = self.repo_usuarios.buscar_por_nome_usuario(nome_limpo)
-        if conta is None or not verificar_senha(
-            str(senha or ""), str(conta["senha_hash"])
-        ):
+        if conta is None:
             bloqueou = self.limitador_tentativas.registrar_falha(nome_limpo)
             if bloqueou:
                 restante = self.limitador_tentativas.segundos_restantes_bloqueio(
@@ -280,7 +278,18 @@ class ServicoAutenticacao:
                 raise PermissionError(
                     f"Muitas tentativas falhas. Aguarde {restante:.0f}s antes de tentar novamente."
                 )
-            raise ValueError("Credenciais inválidas.")
+            raise ValueError("Credenciais inválidas: usuário não encontrado.")
+
+        if not verificar_senha(str(senha or ""), str(conta["senha_hash"])):
+            bloqueou = self.limitador_tentativas.registrar_falha(nome_limpo)
+            if bloqueou:
+                restante = self.limitador_tentativas.segundos_restantes_bloqueio(
+                    nome_limpo
+                )
+                raise PermissionError(
+                    f"Muitas tentativas falhas. Aguarde {restante:.0f}s antes de tentar novamente."
+                )
+            raise ValueError("Credenciais inválidas: senha incorreta.")
 
         if exigir_sessao_unica and not self.gerenciador_sessoes.reivindicar_sessao(
             nome_limpo

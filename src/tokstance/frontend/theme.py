@@ -384,6 +384,36 @@ APP_CSS = """
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
     }
 
+    .auth-feedback-slot, .auth-feedback-slot.block {
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        min-height: 0 !important;
+    }
+    .auth-inline-error {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        background: #fff0f2 !important;
+        border: 1px solid #ffd6dc !important;
+        border-left: 4px solid #9c0014 !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        margin: 10px 0 12px 0 !important;
+        color: #9c0014 !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        line-height: 1.4 !important;
+    }
+    .auth-inline-error .auth-inline-icon {
+        font-size: 16px !important;
+        flex: 0 0 auto !important;
+    }
+    .auth-inline-error .auth-inline-text {
+        flex: 1 1 auto !important;
+    }
+
     /* =========================================================================
        4. BOTOES PRIMARIOS E SECUNDARIOS
        ========================================================================= */
@@ -1349,13 +1379,12 @@ APP_CSS = """
         border: 1px solid #e2e8f0 !important; border-left: 6px solid #176b87 !important;
         box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22) !important;
         font-size: 15px !important; font-weight: 600 !important; line-height: 1.45 !important; color: #0f172a !important;
-        opacity: 0; visibility: hidden; pointer-events: none;
     }
     .tokstance-toast.toast-curto { animation: toast-vida 5s ease forwards; }
     .tokstance-toast.toast-longo { animation: toast-vida 12s ease forwards; }
     @keyframes toast-vida {
-        0% { opacity: 0; visibility: visible; pointer-events: auto; transform: translateX(32px); }
-        5%, 90% { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
+        0% { opacity: 0; transform: translateX(32px); }
+        8%, 85% { opacity: 1; transform: translateX(0); }
         100% { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(32px); }
     }
     .tokstance-toast .toast-icone {
