@@ -31,24 +31,24 @@ from tokstance.backend.services.queue_service import ServicoFilaAnotacao
 def _criar_pool_teste() -> pd.DataFrame:
     """Cria um conjunto balanceado de videos para simulacao ponta a ponta."""
     dados = []
-    # 4 videos do tema 'Tecnologia'
+    #theme one test videos
     for i in range(1, 5):
         dados.append({
-            "id": f"video_tec_{i}",
-            "url": f"https://www.tiktok.com/@canal/video/{1000 + i}",
-            "target": "Inteligência Artificial",
-            "video_description": f"Discussão sobre IA na sociedade {i}",
-            "voice_to_text": f"Transcrição do áudio sobre IA {i}",
+            "id": f"762130692537173941{i}",
+            "url": f"https://www.tiktok.com/@canal/video/762130692537173941{i}",
+            "target": "Fim da Escala de Trabalho 6x1",
+            "video_description": f"Debate sobre escala de trabalho {i}",
+            "voice_to_text": f"Transcrição sobre jornada de trabalho {i}",
             "video_duration": f"{15.0 + i}",
         })
-    # 4 videos do tema 'Economia'
+    #theme two test videos
     for i in range(1, 5):
         dados.append({
-            "id": f"video_eco_{i}",
-            "url": f"https://www.tiktok.com/@canal/video/{2000 + i}",
-            "target": "Inflação",
-            "video_description": f"Análise sobre inflação e juros {i}",
-            "voice_to_text": f"Transcrição sobre índices econômicos {i}",
+            "id": f"692026414795954918{i}",
+            "url": f"https://www.tiktok.com/@canal/video/692026414795954918{i}",
+            "target": "Vacinação",
+            "video_description": f"Campanha sobre imunização {i}",
+            "voice_to_text": f"Transcrição sobre vacinas {i}",
             "video_duration": f"{20.0 + i}",
         })
     return pd.DataFrame(dados)
