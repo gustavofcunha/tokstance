@@ -887,34 +887,6 @@ APP_CSS = """
         font-size: 14px !important;
     }
 
-    .labeler-layout {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        align-items: flex-start !important;
-        gap: 22px !important;
-        width: 100% !important;
-    }
-    .video-column {
-        flex: 1.25 1 0 !important;
-        min-width: 480px !important;
-        max-width: 63% !important;
-    }
-    .labeler-controls-column {
-        flex: 0.85 1 0 !important;
-        min-width: 320px !important;
-        max-width: 39% !important;
-    }
-    @media (max-width: 1024px) {
-        .labeler-layout {
-            flex-direction: column !important;
-        }
-        .video-column, .labeler-controls-column {
-            max-width: 100% !important;
-            width: 100% !important;
-        }
-    }
-
     .labeler-actions {
         display: flex !important;
         justify-content: flex-end !important;
@@ -1737,7 +1709,9 @@ APP_CSS = """
     body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
     body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer,
     body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.brand-header),
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.app-footer) {
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.app-footer),
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer {
         display: none !important;
         height: 0 !important;
         min-height: 0 !important;
@@ -1746,8 +1720,24 @@ APP_CSS = """
         padding: 0 !important;
         border: none !important;
     }
+    html:has(.labeler-panel:not(.hide):not(.hidden)),
+    body:has(.labeler-panel:not(.hide):not(.hidden)) {
+        overflow: hidden !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+    }
+    .gradio-container:has(.labeler-panel:not(.hide):not(.hidden)) {
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        padding: 6px 16px !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
     .labeler-panel {
-        --altura-player: clamp(480px, calc(100vh - 190px), 740px);
+        --altura-player: clamp(420px, calc(100vh - 85px), 590px);
         display: flex !important;
         flex-direction: column !important;
         height: calc(100vh - 12px) !important;
@@ -1755,7 +1745,9 @@ APP_CSS = """
         overflow: hidden !important;
         box-sizing: border-box !important;
         padding: 0 !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 1200px !important;
     }
     .labeler-workspace-container {
         display: flex !important;
@@ -1767,23 +1759,30 @@ APP_CSS = """
     }
     .labeler-header-bar {
         margin-bottom: 6px !important;
-        padding-bottom: 4px !important;
-        height: 38px !important;
-        min-height: 38px !important;
+        padding-bottom: 2px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
         flex: 0 0 auto !important;
     }
     .labeler-exit-btn {
-        min-width: 170px !important;
+        min-width: 160px !important;
         flex: 0 0 auto !important;
         width: auto !important;
-        height: 34px !important;
+        height: 32px !important;
         white-space: nowrap !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
     }
     .labeler-layout {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: stretch !important;
+        justify-content: center !important;
         gap: 16px !important;
         width: 100% !important;
         height: 100% !important;
@@ -1791,124 +1790,291 @@ APP_CSS = """
         overflow: hidden !important;
     }
     .video-column {
-        flex: 1 1 auto !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
         min-width: 0 !important;
         max-width: none !important;
         height: 100% !important;
         min-height: 0 !important;
         display: flex !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
+        overflow: hidden !important;
     }
-    .labeler-controls-column {
-        flex: 0 0 380px !important;
-        width: 380px !important;
-        min-width: 320px !important;
-        max-width: 400px !important;
+    .video-column > div,
+    .video-column .block,
+    .video-column .prose {
         height: 100% !important;
         min-height: 0 !important;
         display: flex !important;
-        flex-direction: column !important;
-        overflow-y: auto !important;
+        flex-direction: row !important;
+        overflow: hidden !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
     }
     .video-card {
         height: 100% !important;
         max-height: 100% !important;
         display: flex !important;
-        flex-direction: column !important;
-        padding: 8px 12px !important;
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 10px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 16px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
         box-sizing: border-box !important;
         min-height: 0 !important;
         overflow: hidden !important;
     }
-    .video-meta {
-        margin-bottom: 6px !important;
-        padding: 5px 12px !important;
-        font-size: 13.5px !important;
-        flex: 0 0 auto !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 6px !important;
-    }
-    .video-content-grid {
-        display: grid !important;
-        grid-template-columns: 240px 1fr !important;
-        gap: 14px !important;
-        align-items: center !important;
-        flex: 1 1 auto !important;
-        height: 100% !important;
-        min-height: 0 !important;
-        overflow: hidden !important;
-    }
     .video-context-column {
-        width: 240px !important;
-        min-width: 210px !important;
-        max-width: 260px !important;
-        height: 100% !important;
+        width: 290px !important;
+        min-width: 250px !important;
+        max-width: 310px !important;
+        height: var(--altura-player) !important;
+        max-height: var(--altura-player) !important;
         display: flex !important;
         flex-direction: column !important;
         gap: 8px !important;
         min-height: 0 !important;
         overflow: hidden !important;
-    }
-    .video-description, .video-transcription {
-        padding: 10px 12px !important;
-        margin: 0 !important;
-        font-size: 13px !important;
-        line-height: 1.4 !important;
-        border-radius: 6px !important;
-        overflow-y: auto !important;
-        flex: 1 1 50% !important;
-        max-height: 50% !important;
         box-sizing: border-box !important;
     }
+    .video-meta {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        padding: 6px 12px !important;
+        font-size: 13px !important;
+        color: #1e293b !important;
+        flex: 0 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        min-height: 38px !important;
+        box-sizing: border-box !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    .video-meta.target-transition {
+        border-color: #9c0014 !important;
+        box-shadow: 0 0 0 3px rgba(156, 0, 20, 0.15) !important;
+        animation: pulse-target 1.8s ease-in-out infinite alternate !important;
+    }
+    .video-description, .video-transcription {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        padding: 8px 12px !important;
+        margin: 0 !important;
+        font-size: 12.5px !important;
+        line-height: 1.45 !important;
+        color: #334155 !important;
+        overflow-y: auto !important;
+        flex: 1 1 50% !important;
+        max-height: calc(50% - 24px) !important;
+        min-height: 60px !important;
+        box-sizing: border-box !important;
+        scrollbar-width: thin !important;
+    }
+    .metadata-title {
+        font-size: 11.5px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.4px !important;
+        color: #475569 !important;
+        margin-bottom: 4px !important;
+    }
+    .metadata-text {
+        font-size: 12.5px !important;
+        color: #1e293b !important;
+        word-break: break-word !important;
+    }
     .video-player-column {
-        height: 100% !important;
+        width: calc(var(--altura-player) * 0.5625) !important;
+        height: var(--altura-player) !important;
+        max-height: var(--altura-player) !important;
         min-height: 0 !important;
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
         overflow: hidden !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        flex: 0 0 auto !important;
     }
-    .video-player-column > div {
+    .video-player-column > div,
+    .video-player-column .tiktok-player-wrapper {
         height: 100% !important;
+        width: 100% !important;
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
     }
-    .video-card iframe {
+    .video-player-column iframe {
         height: var(--altura-player) !important;
-        max-height: calc(100vh - 190px) !important;
         width: calc(var(--altura-player) * 0.5625) !important;
-        max-width: calc((100vh - 190px) * 0.5625) !important;
-        border-radius: 10px !important;
+        max-height: 100% !important;
+        max-width: 100% !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+        background: #000000 !important;
+        box-sizing: border-box !important;
+    }
+    .labeler-controls-column {
+        flex: 0 0 340px !important;
+        width: 340px !important;
+        min-width: 300px !important;
+        max-width: 360px !important;
+        height: var(--altura-player) !important;
+        max-height: var(--altura-player) !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    .labeler-controls-column > div,
+    .labeler-controls-column > .block {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        flex: 0 0 auto !important;
+    }
+    .labeler-header-badge-wrapper {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        padding: 4px 10px !important;
+        flex: 0 0 auto !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+    }
+    .labeler-info-badge {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        font-size: 12px !important;
+        gap: 6px !important;
+        color: #64748b !important;
+        line-height: 1.25 !important;
+    }
+    .labeler-info-badge strong {
+        color: #0f172a !important;
+        font-size: 12.5px !important;
+        font-weight: 700 !important;
+    }
+    .labeler-info-badge .user-pill {
+        font-size: 11px !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
     }
     .annotation-controls {
-        padding: 10px 14px !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+        padding: 8px 10px !important;
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
+        min-height: 0 !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+        scrollbar-width: thin !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
     }
     .labeler-warning-stack {
-        font-size: 11.5px !important;
-        line-height: 1.35 !important;
-        padding: 6px 10px !important;
-        margin-bottom: 4px !important;
-        gap: 3px !important;
+        font-size: 10.5px !important;
+        line-height: 1.3 !important;
+        padding: 4px 6px !important;
+        margin-bottom: 2px !important;
+        gap: 2px !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 6px !important;
+        color: #475569 !important;
+        flex: 0 0 auto !important;
     }
-    .wrap-radio label {
-        padding: 7px 12px !important;
-        margin-bottom: 3px !important;
-        font-size: 13.5px !important;
-        font-weight: 400 !important;
+    .annotation-controls .prose {
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 0 0 auto !important;
     }
-    .wrap-radio label span,
-    .wrap-radio label div,
-    .wrap-radio span {
-        font-weight: 400 !important;
+    .annotation-controls .target-question {
+        padding: 5px 8px !important;
+        margin-bottom: 2px !important;
+        font-size: 12.5px !important;
+        line-height: 1.3 !important;
+        border-left: 4px solid #9c0014 !important;
     }
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer { display: none !important; }
+    .annotation-controls .target-question .target-name-badge {
+        font-size: 13px !important;
+        padding: 1px 5px !important;
+    }
+    .annotation-controls .wrap-radio {
+        margin: 0 0 2px 0 !important;
+        padding: 0 !important;
+        flex: 0 0 auto !important;
+    }
+    .annotation-controls .wrap-radio > div,
+    .annotation-controls .wrap-radio fieldset {
+        gap: 2px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+    .annotation-controls .wrap-radio label {
+        padding: 4px 8px !important;
+        margin-bottom: 2px !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        border-radius: 6px !important;
+        min-height: 28px !important;
+        gap: 6px !important;
+    }
+    .annotation-controls .wrap-radio label span,
+    .annotation-controls .wrap-radio label div,
+    .annotation-controls .wrap-radio span {
+        font-weight: 500 !important;
+        font-size: 12px !important;
+    }
+    .annotation-controls .ufmg-btn {
+        height: 34px !important;
+        min-height: 34px !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        margin: 3px 0 2px 0 !important;
+        padding: 0 10px !important;
+        flex: 0 0 auto !important;
+    }
+    .annotation-controls .error-btn {
+        height: 26px !important;
+        min-height: 26px !important;
+        font-size: 11px !important;
+        padding: 0 8px !important;
+        margin: 0 !important;
+        flex: 0 0 auto !important;
+    }
 
     /* botao de visibilidade de senha com icone de olho */
     .container-olho-senha {

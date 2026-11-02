@@ -69,7 +69,7 @@ def formatar_pergunta_com_target(pergunta_template: Optional[str], target: str) 
 
 
 def render_video_card(item: Dict[str, Any], highlight_target: bool = False) -> str:
-    """Renderiza o cartao com metadados do target, descricao, transcricao e player TikTok."""
+    """Renderiza os blocos independentes de metadados (target, descricao, transcricao) e o player TikTok."""
     target = str(item.get("target", "") or "").strip()
     description = str(item.get("video_description", "") or "").strip()
     transcription = str(item.get("voice_to_text", "") or "").strip()
@@ -92,13 +92,19 @@ def render_video_card(item: Dict[str, Any], highlight_target: bool = False) -> s
 
     return f"""
     <div class='video-card'>
-        <div class='video-meta{transicao_classe}'><strong>Target:</strong> {target_badge_html}</div>
-        <div class='video-content-grid'>
-            <div class='video-context-column'>
-                <div class='{description_class}'><strong>Descrição do vídeo</strong><div>{description_html}</div></div>
-                <div class='{transcription_class}'><strong>Transcrição do áudio <span class='transcription-note'>(pode conter erros)</span></strong><div>{transcription_html}</div></div>
+        <div class='video-context-column'>
+            <div class='video-meta{transicao_classe}'><strong>Target:</strong> {target_badge_html}</div>
+            <div class='{description_class}'>
+                <div class='metadata-title'>Descrição do vídeo</div>
+                <div class='metadata-text'>{description_html}</div>
             </div>
-            <div class='video-player-column'>{render_tiktok(url)}</div>
+            <div class='{transcription_class}'>
+                <div class='metadata-title'>Transcrição do áudio <span class='transcription-note'>(pode conter erros)</span></div>
+                <div class='metadata-text'>{transcription_html}</div>
+            </div>
+        </div>
+        <div class='video-player-column'>
+            {render_tiktok(url)}
         </div>
     </div>
     """
@@ -108,11 +114,11 @@ def generate_progress_bar(position: int, total: int) -> str:
     """Renderiza a barra de progresso visual com contador e percentual."""
     percent = int((position / total) * 100) if total > 0 else 100
     return f"""
-    <div style="width: 100%; margin-bottom: 12px;">
-        <div style="width: 100%; background-color: #e0e0e0; border-radius: 6px; height: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="width: 100%; margin: 2px 0 4px 0;">
+        <div style="width: 100%; background-color: #e2e8f0; border-radius: 4px; height: 6px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);">
             <div style="width: {percent}%; background-color: #9c0014; height: 100%; transition: width 0.4s ease;"></div>
         </div>
-        <div style="text-align: right; font-size: 13px; color: #333; font-weight: 600; margin-top: 4px;">
+        <div style="text-align: right; font-size: 11px; color: #475569; font-weight: 700; margin-top: 2px;">
             {position} de {total} ({percent}%)
         </div>
     </div>
