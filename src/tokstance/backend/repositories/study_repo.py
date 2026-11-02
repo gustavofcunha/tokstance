@@ -185,8 +185,17 @@ class RepositorioEstudo:
             raise ValueError("O conjunto de vídeos da tarefa não pode estar vazio.")
 
         if videos_reserva_explicitos is not None:
-            principais_df = pool_norm
-            reservas_df = _normalizar_dataframe_videos(videos_reserva_explicitos)
+            res_norm = _normalizar_dataframe_videos(videos_reserva_explicitos)
+            if (
+                quantidade_videos_principal is not None
+                and 0 < int(quantidade_videos_principal) < len(pool_norm)
+            ):
+                principais_df = pool_norm.iloc[: int(quantidade_videos_principal)].copy()
+                excedente = pool_norm.iloc[int(quantidade_videos_principal) :].copy()
+                reservas_df = pd.concat([excedente, res_norm], ignore_index=True)
+            else:
+                principais_df = pool_norm
+                reservas_df = res_norm
         else:
             qtd_principal = (
                 int(quantidade_videos_principal)

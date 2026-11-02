@@ -853,11 +853,15 @@ def construir_interface(
                     pool_videos = pd.read_csv(caminho_arq, dtype=str).fillna("")
                 except Exception as exc:
                     return renderizar_toast_html(f"⚠️ Erro ao ler arquivo CSV de vídeos: {str(exc)}"), gr.update()
+                reserva_df = None
             else:
                 if ARQUIVO_VIDEOS.exists():
-                    p_base = pd.read_csv(ARQUIVO_VIDEOS, dtype=str).fillna("")
-                    p_res = pd.read_csv(ARQUIVO_VIDEOS_RESERVA, dtype=str).fillna("") if ARQUIVO_VIDEOS_RESERVA.exists() else pd.DataFrame()
-                    pool_videos = pd.concat([p_base, p_res], ignore_index=True) if not p_res.empty else p_base
+                    pool_videos = pd.read_csv(ARQUIVO_VIDEOS, dtype=str).fillna("")
+                    reserva_df = (
+                        pd.read_csv(ARQUIVO_VIDEOS_RESERVA, dtype=str).fillna("")
+                        if ARQUIVO_VIDEOS_RESERVA.exists()
+                        else None
+                    )
                 else:
                     return renderizar_toast_html("⚠️ Arquivos de vídeo padrão não encontrados no servidor."), gr.update()
 
@@ -868,6 +872,7 @@ def construir_interface(
                     usuario_administrador_id=int(u_id),
                     pool_videos=pool_videos,
                     quantidade_videos_principal=qtd_p,
+                    videos_reserva_explicitos=reserva_df,
                     titulo=titulo or NOME_TAREFA_PADRAO,
                     pergunta=pergunta or PERGUNTA_TAREFA_PADRAO,
                     opcoes_posicao=opcoes,
