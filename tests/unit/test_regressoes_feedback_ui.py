@@ -568,6 +568,115 @@ def test_autenticar_usuario_aceita_nome_ou_email_case_insensitive(
     assert res_4["nome_usuario"] == "cientista_dados"
 
 
+@pytest.mark.unit
+def test_redefinir_senha_valida_requisitos_de_complexidade_e_exibe_mensagens_explicitas(
+    servicos: Dict[str, Any],
+) -> None:
+    auth = servicos["auth"]
+    auth.cadastrar_usuario("usuario_req", "senhaSegura123", email="req@ufmg.br")
+    solic = auth.solicitar_recuperacao_senha("usuario_req")
+    cod = solic["codigo"]
+
+    #senha vazia ou nula
+    with pytest.raises(ValueError, match="obrigatória"):
+        auth.redefinir_senha_com_codigo("usuario_req", cod, "")
+
+    #menos de 6 caracteres
+    with pytest.raises(ValueError, match="mínimo de 6 caracteres"):
+        auth.redefinir_senha_com_codigo("usuario_req", cod, "123")
+
+    #somente letras sem numeros
+    with pytest.raises(ValueError, match="ao menos uma letra e um número"):
+        auth.redefinir_senha_com_codigo("usuario_req", cod, "somenteletras")
+
+    #somente numeros sem letras
+    with pytest.raises(ValueError, match="ao menos uma letra e um número"):
+        auth.redefinir_senha_com_codigo("usuario_req", cod, "123456")
+
+    #senha valida redefine com sucesso
+    res = auth.redefinir_senha_com_codigo("usuario_req", cod, "novaSenhaValida123")
+    assert res["sucesso"] is True
+
+
+@pytest.mark.unit
+def test_interface_redefinicao_senha_exibe_feedback_inline_e_toast_para_requisitos_invalidos(
+    servicos: Dict[str, Any],
+) -> None:
+    app = construir_interface(
+        servico_auth=servicos["auth"],
+        servico_fila=servicos["fila"],
+        servico_admin=servicos["admin"],
+    )
+    #encontra a funcao executar_redefinir_senha registrada nos blocos
+    fn_redefinir = None
+    for fn in app.fns.values():
+        if getattr(fn.fn, "__name__", "") == "executar_redefinir_senha":
+            fn_redefinir = fn.fn
+            break
+    assert fn_redefinir is not None
+
+    #testa senha vazia
+    saida_vazia = fn_redefinir("usuario_teste", "123456", "", "")
+    toast_vazio = saida_vazia[0]
+    aviso_vazio = saida_vazia[3]
+    assert "obrigatória" in toast_vazio
+    assert "obrigatória" in aviso_vazio
+    assert "auth-inline-error" in aviso_vazio
+
+    #testa senha curta menos de 6 caracteres
+    saida_curta = fn_redefinir("usuario_teste", "123456", "abc", "abc")
+    toast_curta = saida_curta[0]
+    aviso_curta = saida_curta[3]
+    assert "6 caracteres" in toast_curta and "mínimo" in toast_curta
+    assert "6 caracteres" in aviso_curta and "mínimo" in aviso_curta
+
+    #testa senha sem numeros
+    saida_sem_num = fn_redefinir("usuario_teste", "123456", "semnumeros", "semnumeros")
+    toast_sn = saida_sem_num[0]
+    aviso_sn = saida_sem_num[3]
+    assert "ao menos uma letra e um número" in toast_sn
+    assert "ao menos uma letra e um número" in aviso_sn
+
+    #testa confirmacao diferente
+    saida_dif = fn_redefinir("usuario_teste", "123456", "senhaValida123", "outraSenha456")
+    toast_dif = saida_dif[0]
+    aviso_dif = saida_dif[3]
+    assert "não coincidem" in toast_dif
+    assert "não coincidem" in aviso_dif
+
+
+@pytest.mark.unit
+def test_interface_cadastro_valida_requisitos_complexidade_senha_e_exibe_aviso(
+    servicos: Dict[str, Any],
+) -> None:
+    app = construir_interface(
+        servico_auth=servicos["auth"],
+        servico_fila=servicos["fila"],
+        servico_admin=servicos["admin"],
+    )
+    fn_cadastro = None
+    for fn in app.fns.values():
+        if getattr(fn.fn, "__name__", "") == "executar_cadastro":
+            fn_cadastro = fn.fn
+            break
+    assert fn_cadastro is not None
+
+    #testa cadastro com senha sem numeros
+    saida_sn = fn_cadastro("novo_usuario", "novo@ufmg.br", "somenteletras", "somenteletras", "")
+    toast_sn = saida_sn[2]
+    aviso_sn = saida_sn[8]
+    assert "ao menos uma letra e um número" in toast_sn
+    assert "ao menos uma letra e um número" in aviso_sn
+
+    #testa cadastro com senha vazia
+    saida_vazia = fn_cadastro("novo_usuario", "novo@ufmg.br", "", "", "")
+    toast_vazia = saida_vazia[2]
+    aviso_vazia = saida_vazia[8]
+    assert "obrigatória" in toast_vazia
+    assert "obrigatória" in aviso_vazia
+
+
+
 
 
 

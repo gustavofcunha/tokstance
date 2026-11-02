@@ -12,7 +12,11 @@ from tokstance.backend.domain.models import PAPEL_ADMINISTRADOR, PAPEL_ROTULADOR
 from tokstance.backend.repositories.database import BancoDadosSQLite
 from tokstance.backend.repositories.study_repo import RepositorioEstudo
 from tokstance.backend.repositories.user_repo import RepositorioUsuarios
-from tokstance.backend.security.password import gerar_hash_senha, verificar_senha
+from tokstance.backend.security.password import (
+    gerar_hash_senha,
+    validar_complexidade_senha,
+    verificar_senha,
+)
 from tokstance.backend.security.rate_limit import (
     GerenciadorSessoesAtivas,
     LimitadorTentativas,
@@ -217,8 +221,15 @@ class ServicoAutenticacao:
             raise ValueError("Informe seu nome de usuário ou e-mail cadastrado.")
         if not cod:
             raise ValueError("O código de recuperação de 6 dígitos é obrigatório.")
-        if not isinstance(nova_senha, str) or len(nova_senha) < 6:
-            raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
+        if not isinstance(nova_senha, str) or not nova_senha.strip():
+            raise ValueError("A nova senha é obrigatória (mínimo de 6 caracteres, com ao menos uma letra e um número).")
+        try:
+            validar_complexidade_senha(nova_senha)
+        except ValueError as exc:
+            msg = str(exc).replace("A senha ", "A nova senha ")
+            if "no mínimo 6 caracteres" in msg:
+                msg = msg.replace("no mínimo 6 caracteres", "pelo menos 6 caracteres (mínimo de 6 caracteres)")
+            raise ValueError(msg)
 
         usuario = self.repo_usuarios.buscar_por_nome_usuario(termo)
         if usuario is None:

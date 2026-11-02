@@ -20,6 +20,7 @@ from tokstance.backend.domain.models import (
 from tokstance.backend.repositories.database import BancoDadosSQLite
 from tokstance.backend.repositories.study_repo import RepositorioEstudo
 from tokstance.backend.repositories.user_repo import RepositorioUsuarios
+from tokstance.backend.security.password import validar_complexidade_senha
 from tokstance.backend.security.validators import gerar_codigo_convite
 from tokstance.backend.services.admin_service import ServicoAdministracao
 from tokstance.backend.services.auth_service import ServicoAutenticacao
@@ -369,8 +370,22 @@ def construir_interface(
                             cadastro_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Ex: pesquisador_1")
                             cadastro_email = gr.Textbox(label="E-mail (usado na recuperação de senha)", placeholder="Ex: usuario@dominio.com")
                             with gr.Row():
-                                cadastro_senha = gr.Textbox(label="Senha de Acesso", type="password", placeholder="Mínimo 6 caracteres", scale=1, elem_classes=["campo-senha-com-olho"])
-                                cadastro_confirma = gr.Textbox(label="Confirmar Senha", type="password", placeholder="Repita a senha", scale=1, elem_classes=["campo-senha-com-olho"])
+                                cadastro_senha = gr.Textbox(
+                                    label="Senha de Acesso",
+                                    type="password",
+                                    placeholder="Mínimo 6 caracteres (letras e números)",
+                                    info="Mínimo de 6 caracteres, com ao menos uma letra e um número.",
+                                    scale=1,
+                                    elem_classes=["campo-senha-com-olho"],
+                                )
+                                cadastro_confirma = gr.Textbox(
+                                    label="Confirmar Senha",
+                                    type="password",
+                                    placeholder="Repita a senha",
+                                    info="Digite novamente a senha para confirmação.",
+                                    scale=1,
+                                    elem_classes=["campo-senha-com-olho"],
+                                )
                             cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
                             cadastro_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                             btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
@@ -390,8 +405,22 @@ def construir_interface(
 
                             with gr.Column(visible=False) as recuperar_passo_senha:
                                 with gr.Row():
-                                    recuperar_nova_senha = gr.Textbox(label="Nova Senha", type="password", placeholder="Mínimo 6 caracteres", scale=1, elem_classes=["campo-senha-com-olho"])
-                                    recuperar_confirma_senha = gr.Textbox(label="Confirmar Nova Senha", type="password", placeholder="Repita a nova senha", scale=1, elem_classes=["campo-senha-com-olho"])
+                                    recuperar_nova_senha = gr.Textbox(
+                                        label="Nova Senha",
+                                        type="password",
+                                        placeholder="Mínimo 6 caracteres (letras e números)",
+                                        info="Mínimo de 6 caracteres, com ao menos uma letra e um número.",
+                                        scale=1,
+                                        elem_classes=["campo-senha-com-olho"],
+                                    )
+                                    recuperar_confirma_senha = gr.Textbox(
+                                        label="Confirmar Nova Senha",
+                                        type="password",
+                                        placeholder="Repita a nova senha",
+                                        info="Digite novamente a nova senha para confirmação.",
+                                        scale=1,
+                                        elem_classes=["campo-senha-com-olho"],
+                                    )
                                 recuperar_aviso_senha = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                                 btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
 
@@ -752,6 +781,12 @@ def construir_interface(
         def executar_cadastro(usuario: str, email: str, senha: str, confirma: str, convite: str) -> Tuple[Any, ...]:
             if not email or not str(email).strip():
                 return resposta_acesso_falha("O preenchimento do e-mail é obrigatório para a recuperação de senha.", origem="cadastro")
+            if not senha or not str(senha).strip():
+                return resposta_acesso_falha("A senha de acesso é obrigatória (mínimo de 6 caracteres, com ao menos uma letra e um número).", origem="cadastro")
+            try:
+                validar_complexidade_senha(senha)
+            except ValueError as exc:
+                return resposta_acesso_falha(str(exc), origem="cadastro")
             if senha != confirma:
                 return resposta_acesso_falha("As senhas digitadas não coincidem.", origem="cadastro")
             try:
@@ -822,6 +857,32 @@ def construir_interface(
             )
 
         def executar_redefinir_senha(identificador: str, codigo: str, nova_senha: str, confirma: str) -> Tuple[Any, ...]:
+            if not nova_senha or not str(nova_senha).strip():
+                msg_erro = "A nova senha é obrigatória (mínimo de 6 caracteres, com ao menos uma letra e um número)."
+                aviso_html = renderizar_aviso_inline(msg_erro, tipo="erro")
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    gr.update(),
+                    gr.update(),
+                    aviso_html,
+                    gr.update(),
+                    gr.update(),
+                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                )
+            try:
+                validar_complexidade_senha(nova_senha)
+            except ValueError as exc:
+                msg_erro = str(exc).replace("A senha ", "A nova senha ")
+                aviso_html = renderizar_aviso_inline(msg_erro, tipo="erro")
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    gr.update(),
+                    gr.update(),
+                    aviso_html,
+                    gr.update(),
+                    gr.update(),
+                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                )
             if nova_senha != confirma:
                 msg_erro = "A nova senha e a confirmação de senha não coincidem."
                 aviso_html = renderizar_aviso_inline(msg_erro, tipo="erro")

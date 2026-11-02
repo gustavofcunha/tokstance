@@ -458,6 +458,17 @@ APP_CSS = """
         background: transparent !important;
         min-height: 0 !important;
     }
+    span[data-testid="block-info"],
+    .block-info,
+    label small,
+    label .info {
+        font-size: 11.5px !important;
+        color: #64748b !important;
+        font-weight: 500 !important;
+        margin-top: 3px !important;
+        display: block !important;
+        line-height: 1.35 !important;
+    }
     .auth-inline-error {
         display: flex !important;
         align-items: center !important;
