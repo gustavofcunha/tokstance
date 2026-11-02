@@ -1059,7 +1059,7 @@ APP_CSS = """
     }
     .wizard-file-upload button[aria-label*="upload"] .wrap,
     .wizard-file-upload button.center .wrap {
-        margin-top: 18px !important;
+        margin-top: 26px !important;
         gap: 6px !important;
     }
     .wizard-file-upload .icon-wrap {
@@ -1820,14 +1820,16 @@ APP_CSS = """
         overflow: hidden !important;
         box-sizing: border-box !important;
         padding: 0 !important;
-        margin: 0 auto !important;
+        margin: 0 !important;
         width: 100% !important;
-        max-width: 1200px !important;
+        max-width: 100% !important;
     }
     .labeler-workspace-container {
         display: flex !important;
         flex-direction: column !important;
         flex: 1 1 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
         height: calc(100% - 42px) !important;
         min-height: 0 !important;
         overflow: hidden !important;
@@ -1857,15 +1859,15 @@ APP_CSS = """
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: stretch !important;
-        justify-content: center !important;
-        gap: 16px !important;
+        justify-content: space-between !important;
+        gap: clamp(16px, 1.8vw, 24px) !important;
         width: 100% !important;
         height: 100% !important;
         min-height: 0 !important;
         overflow: hidden !important;
     }
     .video-column {
-        flex: 0 0 auto !important;
+        flex: 1 1 auto !important;
         width: auto !important;
         min-width: 0 !important;
         max-width: none !important;
@@ -1878,6 +1880,7 @@ APP_CSS = """
     .video-column > div,
     .video-column .block,
     .video-column .prose {
+        width: 100% !important;
         height: 100% !important;
         min-height: 0 !important;
         display: flex !important;
@@ -1890,12 +1893,14 @@ APP_CSS = """
         box-shadow: none !important;
     }
     .video-card {
+        width: 100% !important;
         height: 100% !important;
         max-height: 100% !important;
         display: flex !important;
         flex-direction: row !important;
-        align-items: center !important;
-        gap: 16px !important;
+        align-items: stretch !important;
+        justify-content: space-between !important;
+        gap: clamp(16px, 1.8vw, 24px) !important;
         padding: 0 !important;
         margin: 0 !important;
         background: transparent !important;
@@ -1907,14 +1912,16 @@ APP_CSS = """
         overflow: hidden !important;
     }
     .video-context-column {
-        width: 290px !important;
-        min-width: 250px !important;
-        max-width: 310px !important;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 360px !important;
+        max-width: 720px !important;
         height: var(--altura-player) !important;
         max-height: var(--altura-player) !important;
         display: flex !important;
         flex-direction: column !important;
-        gap: 8px !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
         min-height: 0 !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
@@ -1924,14 +1931,14 @@ APP_CSS = """
         border: 1px solid #e2e8f0 !important;
         border-radius: 8px !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-        padding: 6px 12px !important;
-        font-size: 13px !important;
+        padding: 8px 14px !important;
+        font-size: 13.5px !important;
         color: #1e293b !important;
         flex: 0 0 auto !important;
         display: flex !important;
         align-items: center !important;
-        gap: 6px !important;
-        min-height: 38px !important;
+        gap: 8px !important;
+        min-height: 40px !important;
         box-sizing: border-box !important;
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
@@ -1945,17 +1952,24 @@ APP_CSS = """
         border: 1px solid #e2e8f0 !important;
         border-radius: 8px !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-        padding: 8px 12px !important;
+        padding: 10px 14px !important;
         margin: 0 !important;
-        font-size: 12.5px !important;
-        line-height: 1.45 !important;
+        font-size: 13px !important;
+        line-height: 1.5 !important;
         color: #334155 !important;
         overflow-y: auto !important;
-        flex: 1 1 50% !important;
+        flex: 1 1 auto !important;
         max-height: calc(50% - 24px) !important;
         min-height: 60px !important;
         box-sizing: border-box !important;
         scrollbar-width: thin !important;
+    }
+    .video-transcription.unavailable,
+    .video-description.unavailable {
+        flex: 0 0 auto !important;
+        min-height: 54px !important;
+        max-height: 68px !important;
+        color: #64748b !important;
     }
     .metadata-title {
         font-size: 11.5px !important;
@@ -1966,7 +1980,7 @@ APP_CSS = """
         margin-bottom: 4px !important;
     }
     .metadata-text {
-        font-size: 12.5px !important;
+        font-size: 13px !important;
         color: #1e293b !important;
         word-break: break-word !important;
     }
@@ -2006,10 +2020,10 @@ APP_CSS = """
         box-sizing: border-box !important;
     }
     .labeler-controls-column {
-        flex: 0 0 340px !important;
-        width: 340px !important;
-        min-width: 300px !important;
-        max-width: 360px !important;
+        flex: 0 0 clamp(350px, 28vw, 420px) !important;
+        width: clamp(350px, 28vw, 420px) !important;
+        min-width: 340px !important;
+        max-width: 440px !important;
         height: var(--altura-player) !important;
         max-height: var(--altura-player) !important;
         min-height: 0 !important;

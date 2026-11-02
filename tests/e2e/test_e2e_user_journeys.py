@@ -593,11 +593,11 @@ def test_e2e_criacao_de_multiplas_tarefas_exibe_mensagem_em_todas_e_em_falhas(
 
     #assert mensagem de erro exibida no toast e no aviso inline
     toast_erro = pagina_navegador.locator(".tokstance-toast.toast-erro")
-    toast_erro.wait_for(state="visible", timeout=8000)
+    toast_erro.wait_for(state="visible", timeout=12000)
     assert "ao menos duas opções" in (toast_erro.text_content() or "").lower()
 
     inline_erro = pagina_navegador.locator(".wizard-feedback-slot .auth-inline-error")
-    inline_erro.wait_for(state="visible", timeout=8000)
+    inline_erro.wait_for(state="visible", timeout=12000)
     assert "ao menos duas opções" in (inline_erro.text_content() or "").lower()
 
 

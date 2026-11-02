@@ -873,6 +873,34 @@ def test_tema_preserva_fonte_original_da_versao_legado() -> None:
     assert '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter"' not in APP_CSS
 
 
+#horizontal workspace utilization and metadata cards proportion
+
+
+@pytest.mark.unit
+def test_workspace_layout_horizontal_e_proporcoes_cards() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+
+    #assert aproveitamento horizontal total do painel de rotulacao
+    assert ".labeler-panel" in APP_CSS
+    assert "max-width: 100% !important;" in APP_CSS
+    assert "max-width: 1200px !important;" not in APP_CSS
+
+    #assert coluna de metadados ampla e proporcional
+    assert ".video-context-column {" in APP_CSS
+    assert "min-width: 360px !important;" in APP_CSS
+    assert "max-width: 720px !important;" in APP_CSS
+
+    #assert cards de transcricao e descricao com proporcao elegante
+    assert ".video-transcription.unavailable," in APP_CSS
+    assert "max-height: 68px !important;" in APP_CSS
+
+    #assert espacamento vertical do botao de upload no card de videos
+    assert ".wizard-file-upload button.center .wrap {" in APP_CSS
+    assert "margin-top: 26px !important;" in APP_CSS
+
+
+
 
 
 
