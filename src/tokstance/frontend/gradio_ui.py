@@ -103,7 +103,7 @@ def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rot
                     <span style="font-weight: 700; color: #334155;">{vagas} de {total_v}</span>
                 </td>
                 <td>
-                    <span class="table-bar-track"><span class="table-bar-fill" style="width: {prog_clamped:.0f}%;"></span></span>
+                    <span class="table-bar-track" style="display:inline-block; width:100px; height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; vertical-align:middle; margin-right:8px;"><span class="table-bar-fill" style="display:block; height:100%; width:{prog_clamped:.0f}%; background:#9c0014; border-radius:999px;"></span></span>
                     <span style="font-weight: 700; font-size: 13px; color: #334155;">{prog:.0f}%</span>
                 </td>
                 <td style="text-align: right; white-space: nowrap;">
@@ -171,7 +171,7 @@ def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rot
                     <div style="font-size: 12px; color: #64748b;">ID #{t_id}</div>
                 </td>
                 <td>
-                    <span class="table-bar-track"><span class="table-bar-fill" style="width: {pct}%;"></span></span>
+                    <span class="table-bar-track" style="display:inline-block; width:100px; height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; vertical-align:middle; margin-right:8px;"><span class="table-bar-fill" style="display:block; height:100%; width:{pct}%; background:#9c0014; border-radius:999px;"></span></span>
                     <span style="font-weight: 700; font-size: 13px; color: #334155; white-space: nowrap;">{prog_txt}</span>
                 </td>
                 <td>
