@@ -311,7 +311,7 @@ def construir_interface(
         gr.HTML(elem_classes="toast-slot", value=f"""
         <style>{APP_CSS}</style>
         <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>Código '+t+' copiado</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}};"
+             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>Código '+t+' copiado</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}}; window.tokstanceForcarMaiusculo=function(){{document.addEventListener('input',function(e){{if(e.target&&(e.target.matches('.campo-nome-maiusculo input')||e.target.closest('.campo-nome-maiusculo'))){{var inp=e.target.tagName==='INPUT'?e.target:e.target.querySelector('input');if(inp){{var s=inp.selectionStart,end=inp.selectionEnd;inp.value=inp.value.toUpperCase();if(s!==null&&end!==null){{inp.setSelectionRange(s,end);}}}}}}}},true);}}; window.tokstanceForcarMaiusculo();"
              style="display:none;" />
         """)
 
@@ -367,8 +367,13 @@ def construir_interface(
                             btn_login = gr.Button("Entrar no Sistema", elem_classes="ufmg-btn", size="lg")
 
                         with gr.Tab("Criar Conta", id="tab_cadastro"):
+                            cadastro_nome_completo = gr.Textbox(
+                                label="Nome Completo",
+                                placeholder="Ex: MARIA SILVA SANTOS",
+                                elem_classes=["campo-nome-maiusculo", "uppercase-input"],
+                            )
                             cadastro_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Ex: pesquisador_1")
-                            cadastro_email = gr.Textbox(label="E-mail (usado na recuperação de senha)", placeholder="Ex: usuario@dominio.com")
+                            cadastro_email = gr.Textbox(label="E-mail", placeholder="Ex: usuario@dominio.com")
                             with gr.Row():
                                 cadastro_senha = gr.Textbox(
                                     label="Senha de Acesso",
@@ -693,7 +698,7 @@ def construir_interface(
             rot_tarefas = painel["tarefas_rotulador"]
 
             html_admin, html_rot = renderizar_hub_tabelas_html(admin_tarefas, rot_tarefas)
-            nome_display = escape(sessao.get("nome_usuario", ""))
+            nome_display = escape(str(sessao.get("nome_completo") or sessao.get("nome_usuario", "")))
             saudacao = (
                 f"<div>"
                 f"<span style='font-size:12px; font-weight:700; color:#9c0014; text-transform:uppercase; letter-spacing:0.06em;'>Painel Principal</span>"
@@ -705,21 +710,23 @@ def construir_interface(
 
         campos_acesso = [
             login_usuario, login_senha,
-            cadastro_usuario, cadastro_email, cadastro_senha, cadastro_confirma, cadastro_convite,
+            cadastro_nome_completo, cadastro_usuario, cadastro_email, cadastro_senha, cadastro_confirma, cadastro_convite,
             recuperar_identificador, recuperar_codigo, recuperar_nova_senha, recuperar_confirma_senha,
         ]
         saidas_formularios = campos_acesso + [recuperar_passo_codigo, recuperar_passo_senha]
 
         def sessao_vazia() -> Dict[str, Any]:
-            return {"usuario_id": None, "nome_usuario": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""}
+            return {"usuario_id": None, "nome_usuario": "", "nome_completo": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""}
 
         def formularios_limpos(usuario_padrao: str = "") -> List[Any]:
             #reset form inputs and collapse recovery steps
             valores: List[Any] = [""] * len(campos_acesso)
             if usuario_padrao:
                 valores[0] = usuario_padrao
-            valores[7] = gr.update(value="", interactive=True)
-            valores[8] = gr.update(value="", interactive=True)
+            idx_identificador = campos_acesso.index(recuperar_identificador)
+            idx_codigo = campos_acesso.index(recuperar_codigo)
+            valores[idx_identificador] = gr.update(value="", interactive=True)
+            valores[idx_codigo] = gr.update(value="", interactive=True)
             return valores + [gr.update(visible=False), gr.update(visible=False)]
 
         def formularios_mantidos() -> List[Any]:
@@ -753,6 +760,7 @@ def construir_interface(
             sessao = {
                 "usuario_id": dados["usuario_id"],
                 "nome_usuario": dados["nome_usuario"],
+                "nome_completo": dados.get("nome_completo", ""),
                 "tarefa_ativa_id": None,
                 "login_time": time.time(),
                 "start_time": time.time(),
@@ -778,9 +786,14 @@ def construir_interface(
                 *formularios_limpos(),
             )
 
-        def executar_cadastro(usuario: str, email: str, senha: str, confirma: str, convite: str) -> Tuple[Any, ...]:
+        def executar_cadastro(nome_completo: str, usuario: str, email: str, senha: str, confirma: str, convite: str) -> Tuple[Any, ...]:
+            nome_completo_limpo = str(nome_completo or "").strip().upper()
+            if not nome_completo_limpo:
+                return resposta_acesso_falha("O preenchimento do nome completo é obrigatório.", origem="cadastro")
+            if not usuario or not str(usuario).strip():
+                return resposta_acesso_falha("O nome de usuário é obrigatório.", origem="cadastro")
             if not email or not str(email).strip():
-                return resposta_acesso_falha("O preenchimento do e-mail é obrigatório para a recuperação de senha.", origem="cadastro")
+                return resposta_acesso_falha("O preenchimento do e-mail é obrigatório.", origem="cadastro")
             if not senha or not str(senha).strip():
                 return resposta_acesso_falha("A senha de acesso é obrigatória (mínimo de 6 caracteres, com ao menos uma letra e um número).", origem="cadastro")
             try:
@@ -790,7 +803,13 @@ def construir_interface(
             if senha != confirma:
                 return resposta_acesso_falha("As senhas digitadas não coincidem.", origem="cadastro")
             try:
-                auth.cadastrar_usuario(usuario, senha, email=email, codigo_convite=convite or None)
+                auth.cadastrar_usuario(
+                    nome_usuario=usuario,
+                    senha=senha,
+                    email=email,
+                    nome_completo=nome_completo_limpo,
+                    codigo_convite=convite or None,
+                )
             except Exception as exc:
                 return resposta_acesso_falha(str(exc), origem="cadastro")
             return executar_login(usuario, senha)
@@ -1557,12 +1576,15 @@ def construir_interface(
         login_usuario.submit(**handler_login_params)
         login_senha.submit(**handler_login_params)
 
+        cadastro_nome_completo.change(lambda v: (str(v or "")).upper(), inputs=[cadastro_nome_completo], outputs=[cadastro_nome_completo])
+
         handler_cadastro_params = {
             "fn": executar_cadastro,
-            "inputs": [cadastro_usuario, cadastro_email, cadastro_senha, cadastro_confirma, cadastro_convite],
+            "inputs": [cadastro_nome_completo, cadastro_usuario, cadastro_email, cadastro_senha, cadastro_confirma, cadastro_convite],
             "outputs": saidas_acesso,
         }
         btn_cadastrar.click(**handler_cadastro_params)
+        cadastro_nome_completo.submit(**handler_cadastro_params)
         cadastro_usuario.submit(**handler_cadastro_params)
         cadastro_email.submit(**handler_cadastro_params)
         cadastro_senha.submit(**handler_cadastro_params)

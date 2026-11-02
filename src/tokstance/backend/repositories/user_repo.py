@@ -21,6 +21,7 @@ class RepositorioUsuarios:
         nome_usuario: str,
         senha_hash: str,
         email: str = "",
+        nome_completo: str = "",
         criado_em: str | None = None,
     ) -> dict[str, Any]:
         """Registra um novo usuario na tabela usuarios e retorna seus dados."""
@@ -28,14 +29,15 @@ class RepositorioUsuarios:
         if not isinstance(senha_hash, str) or not senha_hash.strip():
             raise ValueError("O hash da senha é obrigatório.")
         email_limpo = str(email or "").strip().lower()
+        nome_completo_limpo = str(nome_completo or "").strip().upper()
         instante = str(criado_em or formatar_data_hora_brt())
         try:
             usuario_id = self.banco.executar(
                 """
-                INSERT INTO usuarios (nome_usuario, email, senha_hash, criado_em)
-                VALUES (?, ?, ?, ?);
+                INSERT INTO usuarios (nome_usuario, nome_completo, email, senha_hash, criado_em)
+                VALUES (?, ?, ?, ?, ?);
                 """,
-                (nome_limpo, email_limpo, senha_hash.strip(), instante),
+                (nome_limpo, nome_completo_limpo, email_limpo, senha_hash.strip(), instante),
             )
         except sqlite3.IntegrityError as exc:
             raise ValueError(f"O nome de usuário '{nome_limpo}' já está cadastrado.") from exc
@@ -51,7 +53,7 @@ class RepositorioUsuarios:
             return None
         return self.banco.consultar_um(
             """
-            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
+            SELECT usuario_id, nome_usuario, nome_completo, email, senha_hash, criado_em
             FROM usuarios
             WHERE nome_usuario = ?;
             """,
@@ -64,7 +66,7 @@ class RepositorioUsuarios:
             return None
         return self.banco.consultar_um(
             """
-            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
+            SELECT usuario_id, nome_usuario, nome_completo, email, senha_hash, criado_em
             FROM usuarios
             WHERE LOWER(email) = ?;
             """,
@@ -80,7 +82,7 @@ class RepositorioUsuarios:
         limpo = identificador.strip()
         return self.banco.consultar_um(
             """
-            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
+            SELECT usuario_id, nome_usuario, nome_completo, email, senha_hash, criado_em
             FROM usuarios
             WHERE nome_usuario = ? COLLATE NOCASE OR email = ? COLLATE NOCASE
             LIMIT 1;
@@ -96,7 +98,7 @@ class RepositorioUsuarios:
         """Busca um usuario pela chave primaria usuario_id."""
         return self.banco.consultar_um(
             """
-            SELECT usuario_id, nome_usuario, email, senha_hash, criado_em
+            SELECT usuario_id, nome_usuario, nome_completo, email, senha_hash, criado_em
             FROM usuarios
             WHERE usuario_id = ?;
             """,
@@ -182,7 +184,7 @@ class RepositorioUsuarios:
         """Retorna todos os usuarios cadastrados em ordem de criacao."""
         return self.banco.consultar_todos(
             """
-            SELECT usuario_id, nome_usuario, email, criado_em
+            SELECT usuario_id, nome_usuario, nome_completo, email, criado_em
             FROM usuarios
             ORDER BY usuario_id ASC;
             """

@@ -147,8 +147,9 @@ def test_e2e_cadastro_login_e_ingresso_via_convite(
     pagina_navegador.wait_for_selector(".auth-card")
 
     pagina_navegador.get_by_role("tab", name="Criar Conta").click()
+    pagina_navegador.get_by_label("Nome Completo").fill("Nome Rotulador Teste")
     pagina_navegador.get_by_label("Nome de Usuário").nth(1).fill(usuario_novo)
-    pagina_navegador.get_by_label("E-mail (usado na recuperação de senha)").fill(f"{usuario_novo}@ufmg.br")
+    pagina_navegador.get_by_label("E-mail").fill(f"{usuario_novo}@ufmg.br")
     pagina_navegador.get_by_label("Senha de Acesso").nth(1).fill("senhaSecreta123")
     pagina_navegador.get_by_label("Confirmar Senha").fill("senhaSecreta123")
     pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
@@ -223,8 +224,9 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
 
     #act tentativa de cadastro com senha sem cumprir requisitos de complexidade
     pagina_navegador.get_by_role("tab", name="Criar Conta").click()
+    pagina_navegador.get_by_label("Nome Completo").fill("Usuario Falha Senha")
     pagina_navegador.get_by_label("Nome de Usuário").nth(1).fill("usuario_falha_senha")
-    pagina_navegador.get_by_label("E-mail (usado na recuperação de senha)").fill("falha@exemplo.org")
+    pagina_navegador.get_by_label("E-mail").fill("falha@exemplo.org")
     pagina_navegador.get_by_label("Senha de Acesso").nth(1).fill("somenteletras")
     pagina_navegador.get_by_label("Confirmar Senha").fill("somenteletras")
     pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
@@ -245,8 +247,9 @@ def _cadastrar_e_entrar_na_tarefa(
     pagina.goto(url_base)
     pagina.wait_for_selector(".auth-card")
     pagina.get_by_role("tab", name="Criar Conta").click()
+    pagina.get_by_label("Nome Completo").fill(f"Nome Completo {usuario}")
     pagina.get_by_label("Nome de Usuário").nth(1).fill(usuario)
-    pagina.get_by_label("E-mail (usado na recuperação de senha)").fill(f"{usuario}@exemplo.org")
+    pagina.get_by_label("E-mail").fill(f"{usuario}@exemplo.org")
     pagina.get_by_label("Senha de Acesso").nth(1).fill("senha12345")
     pagina.get_by_label("Confirmar Senha").fill("senha12345")
     pagina.get_by_label("Código de Convite (opcional)").fill(codigo_convite)
@@ -352,8 +355,9 @@ def test_e2e_criacao_de_tarefa_e_auditoria_console_administrador(
     pagina_navegador.goto(url_base)
     pagina_navegador.wait_for_selector(".auth-card")
     pagina_navegador.get_by_role("tab", name="Criar Conta").click()
+    pagina_navegador.get_by_label("Nome Completo").fill("Coordenador Administrador")
     pagina_navegador.get_by_label("Nome de Usuário").nth(1).fill(coord_usuario)
-    pagina_navegador.get_by_label("E-mail (usado na recuperação de senha)").fill(f"{coord_usuario}@ufmg.br")
+    pagina_navegador.get_by_label("E-mail").fill(f"{coord_usuario}@ufmg.br")
     pagina_navegador.get_by_label("Senha de Acesso").nth(1).fill("senhaForte123")
     pagina_navegador.get_by_label("Confirmar Senha").fill("senhaForte123")
     pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
@@ -681,6 +685,57 @@ def test_e2e_redefinicao_senha_preserva_tarefas_administradas_atribuidas_e_progr
     btn_continuar_pos_redefinicao = pagina_navegador.locator(".hub-table-btn.in-progress", has_text="Continuar Rotulação")
     btn_continuar_pos_redefinicao.wait_for(state="visible", timeout=8000)
     assert pagina_navegador.locator("text=1 de ").count() >= 1
+
+
+@pytest.mark.e2e
+def test_e2e_cadastro_solicita_nome_completo_persiste_maiusculo_e_email_limpo(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange
+    url_base, _, caminho_banco = servidor_e2e
+    usuario_teste = f"usuario_nc_{int(time.time() * 1000) % 100000}"
+
+    pagina_navegador.goto(url_base)
+    pagina_navegador.wait_for_selector(".auth-card")
+    pagina_navegador.get_by_role("tab", name="Criar Conta").click()
+
+    #assert campo de email sem texto de recuperacao de senha
+    assert pagina_navegador.get_by_label("E-mail").count() >= 1
+    assert pagina_navegador.locator("text=E-mail (usado na recuperação de senha)").count() == 0
+
+    #assert campo de nome completo presente com classe de transformacao
+    campo_nome = pagina_navegador.get_by_label("Nome Completo")
+    campo_nome.wait_for(state="visible", timeout=5000)
+
+    #act tentativa de submissao sem nome completo
+    pagina_navegador.get_by_label("Nome de Usuário").nth(1).fill(usuario_teste)
+    pagina_navegador.get_by_label("E-mail").fill(f"{usuario_teste}@ufmg.br")
+    pagina_navegador.get_by_label("Senha de Acesso").nth(1).fill("senhaForte123")
+    pagina_navegador.get_by_label("Confirmar Senha").fill("senhaForte123")
+    pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
+
+    #assert erro informando obrigatoriedade do nome completo
+    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=5000)
+    texto_erro = pagina_navegador.locator(".auth-inline-error").inner_text()
+    assert "nome completo" in texto_erro.lower()
+
+    #act preenche nome completo em minusculas
+    campo_nome.fill("carlos eduardo da silva")
+    pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
+
+    #assert cadastro bem-sucedido e entrada no hub
+    pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
+
+    #assert gravacao no banco sqlite em maiusculas
+    banco = BancoDadosSQLite(Path(caminho_banco) / "tokstance.db")
+    registro = banco.consultar_um(
+        "SELECT nome_usuario, nome_completo, email FROM usuarios WHERE nome_usuario = ?;",
+        (usuario_teste,),
+    )
+    assert registro is not None
+    assert registro["nome_completo"] == "CARLOS EDUARDO DA SILVA"
+    assert registro["email"] == f"{usuario_teste}@ufmg.br"
+
 
 
 

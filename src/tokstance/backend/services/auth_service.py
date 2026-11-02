@@ -77,10 +77,12 @@ class ServicoAutenticacao:
         nome_usuario: str,
         senha: str,
         email: str = "",
+        nome_completo: str = "",
         codigo_convite: str | None = None,
     ) -> dict[str, Any]:
         """Cria uma nova conta de usuario com e-mail obrigatorio e opcionalmente o vincula a uma tarefa via convite."""
         nome_limpo = validar_nome_usuario(nome_usuario)
+        nome_completo_limpo = str(nome_completo or "").strip().upper()
         if self.repo_usuarios.buscar_por_nome_usuario(nome_limpo) is not None:
             raise ValueError(f"O nome de usuário '{nome_limpo}' já está cadastrado.")
 
@@ -102,6 +104,7 @@ class ServicoAutenticacao:
             nome_usuario=nome_limpo,
             senha_hash=senha_hash,
             email=email_limpo,
+            nome_completo=nome_completo_limpo,
         )
         self.repo_usuarios.vincular_atribuicoes_e_membros_pendentes(
             usuario_id=int(usuario["usuario_id"]),
@@ -125,6 +128,7 @@ class ServicoAutenticacao:
         return {
             "usuario_id": int(usuario["usuario_id"]),
             "nome_usuario": str(usuario["nome_usuario"]),
+            "nome_completo": str(usuario.get("nome_completo", nome_completo_limpo)),
             "email": str(usuario.get("email", email_limpo)),
             "criado_em": str(usuario["criado_em"]),
             "vinculo_inicial": vinculo_rotulador,
@@ -358,6 +362,7 @@ class ServicoAutenticacao:
         return {
             "usuario_id": int(conta["usuario_id"]),
             "nome_usuario": str(conta["nome_usuario"]),
+            "nome_completo": str(conta.get("nome_completo", "") or ""),
             "tarefas_administrador": hub["tarefas_administrador"],
             "tarefas_rotulador": hub["tarefas_rotulador"],
         }
