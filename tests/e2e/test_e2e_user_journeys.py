@@ -589,5 +589,92 @@ def test_e2e_criacao_de_multiplas_tarefas_exibe_mensagem_em_todas_e_em_falhas(
     assert "ao menos duas opções" in (inline_erro.text_content() or "").lower()
 
 
+@pytest.mark.e2e
+def test_e2e_redefinicao_senha_preserva_tarefas_administradas_atribuidas_e_progresso(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange login e criacao de tarefa
+    url_base, _, caminho_banco = servidor_e2e
+    usuario = f"pesq_pres_{int(time.time() * 1000) % 100000}"
+    email = f"{usuario}@exemplo.org"
+    _cadastrar_e_entrar_na_tarefa(pagina_navegador, url_base, usuario, "")
+
+    #cria tarefa com admin participando como rotulador
+    pagina_navegador.locator(".hub-plus-admin").click()
+    pagina_navegador.wait_for_selector(".admin-panel", timeout=8000)
+    pagina_navegador.get_by_label("Título da Tarefa").fill("Estudo Preservação de Progresso")
+    pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
+    pagina_navegador.locator(".wizard-feedback-slot .auth-inline-success").wait_for(state="visible", timeout=8000)
+
+    #volta para o hub e inicia rotulacao
+    pagina_navegador.get_by_role("button", name="← Voltar ao Hub").click()
+    pagina_navegador.wait_for_selector(".hub-two-col", timeout=8000)
+
+    btn_iniciar = pagina_navegador.locator(".hub-table-btn", has_text="Rotulação").first
+    btn_iniciar.wait_for(state="visible", timeout=8000)
+    btn_iniciar.click()
+
+    pagina_navegador.wait_for_selector(".sensitive-warning-wrapper", timeout=10000)
+    pagina_navegador.get_by_role("button", name="Continuar").click()
+    pagina_navegador.wait_for_selector(".annotation-controls", state="visible", timeout=10000)
+
+    pagina_navegador.locator("label", has_text="A Favor").click()
+    pagina_navegador.get_by_role("button", name="Salvar Resposta e Avançar").click()
+
+    #aguarda avanco da barra de progresso para 1 de N
+    pagina_navegador.locator(".labeler-controls-column").get_by_text(re.compile(r"1 de ")).wait_for(timeout=10000)
+
+    #sai para o hub e verifica progresso salvo
+    pagina_navegador.get_by_role("button", name="← Sair do Workspace").click()
+    pagina_navegador.wait_for_selector(".hub-two-col", timeout=8000)
+    btn_continuar = pagina_navegador.locator(".hub-table-btn.in-progress", has_text="Continuar Rotulação")
+    btn_continuar.wait_for(state="visible", timeout=8000)
+
+    #logout
+    pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
+    pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
+
+    #solicita recuperacao de senha
+    pagina_navegador.get_by_role("tab", name="Recuperar Senha").click()
+    pagina_navegador.get_by_label("Nome de Usuário ou E-mail Cadastrado").fill(email)
+    pagina_navegador.get_by_role("button", name="Enviar Código de Recuperação").click()
+
+    campo_codigo = pagina_navegador.get_by_label("Código de Verificação (6 dígitos)")
+    campo_codigo.wait_for(state="visible", timeout=15000)
+
+    #obtem codigo gerado no banco de dados sqlite
+    banco = BancoDadosSQLite(Path(caminho_banco) / "tokstance.db")
+    registro = banco.consultar_um(
+        "SELECT codigo_recuperacao FROM recuperacao_senha WHERE usado = 0 ORDER BY recuperacao_id DESC LIMIT 1;"
+    )
+    assert registro is not None
+    codigo = str(registro["codigo_recuperacao"])
+
+    #digita codigo e confirma
+    campo_codigo.fill(codigo)
+    pagina_navegador.get_by_role("button", name="Verificar Código").click()
+
+    #digita nova senha e redefine
+    pagina_navegador.get_by_label("Nova Senha").first.fill("NovaSenhaSegura123")
+    pagina_navegador.get_by_label("Confirmar Nova Senha").fill("NovaSenhaSegura123")
+    pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
+
+    #verifica retorno para a tela de login
+    pagina_navegador.wait_for_selector(".auth-inline-success", timeout=8000)
+
+    #faz login com a nova senha
+    campo_senha = pagina_navegador.get_by_label("Senha de Acesso").first
+    campo_senha.fill("NovaSenhaSegura123")
+    pagina_navegador.get_by_role("button", name="Entrar no Sistema").click()
+
+    #verifica hub com tarefas administradas e progresso 100% preservado
+    pagina_navegador.wait_for_selector(".hub-two-col", timeout=10000)
+    assert pagina_navegador.locator("text=Estudo Preservação de Progresso").count() >= 1
+    btn_continuar_pos_redefinicao = pagina_navegador.locator(".hub-table-btn.in-progress", has_text="Continuar Rotulação")
+    btn_continuar_pos_redefinicao.wait_for(state="visible", timeout=8000)
+    assert pagina_navegador.locator("text=1 de ").count() >= 1
+
+
+
 
 

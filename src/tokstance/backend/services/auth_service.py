@@ -8,7 +8,14 @@ from datetime import timedelta
 from email.mime.text import MIMEText
 from typing import Any
 
-from tokstance.backend.domain.models import PAPEL_ADMINISTRADOR, PAPEL_ROTULADOR
+import pandas as pd
+
+from tokstance.backend.domain.models import (
+    COLUNAS_ATRIBUICAO,
+    COLUNAS_RESULTADO,
+    PAPEL_ADMINISTRADOR,
+    PAPEL_ROTULADOR,
+)
 from tokstance.backend.repositories.database import BancoDadosSQLite
 from tokstance.backend.repositories.study_repo import RepositorioEstudo
 from tokstance.backend.repositories.user_repo import RepositorioUsuarios
@@ -78,6 +85,8 @@ class ServicoAutenticacao:
             raise ValueError(f"O nome de usuário '{nome_limpo}' já está cadastrado.")
 
         email_limpo = validar_email(email) if email and str(email).strip() else ""
+        if email_limpo and self.repo_usuarios.buscar_por_email(email_limpo) is not None:
+            raise ValueError(f"O e-mail '{email_limpo}' já está em uso por outra conta.")
 
         tarefa_alvo: dict[str, Any] | None = None
         if codigo_convite is not None and str(codigo_convite).strip():
@@ -92,6 +101,11 @@ class ServicoAutenticacao:
         usuario = self.repo_usuarios.criar_usuario(
             nome_usuario=nome_limpo,
             senha_hash=senha_hash,
+            email=email_limpo,
+        )
+        self.repo_usuarios.vincular_atribuicoes_e_membros_pendentes(
+            usuario_id=int(usuario["usuario_id"]),
+            nome_usuario=nome_limpo,
             email=email_limpo,
         )
         self.repo_estudo.registrar_log_acesso(
@@ -250,6 +264,12 @@ class ServicoAutenticacao:
         novo_hash = gerar_hash_senha(nova_senha, rodadas=self.rodadas_bcrypt)
         self.repo_usuarios.atualizar_senha(usuario_id=u_id, nova_senha_hash=novo_hash)
         self.repo_usuarios.consumir_codigo_recuperacao(usuario_id=u_id, codigo_recuperacao=cod)
+        self.repo_usuarios.vincular_atribuicoes_e_membros_pendentes(
+            usuario_id=u_id,
+            nome_usuario=str(usuario["nome_usuario"]),
+            email=str(usuario.get("email", "") or ""),
+        )
+        self.gerenciador_sessoes.liberar_sessao(str(usuario["nome_usuario"]))
 
         self.repo_estudo.registrar_log_acesso(
             usuario=str(usuario["nome_usuario"]),
@@ -284,9 +304,7 @@ class ServicoAutenticacao:
                 f"Muitas tentativas falhas. Aguarde {restante:.0f}s antes de tentar novamente."
             )
 
-        conta = self.repo_usuarios.buscar_por_nome_usuario(chave_bruta)
-        if conta is None:
-            conta = self.repo_usuarios.buscar_por_email(chave_bruta)
+        conta = self.repo_usuarios.buscar_por_identificador(chave_bruta)
         if conta is None:
             conta = self.repo_usuarios.buscar_por_nome_ou_email_case_insensitive(chave_bruta)
 
@@ -325,6 +343,11 @@ class ServicoAutenticacao:
                 )
 
         self.limitador_tentativas.registrar_sucesso(nome_limpo)
+        self.repo_usuarios.vincular_atribuicoes_e_membros_pendentes(
+            usuario_id=int(conta["usuario_id"]),
+            nome_usuario=nome_limpo,
+            email=str(conta.get("email", "") or ""),
+        )
         self.repo_estudo.registrar_log_acesso(
             usuario=nome_limpo,
             acao="login",
@@ -430,24 +453,37 @@ class ServicoAutenticacao:
                 }
             )
 
+        email_usuario = str(usuario.get("email", "") or "").strip()
         resumo_rotulador: list[dict[str, Any]] = []
         for item in tarefas_rot:
             tid = int(item["tarefa_id"])
             vaga_membro = str(item.get("vaga_atribuida", "") or "").strip()
-            fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
-                tid, rotulador=nome_usuario
-            )
-            if fila_df.empty and vaga_membro:
-                fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
-                    tid, rotulador=vaga_membro
-                )
-            anot_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
-                tid, rotulador=nome_usuario
-            )
-            if anot_df.empty and vaga_membro:
-                anot_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
-                    tid, rotulador=vaga_membro
-                )
+            rotuladores_candidatos = [nome_usuario]
+            if vaga_membro and vaga_membro.lower() != nome_usuario.lower():
+                rotuladores_candidatos.append(vaga_membro)
+            if email_usuario and email_usuario.lower() not in [c.lower() for c in rotuladores_candidatos]:
+                rotuladores_candidatos.append(email_usuario)
+
+            quadros_fila = []
+            for rot_cand in rotuladores_candidatos:
+                df_c = self.repo_estudo.carregar_atribuicoes_tarefa_df(tid, rotulador=rot_cand)
+                if not df_c.empty:
+                    quadros_fila.append(df_c)
+            if quadros_fila:
+                fila_df = pd.concat(quadros_fila, ignore_index=True).drop_duplicates(subset=["assignment_id"])
+            else:
+                fila_df = pd.DataFrame(columns=list(COLUNAS_ATRIBUICAO))
+
+            quadros_anot = []
+            for rot_cand in rotuladores_candidatos:
+                df_a = self.repo_estudo.carregar_anotacoes_tarefa_df(tid, rotulador=rot_cand)
+                if not df_a.empty:
+                    quadros_anot.append(df_a)
+            if quadros_anot:
+                anot_df = pd.concat(quadros_anot, ignore_index=True).drop_duplicates(subset=["assignment_id"])
+            else:
+                anot_df = pd.DataFrame(columns=list(COLUNAS_RESULTADO))
+
             erros_df = self.repo_estudo.carregar_erros_videos_tarefa_df(tid)
             ids_anotados = (
                 set(anot_df["assignment_id"].astype(str))
@@ -456,9 +492,7 @@ class ServicoAutenticacao:
             )
             ids_erros_sem_reserva: set[str] = set()
             if not erros_df.empty:
-                alvos_labelers = {nome_usuario.lower()}
-                if vaga_membro:
-                    alvos_labelers.add(vaga_membro.lower())
+                alvos_labelers = {c.lower() for c in rotuladores_candidatos}
                 erros_rot = erros_df[
                     erros_df["labeler"].astype(str).str.lower().isin(alvos_labelers)
                     & erros_df["replacement_assignment_id"].astype(str).str.strip().eq("")

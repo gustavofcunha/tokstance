@@ -676,6 +676,109 @@ def test_interface_cadastro_valida_requisitos_complexidade_senha_e_exibe_aviso(
     assert "obrigatória" in aviso_vazia
 
 
+@pytest.mark.unit
+def test_cadastro_com_email_duplicado_lanca_erro_impedindo_sobreposicao_de_conta(
+    servicos: Dict[str, Any],
+) -> None:
+    auth: ServicoAutenticacao = servicos["auth"]
+    auth.cadastrar_usuario("pesquisador_original", "SenhaSegura123", email="duplicado@ufmg.br")
+
+    with pytest.raises(ValueError, match="já está em uso por outra conta"):
+        auth.cadastrar_usuario("pesquisador_invasor", "OutraSenhaSegura123", email="duplicado@ufmg.br")
+
+
+@pytest.mark.unit
+def test_cadastro_vincula_automaticamente_atribuicoes_e_progresso_pre_existentes(
+    servicos: Dict[str, Any],
+) -> None:
+    auth: ServicoAutenticacao = servicos["auth"]
+    admin: ServicoAdministracao = servicos["admin"]
+
+    #admin cria tarefa incluindo rotulador que ainda nao possui conta no sistema
+    admin_user = auth.cadastrar_usuario("admin_pesquisa", "SenhaValida123", email="admin@ufmg.br")
+    tarefa = admin.repo_estudo.criar_tarefa(
+        titulo="Estudo Pré-Cadastro",
+        pergunta="Qual o posicionamento?",
+        opcoes_posicao=["A favor", "Contra"],
+        rotuladores_iniciais=["novo_aluno"],
+        numero_vagas=1,
+        pool_videos=_pool_de_videos(),
+        criado_por_usuario_id=admin_user["usuario_id"],
+    )
+
+    #novo_aluno cadastra sua conta definindo sua primeira senha
+    aluno = auth.cadastrar_usuario("novo_aluno", "SenhaValida123", email="novoaluno@ufmg.br")
+    painel = auth.obter_painel_usuario(aluno["usuario_id"])
+
+    assert len(painel["tarefas_rotulador"]) == 1
+    assert painel["tarefas_rotulador"][0]["tarefa_id"] == tarefa["tarefa_id"]
+    assert painel["tarefas_rotulador"][0]["total_videos_fila"] > 0
+
+
+@pytest.mark.unit
+def test_definicao_e_redefinicao_senha_preserva_tarefas_admin_rotulador_e_progresso_completo(
+    servicos: Dict[str, Any],
+) -> None:
+    auth: ServicoAutenticacao = servicos["auth"]
+    admin: ServicoAdministracao = servicos["admin"]
+    fila: ServicoFilaAnotacao = servicos["fila"]
+
+    #cria usuario inicial com tarefas sob administracao e atribuicao
+    u = auth.cadastrar_usuario("lider_lab", "SenhaInicial123", email="lider@ufmg.br")
+    uid = u["usuario_id"]
+
+    tarefa = admin.repo_estudo.criar_tarefa(
+        titulo="Rodada de Análise Laboratório",
+        pergunta="Qual o posicionamento?",
+        opcoes_posicao=["A favor", "Contra"],
+        rotuladores_iniciais=["lider_lab", "colega_lab"],
+        numero_vagas=2,
+        pool_videos=_pool_de_videos(),
+        criado_por_usuario_id=uid,
+    )
+    tid = tarefa["tarefa_id"]
+
+    #rotula 2 videos na fila
+    f1 = fila.obter_estado_fila(tid, "lider_lab")
+    v1 = f1["video_atual"]
+    fila.salvar_anotacao(tid, "lider_lab", v1["assignment_id"], posicao="A favor", tempo_analise_segundos=12.0)
+
+    f2 = fila.obter_estado_fila(tid, "lider_lab")
+    v2 = f2["video_atual"]
+    fila.salvar_anotacao(tid, "lider_lab", v2["assignment_id"], posicao="Contra", tempo_analise_segundos=14.0)
+
+    #verifica estado antes da redefinicao de senha
+    painel_antes = auth.obter_painel_usuario(uid)
+    assert len(painel_antes["tarefas_administrador"]) == 1
+    assert len(painel_antes["tarefas_rotulador"]) == 1
+    assert painel_antes["tarefas_rotulador"][0]["videos_concluidos"] == 2
+
+    #redefine senha via codigo de recuperacao
+    solic = auth.solicitar_recuperacao_senha("lider@ufmg.br")
+    codigo = solic["codigo"]
+    res_red = auth.redefinir_senha_com_codigo("lider@ufmg.br", codigo, "NovaSenhaLab456")
+    assert res_red["sucesso"] is True
+
+    #autentica com a nova senha
+    dados_login = auth.autenticar_usuario("lider_lab", "NovaSenhaLab456")
+    assert len(dados_login["tarefas_administrador"]) == 1
+    assert len(dados_login["tarefas_rotulador"]) == 1
+    assert dados_login["tarefas_rotulador"][0]["videos_concluidos"] == 2
+
+    #verifica que a fila continua exatamente do video 3
+    f3 = fila.obter_estado_fila(tid, "lider_lab")
+    assert f3["posicao_concluida"] == 2
+    assert f3["video_atual"]["assignment_id"] not in {v1["assignment_id"], v2["assignment_id"]}
+
+    #rotula o terceiro video
+    fila.salvar_anotacao(tid, "lider_lab", f3["video_atual"]["assignment_id"], posicao="A favor", tempo_analise_segundos=11.0)
+
+    #autentica usando o e-mail em maiusculas para checar preservacao total
+    dados_login_email = auth.autenticar_usuario("LIDER@UFMG.BR", "NovaSenhaLab456", permitir_reassumir=True)
+    assert dados_login_email["tarefas_rotulador"][0]["videos_concluidos"] == 3
+
+
+
 
 
 
