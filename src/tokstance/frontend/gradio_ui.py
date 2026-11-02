@@ -1163,8 +1163,8 @@ def construir_interface(
 
             cabecalho_txt = (
                 f"<div class='labeler-info-badge'>"
-                f"<span>Tarefa:</span> <strong style='color:#0f172a; font-size:15px;'>{escape(str(estado_f['titulo']))}</strong>"
-                f"<span style='margin-left:14px;'>Rotulador:</span> <span class='user-pill'>{escape(str(nome_u))}</span>"
+                f"<div><span>Tarefa:</span> <strong>{escape(str(estado_f['titulo']))}</strong></div>"
+                f"<div><span>Rotulador:</span> <span class='user-pill'>{escape(str(nome_u))}</span></div>"
                 f"</div>"
             )
             sessao_atualizada = dict(sessao)

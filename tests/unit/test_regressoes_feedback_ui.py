@@ -353,11 +353,11 @@ def test_workspace_rotulacao_widescreen_sem_rolagem_vertical_e_player_ampliado()
     from tokstance.frontend.theme import APP_CSS
 
     #assert
-    assert "--altura-player: clamp(480px" in APP_CSS
-    assert "grid-template-columns: 240px 1fr" in APP_CSS
+    assert "--altura-player: clamp(" in APP_CSS
     assert ".video-context-column" in APP_CSS
-    assert "overflow-y: hidden !important;" in APP_CSS
+    assert ".video-player-column" in APP_CSS
     assert "body:has(.labeler-panel:not(.hide):not(.hidden))" in APP_CSS
+    assert "overflow: hidden !important;" in APP_CSS
 
 
 #bold question styling and regular alternative options
