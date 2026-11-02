@@ -110,7 +110,6 @@ APP_CSS = """
         background-color: #f8fafc !important;
         background: #f8fafc !important;
         color: #0f172a !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif !important;
     }
 
     /* Container Principal com Otimizacao Total para Telas Widescreen (16:9, 16:10, 21:9) */
@@ -2209,8 +2208,8 @@ APP_CSS = """
 
 
 def obter_tema_branco() -> Any:
-    """Retorna o tema Gradio limpo com fundo branco absoluto e tipografia uniforme de alto contraste."""
-    return gr.themes.Soft(
+    """Retorna o tema Gradio limpo com fundo branco absoluto e tipografia original da versao legado."""
+    return gr.themes.Base(
         primary_hue="red",
         secondary_hue="slate",
         neutral_hue="slate",

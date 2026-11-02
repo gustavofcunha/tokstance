@@ -855,6 +855,24 @@ def test_botoes_utilizam_icones_vetoriais_e_sem_emojis(servicos: Dict[str, Any])
             assert "⚠️" not in valor
 
 
+@pytest.mark.unit
+def test_tema_preserva_fonte_original_da_versao_legado() -> None:
+    #arrange
+    import gradio as gr
+    from tokstance.frontend.theme import obter_tema_branco, APP_CSS
+
+    #act
+    tema = obter_tema_branco()
+
+    #assert tema base compativel com versao legado
+    assert isinstance(tema, gr.themes.Base)
+    assert not isinstance(tema, gr.themes.Soft)
+    assert "'IBM Plex Sans'" in str(tema.font) or "ui-sans-serif" in str(tema.font)
+
+    #assert css global sem sobreposicao forcada de fontes modernas
+    assert '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter"' not in APP_CSS
+
+
 
 
 
