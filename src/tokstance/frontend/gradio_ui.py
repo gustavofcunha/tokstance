@@ -377,10 +377,12 @@ def construir_interface(
                     with gr.Tab("Recuperar Senha"):
                         #progressive recovery step
                         recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou e-mail")
+                        recuperar_aviso_identificador = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                         btn_solicitar_recuperacao = gr.Button("Enviar Código de Recuperação", elem_classes="ufmg-btn", size="lg")
 
                         with gr.Column(visible=False) as recuperar_passo_codigo:
                             recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456")
+                            recuperar_aviso_codigo = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                             with gr.Row(elem_classes="compact-actions"):
                                 btn_verificar_codigo = gr.Button("Verificar Código", elem_classes="ufmg-btn", size="lg")
                                 btn_trocar_identificador = gr.Button("Usar outro e-mail", elem_classes="error-btn", size="lg")
@@ -389,6 +391,7 @@ def construir_interface(
                             with gr.Row():
                                 recuperar_nova_senha = gr.Textbox(label="Nova Senha", type="password", placeholder="Mínimo 6 caracteres", scale=1)
                                 recuperar_confirma_senha = gr.Textbox(label="Confirmar Nova Senha", type="password", placeholder="Repita a nova senha", scale=1)
+                            recuperar_aviso_senha = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                             btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
 
             #task hub panel
@@ -435,6 +438,7 @@ def construir_interface(
                             label="Código de Convite",
                             placeholder="Ex: TOKSTANCE-2026",
                         )
+                        modal_convite_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                         with gr.Row(elem_classes="compact-actions"):
                             btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes="ufmg-btn", scale=0, min_width=160)
                             btn_cancelar_convite = gr.Button("Cancelar", elem_classes="error-btn", scale=0, min_width=110)
@@ -703,6 +707,9 @@ def construir_interface(
                 "",
                 aviso_login,
                 aviso_cadastro,
+                "",  #recuperar_aviso_identificador
+                "",  #recuperar_aviso_codigo
+                "",  #recuperar_aviso_senha
                 *formularios_mantidos(),
             )
 
@@ -731,8 +738,11 @@ def construir_interface(
                 h_adm,
                 h_rot,
                 saudacao,
-                "",
-                "",
+                "",  #login_aviso
+                "",  #cadastro_aviso
+                "",  #recuperar_aviso_identificador
+                "",  #recuperar_aviso_codigo
+                "",  #recuperar_aviso_senha
                 *formularios_limpos(),
             )
 
@@ -752,18 +762,26 @@ def construir_interface(
             try:
                 res = auth.solicitar_recuperacao_senha(identificador)
             except Exception as exc:
-                return (renderizar_toast_html(f"⚠️ {str(exc)}"), *sem_mudanca)
-            if res.get("smtp_configurado") and not res.get("disparado_smtp"):
+                msg_erro = str(exc)
                 return (
-                    renderizar_toast_html("⚠️ Não foi possível enviar o e-mail agora. Tente novamente em instantes."),
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    renderizar_aviso_inline(msg_erro, tipo="erro"),
+                    *sem_mudanca,
+                )
+            if res.get("smtp_configurado") and not res.get("disparado_smtp"):
+                msg_erro = "Não foi possível enviar o e-mail agora. Tente novamente em instantes."
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    renderizar_aviso_inline(msg_erro, tipo="erro"),
                     *sem_mudanca,
                 )
             if res.get("disparado_smtp"):
-                msg = "✅ Enviamos um código de 6 dígitos para o seu e-mail. Ele expira em 15 minutos."
+                msg = "Enviamos um código de 6 dígitos para o seu e-mail. Ele expira em 15 minutos."
             else:
-                msg = "✅ Código gerado. O envio de e-mail não está configurado: consulte o terminal do servidor."
+                msg = "Código gerado. O envio de e-mail não está configurado: consulte o terminal do servidor."
             return (
-                renderizar_toast_html(msg),
+                renderizar_toast_html(f"✅ {msg}"),
+                renderizar_aviso_inline(msg, tipo="sucesso"),
                 gr.update(visible=True),
                 gr.update(visible=False),
                 gr.update(interactive=False),
@@ -773,24 +791,57 @@ def construir_interface(
             try:
                 auth.verificar_codigo_recuperacao(identificador, codigo)
             except Exception as exc:
-                return renderizar_toast_html(f"⚠️ {str(exc)}"), gr.update(), gr.update()
+                msg_erro = str(exc)
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    renderizar_aviso_inline(msg_erro, tipo="erro"),
+                    gr.update(),
+                    gr.update(),
+                )
             return (
                 renderizar_toast_html("✅ Código confirmado. Defina sua nova senha."),
+                "",
                 gr.update(visible=True),
                 gr.update(interactive=False),
             )
 
         def executar_trocar_identificador() -> Tuple[Any, ...]:
-            return gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True), gr.update(value="", interactive=True), gr.update(value="")
+            return (
+                "",
+                "",
+                "",
+                gr.update(visible=False),
+                gr.update(visible=False),
+                gr.update(interactive=True),
+                gr.update(value="", interactive=True),
+                gr.update(value=""),
+                gr.update(value=""),
+            )
 
         def executar_redefinir_senha(identificador: str, codigo: str, nova_senha: str, confirma: str) -> Tuple[Any, ...]:
             if nova_senha != confirma:
-                return (renderizar_toast_html("⚠️ A nova senha e a confirmação não coincidem."), *[gr.update() for _ in range(len(campos_acesso) + 2)])
+                msg_erro = "A nova senha e a confirmação de senha não coincidem."
+                aviso_html = renderizar_aviso_inline(msg_erro, tipo="erro")
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    aviso_html,
+                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                )
             try:
                 res = auth.redefinir_senha_com_codigo(identificador, codigo, nova_senha)
             except Exception as exc:
-                return (renderizar_toast_html(f"⚠️ {str(exc)}"), *[gr.update() for _ in range(len(campos_acesso) + 2)])
-            return (renderizar_toast_html(f"✅ {res['mensagem']}"), *formularios_limpos())
+                msg_erro = str(exc)
+                aviso_html = renderizar_aviso_inline(msg_erro, tipo="erro")
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    aviso_html,
+                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                )
+            return (
+                renderizar_toast_html(f"✅ {res['mensagem']}"),
+                "",
+                *formularios_limpos(),
+            )
 
         def executar_logout(sessao: Dict[str, Any]) -> Tuple[Any, ...]:
             nome_u = sessao.get("nome_usuario", "")
@@ -806,26 +857,48 @@ def construir_interface(
                 sessao_vazia(),
                 "",
                 "",
+                "",
+                "",
+                "",
                 *formularios_limpos(),
             )
 
-        def abrir_modal_convite() -> Tuple[Any, Any]:
-            return gr.update(visible=True), gr.update(value="")
+        def abrir_modal_convite() -> Tuple[Any, Any, str]:
+            return gr.update(visible=True), gr.update(value=""), ""
 
-        def fechar_modal_convite() -> Any:
-            return gr.update(visible=False)
+        def fechar_modal_convite() -> Tuple[Any, str]:
+            return gr.update(visible=False), ""
 
         def executar_entrar_convite(codigo: str, sessao: Dict[str, Any]) -> Tuple[Any, ...]:
             u_id = sessao.get("usuario_id")
             if not u_id:
-                return renderizar_toast_html("⚠️ Sessão inválida."), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                msg_erro = "Sessão inválida."
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    renderizar_aviso_inline(msg_erro, tipo="erro"),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                )
             try:
                 auth.entrar_na_tarefa_por_convite(int(u_id), codigo)
             except Exception as exc:
-                return renderizar_toast_html(f"⚠️ {str(exc)}"), gr.update(), gr.update(), gr.update(), gr.update(visible=True), gr.update()
+                msg_erro = str(exc)
+                return (
+                    renderizar_toast_html(f"⚠️ {msg_erro}"),
+                    renderizar_aviso_inline(msg_erro, tipo="erro"),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(visible=True),
+                    gr.update(),
+                )
             h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
             return (
                 renderizar_toast_html("✅ Você entrou na tarefa com sucesso!"),
+                "",
                 h_adm,
                 h_rot,
                 saudacao,
@@ -1373,6 +1446,9 @@ def construir_interface(
             hub_saudacao,
             login_aviso,
             cadastro_aviso,
+            recuperar_aviso_identificador,
+            recuperar_aviso_codigo,
+            recuperar_aviso_senha,
         ] + saidas_formularios
         handler_login_params = {
             "fn": executar_login,
@@ -1398,7 +1474,7 @@ def construir_interface(
         handler_solicitar_params = {
             "fn": executar_solicitar_recuperacao,
             "inputs": [recuperar_identificador],
-            "outputs": [recuperar_mensagem, recuperar_passo_codigo, recuperar_passo_senha, recuperar_identificador],
+            "outputs": [recuperar_mensagem, recuperar_aviso_identificador, recuperar_passo_codigo, recuperar_passo_senha, recuperar_identificador],
         }
         btn_solicitar_recuperacao.click(**handler_solicitar_params)
         recuperar_identificador.submit(**handler_solicitar_params)
@@ -1406,7 +1482,7 @@ def construir_interface(
         handler_verificar_params = {
             "fn": executar_verificar_codigo,
             "inputs": [recuperar_identificador, recuperar_codigo],
-            "outputs": [recuperar_mensagem, recuperar_passo_senha, recuperar_codigo],
+            "outputs": [recuperar_mensagem, recuperar_aviso_codigo, recuperar_passo_senha, recuperar_codigo],
         }
         btn_verificar_codigo.click(**handler_verificar_params)
         recuperar_codigo.submit(**handler_verificar_params)
@@ -1414,15 +1490,26 @@ def construir_interface(
         btn_trocar_identificador.click(
             executar_trocar_identificador,
             inputs=[],
-            outputs=[recuperar_passo_codigo, recuperar_passo_senha, recuperar_identificador, recuperar_codigo, recuperar_nova_senha],
+            outputs=[
+                recuperar_aviso_identificador,
+                recuperar_aviso_codigo,
+                recuperar_aviso_senha,
+                recuperar_passo_codigo,
+                recuperar_passo_senha,
+                recuperar_identificador,
+                recuperar_codigo,
+                recuperar_nova_senha,
+                recuperar_confirma_senha,
+            ],
         )
 
         handler_redefinir_params = {
             "fn": executar_redefinir_senha,
             "inputs": [recuperar_identificador, recuperar_codigo, recuperar_nova_senha, recuperar_confirma_senha],
-            "outputs": [recuperar_mensagem] + saidas_formularios,
+            "outputs": [recuperar_mensagem, recuperar_aviso_senha] + saidas_formularios,
         }
         btn_redefinir_senha.click(**handler_redefinir_params)
+        recuperar_nova_senha.submit(**handler_redefinir_params)
         recuperar_confirma_senha.submit(**handler_redefinir_params)
 
         btn_logout.click(
@@ -1438,15 +1525,18 @@ def construir_interface(
                 estado_sessao,
                 login_aviso,
                 cadastro_aviso,
+                recuperar_aviso_identificador,
+                recuperar_aviso_codigo,
+                recuperar_aviso_senha,
             ] + saidas_formularios,
         )
 
-        btn_abrir_convite.click(abrir_modal_convite, inputs=[], outputs=[modal_convite, input_codigo_convite])
-        btn_cancelar_convite.click(fechar_modal_convite, inputs=[], outputs=[modal_convite])
+        btn_abrir_convite.click(abrir_modal_convite, inputs=[], outputs=[modal_convite, input_codigo_convite, modal_convite_aviso])
+        btn_cancelar_convite.click(fechar_modal_convite, inputs=[], outputs=[modal_convite, modal_convite_aviso])
         handler_convite_params = {
             "fn": executar_entrar_convite,
             "inputs": [input_codigo_convite, estado_sessao],
-            "outputs": [hub_mensagem, hub_admin_cards_html, hub_rotulador_cards_html, hub_saudacao, modal_convite, input_codigo_convite],
+            "outputs": [hub_mensagem, modal_convite_aviso, hub_admin_cards_html, hub_rotulador_cards_html, hub_saudacao, modal_convite, input_codigo_convite],
         }
         btn_entrar_convite.click(**handler_convite_params)
         input_codigo_convite.submit(**handler_convite_params)

@@ -444,4 +444,43 @@ def test_destaque_target_transicao_primeiro_video_e_mudanca_alvo() -> None:
     assert "target-transition" in perg2
 
 
+#auth inline feedback error and success alerts
+
+
+@pytest.mark.unit
+def test_renderizar_aviso_inline_sucesso_e_erro() -> None:
+    #arrange
+    from tokstance.frontend.gradio_ui import renderizar_aviso_inline
+
+    #act
+    html_erro = renderizar_aviso_inline("A nova senha e a confirmação de senha não coincidem.", tipo="erro")
+    html_sucesso = renderizar_aviso_inline("Código confirmado com sucesso.", tipo="sucesso")
+
+    #assert erro
+    assert "auth-inline-error" in html_erro
+    assert "não coincidem" in html_erro
+    assert "⚠️" in html_erro
+    assert "role='alert'" in html_erro
+
+    #assert sucesso
+    assert "auth-inline-success" in html_sucesso
+    assert "Código confirmado" in html_sucesso
+    assert "✓" in html_sucesso
+    assert "role='alert'" in html_sucesso
+
+
+@pytest.mark.unit
+def test_estilos_css_auth_inline_error_e_success() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+
+    #assert classes no css
+    assert ".auth-inline-error" in APP_CSS
+    assert "color: #9c0014 !important;" in APP_CSS
+    assert ".auth-inline-success" in APP_CSS
+    assert "color: #166534 !important;" in APP_CSS
+    assert "border-left: 4px solid #16a34a !important;" in APP_CSS
+
+
+
 

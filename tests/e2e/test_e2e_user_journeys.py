@@ -205,7 +205,11 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     pagina_navegador.locator("#input_codigo_convite input, #input_codigo_convite textarea").fill("TOK-CODIGOINEXISTENTE")
     pagina_navegador.get_by_role("button", name="Entrar na Tarefa").click()
 
-    #assert invalid invite code toast
+    #assert invalid invite code toast and inline error
+    pagina_navegador.wait_for_selector(".modal-card .auth-inline-error", timeout=8000)
+    texto_inline_modal = pagina_navegador.locator(".modal-card .auth-inline-error").inner_text()
+    assert "encontrada" in texto_inline_modal.lower() or "inválid" in texto_inline_modal.lower()
+
     pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", timeout=8000)
     texto_erro_convite = pagina_navegador.locator(".tokstance-toast").inner_text()
     assert "encontrada" in texto_erro_convite.lower() or "inválid" in texto_erro_convite.lower()
@@ -344,4 +348,86 @@ def test_e2e_criacao_de_tarefa_e_auditoria_console_administrador(
     pagina_navegador.wait_for_selector(".admin-command-center", timeout=10000)
     assert pagina_navegador.locator(".admin-kpis, .dashboard-grid, .admin-command-center").count() > 0
     assert pagina_navegador.locator(".admin-downloads").count() > 0
+
+
+@pytest.mark.e2e
+def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando_coincide(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange
+    url_base, _, caminho_dados_str = servidor_e2e
+    usuario_recup = f"user_recup_{int(time.time() * 1000) % 100000}"
+
+    #act cadastro do usuario para ter email registrado
+    _cadastrar_e_entrar_na_tarefa(pagina_navegador, url_base, usuario_recup, "")
+
+    #act logout para ir a tela inicial
+    pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
+    pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
+
+    #act solicitar recuperacao de senha
+    pagina_navegador.get_by_role("tab", name="Recuperar Senha").click()
+    pagina_navegador.get_by_label("Nome de Usuário ou E-mail Cadastrado").fill(usuario_recup)
+    pagina_navegador.get_by_role("button", name="Enviar Código de Recuperação").click()
+
+    #aguarda o campo do codigo de verificacao ficar visivel e aviso inline
+    campo_codigo = pagina_navegador.get_by_label("Código de Verificação (6 dígitos)")
+    campo_codigo.wait_for(state="visible", timeout=10000)
+    pagina_navegador.wait_for_selector(".auth-inline-success", timeout=8000)
+
+    #busca codigo no banco sqlite isolado
+    banco_path = Path(caminho_dados_str) / "tokstance.db"
+    banco = BancoDadosSQLite(banco_path)
+    linha = None
+    for _ in range(20):
+        linha = banco.consultar_um(
+            "SELECT r.codigo_recuperacao FROM recuperacao_senha r JOIN usuarios u ON u.usuario_id = r.usuario_id WHERE u.nome_usuario = ? AND r.usado = 0 ORDER BY r.recuperacao_id DESC LIMIT 1;",
+            (usuario_recup,),
+        )
+        if linha:
+            break
+        time.sleep(0.3)
+    assert linha is not None
+    cod_recup = str(linha["codigo_recuperacao"])
+
+    #act preencher codigo de verificacao
+    pagina_navegador.get_by_label("Código de Verificação (6 dígitos)").fill(cod_recup)
+    pagina_navegador.get_by_role("button", name="Verificar Código").click()
+
+    #aguarda passo de redefinicao de senha
+    pagina_navegador.get_by_label("Nova Senha", exact=True).wait_for(state="visible", timeout=10000)
+
+    #act preencher nova senha com confirmacao diferente
+    pagina_navegador.get_by_label("Nova Senha", exact=True).fill("novaSenhaForte123")
+    pagina_navegador.get_by_label("Confirmar Nova Senha", exact=True).fill("senhaDiferente456")
+    pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
+
+    #assert erro de confirmacao diferente exibido inline no card e no toast
+    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    texto_inline = pagina_navegador.locator(".auth-inline-error").inner_text()
+    assert "não coincidem" in texto_inline.lower() or "diferente" in texto_inline.lower()
+
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", timeout=8000)
+    texto_toast = pagina_navegador.locator(".tokstance-toast.toast-erro").inner_text()
+    assert "não coincidem" in texto_toast.lower() or "diferente" in texto_toast.lower()
+
+    #act corrigir a confirmacao de senha para coincidir
+    pagina_navegador.get_by_label("Confirmar Nova Senha", exact=True).fill("novaSenhaForte123")
+    pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
+
+    #assert toast de sucesso na redefinicao
+    toast_sucesso = pagina_navegador.locator(".tokstance-toast.toast-sucesso").last
+    toast_sucesso.wait_for(state="visible", timeout=10000)
+    texto_sucesso = toast_sucesso.inner_text()
+    assert "sucesso" in texto_sucesso.lower() or "redefinida" in texto_sucesso.lower()
+
+    #assert login bem sucedido com a nova senha
+    pagina_navegador.get_by_role("tab", name="Entrar").click()
+    pagina_navegador.get_by_label("Nome de Usuário").first.fill(usuario_recup)
+    pagina_navegador.get_by_label("Senha de Acesso").first.fill("novaSenhaForte123")
+    pagina_navegador.get_by_role("button", name="Entrar no Sistema").click()
+
+    pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
+    assert pagina_navegador.locator(".hub-header-bar").is_visible()
+
 
