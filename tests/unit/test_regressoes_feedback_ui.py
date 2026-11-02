@@ -817,6 +817,44 @@ def test_nome_completo_obrigatorio_e_em_maiusculas_no_banco_e_label_email_limpo(
     assert registro["email"] == "anotador@ufmg.br"
 
 
+@pytest.mark.unit
+def test_botoes_utilizam_icones_vetoriais_e_sem_emojis(servicos: Dict[str, Any]) -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+    from tokstance.frontend.gradio_ui import construir_interface, renderizar_hub_tabelas_html, renderizar_configuracao_admin_html
+
+    #assert classes css de mascaras vetoriais para botoes
+    assert ".btn-icon-copiar::before" in APP_CSS
+    assert ".btn-icon-refresh::before" in APP_CSS
+    assert ".btn-icon-alerta::before" in APP_CSS
+    assert ".btn-icon-logout::before" in APP_CSS
+    assert ".btn-icon-trash::before" in APP_CSS
+    assert "button.hub-plus-btn::before" in APP_CSS
+
+    #assert tabela do hub contem icones svg e sem emojis
+    _, html_rotulador = renderizar_hub_tabelas_html([], [{"tarefa_id": 1, "titulo": "T", "videos_concluidos": 0, "total_videos_fila": 10}])
+    assert "hub-btn-icon" in html_rotulador
+    assert "▶" not in html_rotulador
+
+    #assert configuracao admin usa icone svg e sem emoji de prancheta
+    html_config = renderizar_configuracao_admin_html({"tarefa_id": 1, "codigo_convite": "ABC12345"})
+    assert "btn-svg-icon" in html_config
+    assert "📋" not in html_config
+
+    #assert interface montada nao possui emojis em botoes de acao
+    app = construir_interface(
+        servico_auth=servicos["auth"],
+        servico_fila=servicos["fila"],
+        servico_admin=servicos["admin"],
+    )
+    for blk in app.blocks.values():
+        if getattr(blk, "get_block_name", lambda: "")() == "button":
+            valor = str(getattr(blk, "value", "") or "")
+            assert "📋" not in valor
+            assert "🔄" not in valor
+            assert "⚠️" not in valor
+
+
 
 
 

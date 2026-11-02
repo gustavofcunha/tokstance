@@ -579,21 +579,24 @@ def test_renderizar_hub_tabelas_botoes_dinamicos_progresso():
     # Caso 1: Nenhuma anotação iniciada (pos = 0)
     t_rot_zero = [{"tarefa_id": 10, "titulo": "Tarefa Nova", "videos_concluidos": 0, "total_videos_fila": 15}]
     _, h_rot_zero = renderizar_hub_tabelas_html([], t_rot_zero)
-    assert "▶ Iniciar Rotulação" in h_rot_zero
+    assert "Iniciar Rotulação" in h_rot_zero
+    assert "hub-btn-icon" in h_rot_zero
     assert "Não iniciada" in h_rot_zero
     assert "hub-table-btn primary" in h_rot_zero
 
     # Caso 2: Em andamento (0 < pos < tot)
     t_rot_meio = [{"tarefa_id": 10, "titulo": "Tarefa Em Andamento", "videos_concluidos": 7, "total_videos_fila": 15}]
     _, h_rot_meio = renderizar_hub_tabelas_html([], t_rot_meio)
-    assert "▶ Continuar Rotulação" in h_rot_meio
+    assert "Continuar Rotulação" in h_rot_meio
+    assert "hub-btn-icon" in h_rot_meio
     assert "Em andamento" in h_rot_meio
     assert "hub-table-btn in-progress" in h_rot_meio
 
     # Caso 3: Concluída (pos >= tot)
     t_rot_fim = [{"tarefa_id": 10, "titulo": "Tarefa Finalizada", "videos_concluidos": 15, "total_videos_fila": 15}]
     _, h_rot_fim = renderizar_hub_tabelas_html([], t_rot_fim)
-    assert "✓ Ver Concluída" in h_rot_fim
+    assert "Ver Concluída" in h_rot_fim
+    assert "hub-btn-icon" in h_rot_fim
     assert "Concluída" in h_rot_fim
     assert "hub-table-btn completed" in h_rot_fim
 
