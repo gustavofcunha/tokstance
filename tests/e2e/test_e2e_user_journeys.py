@@ -154,7 +154,7 @@ def test_e2e_cadastro_login_e_ingresso_via_convite(
     pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
 
     #open invite modal and join task
-    pagina_navegador.locator(".hub-plus-btn").click()
+    pagina_navegador.locator(".hub-plus-rotulador").click()
     pagina_navegador.wait_for_selector(".modal-overlay:not(.hide)", timeout=5000)
 
     pagina_navegador.locator("#input_codigo_convite input, #input_codigo_convite textarea").fill(codigo_convite)
@@ -199,7 +199,7 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
 
     #act invalid invite code
-    pagina_navegador.locator(".hub-plus-btn").click()
+    pagina_navegador.locator(".hub-plus-rotulador").click()
     pagina_navegador.wait_for_selector(".modal-overlay:not(.hide)", timeout=5000)
 
     pagina_navegador.locator("#input_codigo_convite input, #input_codigo_convite textarea").fill("TOK-CODIGOINEXISTENTE")
@@ -330,7 +330,7 @@ def test_e2e_criacao_de_tarefa_e_auditoria_console_administrador(
     pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
 
     #act open wizard
-    pagina_navegador.get_by_role("button", name="+ Criar Nova Tarefa").click()
+    pagina_navegador.locator(".hub-plus-admin").click()
     pagina_navegador.wait_for_selector(".admin-panel", timeout=10000)
 
     #act submit task with default videos
