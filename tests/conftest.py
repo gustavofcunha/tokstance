@@ -12,6 +12,11 @@ import pytest
 
 #isolate default test data directory before config import
 os.environ["TOKSTANCE_DATA_DIR"] = tempfile.mkdtemp(prefix="tokstance_testes_")
+#configure browser library paths if present
+_ext_lib1 = Path.home() / ".local/lib/playwright_deps/usr/lib/x86_64-linux-gnu"
+_ext_lib2 = Path.home() / ".local/lib/playwright_deps/lib/x86_64-linux-gnu"
+if _ext_lib1.exists():
+    os.environ["LD_LIBRARY_PATH"] = f"{_ext_lib1}:{_ext_lib2}:" + os.environ.get("LD_LIBRARY_PATH", "")
 
 from tokstance.config import CaminhosDados, FUSO_BRT, resolver_caminhos_dados
 

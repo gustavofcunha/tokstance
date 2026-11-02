@@ -411,7 +411,11 @@ def construir_interface(
                             <p>Digite o código de convite compartilhado pelo administrador.</p>
                         </div>
                         """)
-                        input_codigo_convite = gr.Textbox(label="Código de Convite", placeholder="Ex: TOKSTANCE-2026")
+                        input_codigo_convite = gr.Textbox(
+                            elem_id="input_codigo_convite",
+                            label="Código de Convite",
+                            placeholder="Ex: TOKSTANCE-2026",
+                        )
                         with gr.Row(elem_classes="compact-actions"):
                             btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes="ufmg-btn", scale=0, min_width=160)
                             btn_cancelar_convite = gr.Button("Cancelar", elem_classes="error-btn", scale=0, min_width=110)
