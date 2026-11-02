@@ -121,3 +121,36 @@ def test_validar_opcoes_tarefa_rejeita_menos_de_duas_opcoes_ou_caractere_pipe() 
 
     with pytest.raises(ValueError, match="caractere '|'"):
         validar_opcoes_tarefa(["Opcao A", "Opcao|B"])
+
+
+@pytest.mark.unit
+def test_cadastro_usuario_com_nome_completo_persiste_maiusculo_no_banco() -> None:
+    #arrange
+    from tokstance.backend.repositories.database import BancoDadosSQLite
+    from tokstance.backend.repositories.user_repo import RepositorioUsuarios
+    from tokstance.backend.services.auth_service import ServicoAutenticacao
+    import tempfile
+    from pathlib import Path
+
+    pasta = tempfile.mkdtemp(prefix="test_auth_nome_")
+    banco = BancoDadosSQLite(Path(pasta) / "tokstance.db")
+    repo_u = RepositorioUsuarios(banco)
+    auth = ServicoAutenticacao(banco, repo_usuarios=repo_u)
+
+    #act cadastro com letras minusculas
+    dados = auth.cadastrar_usuario(
+        nome_usuario="joao_pesquisa",
+        senha="SenhaForte123",
+        email="joao@dcc.ufmg.br",
+        nome_completo="joão augusto pereira da silva",
+    )
+
+    #assert retorno e banco gravados em maiusculas
+    assert dados["nome_completo"] == "JOÃO AUGUSTO PEREIRA DA SILVA"
+    registro = banco.consultar_um(
+        "SELECT nome_usuario, nome_completo, email FROM usuarios WHERE nome_usuario = ?;",
+        ("joao_pesquisa",),
+    )
+    assert registro is not None
+    assert registro["nome_completo"] == "JOÃO AUGUSTO PEREIRA DA SILVA"
+    assert registro["email"] == "joao@dcc.ufmg.br"

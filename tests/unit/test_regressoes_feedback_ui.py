@@ -661,15 +661,22 @@ def test_interface_cadastro_valida_requisitos_complexidade_senha_e_exibe_aviso(
             break
     assert fn_cadastro is not None
 
+    #testa cadastro com nome completo vazio
+    saida_sem_nome = fn_cadastro("", "novo_usuario", "novo@ufmg.br", "SenhaForte123", "SenhaForte123", "")
+    toast_sem_nome = saida_sem_nome[2]
+    aviso_sem_nome = saida_sem_nome[8]
+    assert "nome completo" in toast_sem_nome.lower()
+    assert "nome completo" in aviso_sem_nome.lower()
+
     #testa cadastro com senha sem numeros
-    saida_sn = fn_cadastro("novo_usuario", "novo@ufmg.br", "somenteletras", "somenteletras", "")
+    saida_sn = fn_cadastro("NOME COMPLETO", "novo_usuario", "novo@ufmg.br", "somenteletras", "somenteletras", "")
     toast_sn = saida_sn[2]
     aviso_sn = saida_sn[8]
     assert "ao menos uma letra e um número" in toast_sn
     assert "ao menos uma letra e um número" in aviso_sn
 
     #testa cadastro com senha vazia
-    saida_vazia = fn_cadastro("novo_usuario", "novo@ufmg.br", "", "", "")
+    saida_vazia = fn_cadastro("NOME COMPLETO", "novo_usuario", "novo@ufmg.br", "", "", "")
     toast_vazia = saida_vazia[2]
     aviso_vazia = saida_vazia[8]
     assert "obrigatória" in toast_vazia
@@ -776,6 +783,39 @@ def test_definicao_e_redefinicao_senha_preserva_tarefas_admin_rotulador_e_progre
     #autentica usando o e-mail em maiusculas para checar preservacao total
     dados_login_email = auth.autenticar_usuario("LIDER@UFMG.BR", "NovaSenhaLab456", permitir_reassumir=True)
     assert dados_login_email["tarefas_rotulador"][0]["videos_concluidos"] == 3
+
+
+@pytest.mark.unit
+def test_nome_completo_obrigatorio_e_em_maiusculas_no_banco_e_label_email_limpo(servicos: Dict[str, Any]) -> None:
+    #arrange
+    auth = servicos["auth"]
+    banco = auth.banco
+    from tokstance.frontend.theme import APP_CSS
+
+    #assert css para campo de nome em maiusculo
+    assert ".campo-nome-maiusculo input" in APP_CSS
+    assert "text-transform: uppercase !important;" in APP_CSS
+
+    #act cadastro com nome completo em minusculas e espacos
+    usuario = auth.cadastrar_usuario(
+        nome_usuario="anotador_maiusculo",
+        senha="SenhaValida123",
+        email="anotador@ufmg.br",
+        nome_completo="  maria silva dos santos  ",
+    )
+
+    #assert retorno do servico com nome em maiusculas
+    assert usuario["nome_completo"] == "MARIA SILVA DOS SANTOS"
+
+    #assert gravacao direta no banco de dados sqlite em maiusculas
+    registro = banco.consultar_um(
+        "SELECT nome_usuario, nome_completo, email FROM usuarios WHERE nome_usuario = ?;",
+        ("anotador_maiusculo",),
+    )
+    assert registro is not None
+    assert registro["nome_completo"] == "MARIA SILVA DOS SANTOS"
+    assert registro["email"] == "anotador@ufmg.br"
+
 
 
 

@@ -2122,6 +2122,13 @@ APP_CSS = """
 
     /* Ocultar footer do Gradio */
     footer, .footer { display: none !important; }
+
+    /* campo de nome completo em maiusculas */
+    .campo-nome-maiusculo input,
+    .uppercase-input input,
+    input.campo-nome-maiusculo {
+        text-transform: uppercase !important;
+    }
 """
 
 

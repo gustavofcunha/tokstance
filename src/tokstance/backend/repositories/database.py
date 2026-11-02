@@ -13,6 +13,7 @@ DDL_ESQUEMA_RELACIONAL = (
     CREATE TABLE IF NOT EXISTS usuarios (
         usuario_id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome_usuario TEXT NOT NULL UNIQUE,
+        nome_completo TEXT NOT NULL DEFAULT '',
         email TEXT NOT NULL DEFAULT '',
         senha_hash TEXT NOT NULL,
         criado_em TEXT NOT NULL
@@ -199,10 +200,12 @@ class BancoDadosSQLite:
         with self.conectar() as conexao:
             for comando_ddl in DDL_ESQUEMA_RELACIONAL:
                 conexao.execute(comando_ddl)
-            # Migracao incremental para coluna email em usuarios se ainda nao existir
+            #migracao incremental para colunas email e nome_completo em usuarios se ainda nao existirem
             cols_usuarios = [r[1] for r in conexao.execute("PRAGMA table_info(usuarios);").fetchall()]
             if "email" not in cols_usuarios:
                 conexao.execute("ALTER TABLE usuarios ADD COLUMN email TEXT NOT NULL DEFAULT '';")
+            if "nome_completo" not in cols_usuarios:
+                conexao.execute("ALTER TABLE usuarios ADD COLUMN nome_completo TEXT NOT NULL DEFAULT '';")
 
     def executar(self, sql: str, parametros: Sequence[Any] = ()) -> int:
         """Executa um comando parametrizado de escrita e retorna o id inserido ou linhas afetadas."""
