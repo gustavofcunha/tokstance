@@ -442,14 +442,15 @@ APP_CSS = """
     }
 
     button.error-btn {
-        background: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
-        color: #334155 !important;
-        font-weight: 600 !important;
+        background: #9c0014 !important;
+        border: 1px solid #7a0010 !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
         font-size: 14px !important;
         padding: 10px 18px !important;
         border-radius: 8px !important;
         cursor: pointer !important;
+        box-shadow: 0 2px 4px rgba(156, 0, 20, 0.2) !important;
         transition: all 0.2s ease !important;
         min-height: 42px !important;
         display: inline-flex !important;
@@ -459,9 +460,11 @@ APP_CSS = """
         width: auto !important;
     }
     button.error-btn:hover {
-        background: #f8fafc !important;
-        border-color: #9c0014 !important;
-        color: #9c0014 !important;
+        background: #7a0010 !important;
+        border-color: #5c000c !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(156, 0, 20, 0.3) !important;
+        transform: translateY(-1px) !important;
     }
 
     /* =========================================================================

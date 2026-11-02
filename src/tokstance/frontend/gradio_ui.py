@@ -395,17 +395,18 @@ def construir_interface(
                 with gr.Row(elem_classes="hub-header-bar"):
                     hub_saudacao = gr.HTML()
                     with gr.Row(elem_classes="compact-actions"):
-                        btn_ir_criar_tarefa = gr.Button("+ Criar Nova Tarefa", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=170)
                         btn_logout = gr.Button("Encerrar Sessão", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=150)
 
                 with gr.Row(elem_classes="hub-two-col"):
                     with gr.Column(scale=1, min_width=0, elem_classes="hub-section-box"):
-                        gr.HTML("""
-                        <div class="hub-box-header">
-                            <h3>Tarefas sob sua Administração</h3>
-                            <p>Rodadas de anotação criadas e coordenadas por você</p>
-                        </div>
-                        """)
+                        with gr.Row(elem_classes="hub-box-header-row"):
+                            gr.HTML("""
+                            <div class="hub-box-header">
+                                <h3>Tarefas sob sua Administração</h3>
+                                <p>Rodadas de anotação criadas e coordenadas por você</p>
+                            </div>
+                            """)
+                            btn_ir_criar_tarefa = gr.Button("+", elem_id="btn_ir_criar_tarefa", elem_classes=["ufmg-btn", "hub-plus-btn", "hub-plus-admin"], scale=0, min_width=44)
                         hub_admin_cards_html = gr.HTML()
 
                     with gr.Column(scale=1, min_width=0, elem_classes="hub-section-box"):
@@ -416,7 +417,7 @@ def construir_interface(
                                 <p>Fila individual de vídeos atribuídos para sua análise</p>
                             </div>
                             """)
-                            btn_abrir_convite = gr.Button("+", elem_classes=["ufmg-btn", "hub-plus-btn"], scale=0, min_width=44)
+                            btn_abrir_convite = gr.Button("+", elem_id="btn_abrir_modal_convite", elem_classes=["ufmg-btn", "hub-plus-btn", "hub-plus-rotulador"], scale=0, min_width=44)
                         hub_rotulador_cards_html = gr.HTML()
 
                 #invite code modal
