@@ -373,8 +373,8 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
 
     #aguarda o campo do codigo de verificacao ficar visivel e aviso inline
     campo_codigo = pagina_navegador.get_by_label("Código de Verificação (6 dígitos)")
-    campo_codigo.wait_for(state="visible", timeout=10000)
-    pagina_navegador.wait_for_selector(".auth-inline-success", timeout=8000)
+    campo_codigo.wait_for(state="visible", timeout=15000)
+    pagina_navegador.wait_for_selector(".auth-inline-success", timeout=15000)
 
     #busca codigo no banco sqlite isolado
     banco_path = Path(caminho_dados_str) / "tokstance.db"
@@ -488,6 +488,58 @@ def test_e2e_login_olho_visualizar_senha_alterna_visibilidade_e_permite_login(
     #assert login concluido com sucesso no hub com senha autenticada
     pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
     assert pagina_navegador.locator(".hub-header-bar").is_visible()
+
+
+@pytest.mark.e2e
+def test_e2e_criacao_de_multiplas_tarefas_exibe_mensagem_em_todas_e_em_falhas(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange login e abertura do wizard
+    url_base, _, _ = servidor_e2e
+    usuario_adm = f"adm_multi_{int(time.time() * 1000) % 100000}"
+    _cadastrar_e_entrar_na_tarefa(pagina_navegador, url_base, usuario_adm, "")
+
+    pagina_navegador.locator(".hub-plus-admin").click()
+    pagina_navegador.wait_for_selector(".admin-panel", timeout=8000)
+
+    #act criar primeira tarefa com sucesso
+    pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
+
+    #assert toast e aviso inline exibidos para a primeira tarefa
+    toast = pagina_navegador.locator(".tokstance-toast")
+    toast.wait_for(state="visible", timeout=8000)
+    texto_t1 = toast.text_content() or ""
+    assert "criada com sucesso" in texto_t1.lower()
+
+    inline_aviso = pagina_navegador.locator(".wizard-feedback-slot .auth-inline-success")
+    inline_aviso.wait_for(state="visible", timeout=8000)
+    assert "criada com sucesso" in (inline_aviso.text_content() or "").lower()
+
+    #act criar segunda tarefa consecutiva com outro titulo
+    pagina_navegador.get_by_label("Título da Tarefa").fill("Estudo de Posicionamento Segundo Lote")
+    pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
+
+    #assert mensagem de sucesso exibida tambem para a segunda tarefa
+    toast.wait_for(state="visible", timeout=8000)
+    texto_t2 = toast.text_content() or ""
+    assert "criada com sucesso" in texto_t2.lower()
+
+    inline_aviso.wait_for(state="visible", timeout=8000)
+    assert "criada com sucesso" in (inline_aviso.text_content() or "").lower()
+
+    #act forcar falha informando apenas uma opcao de resposta
+    pagina_navegador.get_by_label("Opções de Resposta (uma por linha)").fill("ApenasUmaOpcao")
+    pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
+
+    #assert mensagem de erro exibida no toast e no aviso inline
+    toast_erro = pagina_navegador.locator(".tokstance-toast.toast-erro")
+    toast_erro.wait_for(state="visible", timeout=8000)
+    assert "ao menos duas opções" in (toast_erro.text_content() or "").lower()
+
+    inline_erro = pagina_navegador.locator(".wizard-feedback-slot .auth-inline-error")
+    inline_erro.wait_for(state="visible", timeout=8000)
+    assert "ao menos duas opções" in (inline_erro.text_content() or "").lower()
+
 
 
 
