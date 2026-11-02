@@ -359,3 +359,27 @@ def test_workspace_rotulacao_widescreen_sem_rolagem_vertical_e_player_ampliado()
     assert "overflow-y: hidden !important;" in APP_CSS
     assert "body:has(.labeler-panel:not(.hide):not(.hidden))" in APP_CSS
 
+
+#bold question styling and regular alternative options
+
+
+@pytest.mark.unit
+def test_pergunta_em_negrito_e_alternativas_sem_negrito() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+    from tokstance.frontend.components import video_outputs
+
+    fila = [{"target": "AlvoTeste", "url": "https://www.tiktok.com/@u/video/1"}]
+
+    #act
+    _, _, _, pergunta_md, _ = video_outputs(fila, 0)
+
+    #assert
+    assert "target-question" in pergunta_md
+    assert "<strong>" in pergunta_md
+    assert ".target-question" in APP_CSS
+    assert "font-weight: 700 !important;" in APP_CSS
+    assert ".wrap-radio label" in APP_CSS
+    assert "font-weight: 400 !important;" in APP_CSS
+
+

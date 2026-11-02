@@ -1322,13 +1322,33 @@ APP_CSS = """
         pointer-events: none !important;
     }
 
+    .target-question {
+        font-weight: 700 !important;
+        font-size: 14.5px !important;
+        line-height: 1.4 !important;
+        color: #0f172a !important;
+        margin-bottom: 6px !important;
+        padding: 8px 12px !important;
+        background: #fff8f8 !important;
+        border: 1px solid #fed7da !important;
+        border-radius: 6px !important;
+    }
+    .target-question, .target-question strong, .target-question b, .target-question * {
+        font-weight: 700 !important;
+    }
+
     .wrap-radio form, .wrap-radio > div, .wrap-radio fieldset { display: flex !important; flex-direction: column !important; width: 100% !important; }
     .wrap-radio label {
         display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;
         background: #ffffff !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important; padding: 12px 16px !important; margin-bottom: 10px !important;
-        box-sizing: border-box !important; cursor: pointer !important; font-size: 15px !important; font-weight: 600 !important;
+        box-sizing: border-box !important; cursor: pointer !important; font-size: 15px !important; font-weight: 400 !important;
         transition: all 0.15s ease !important;
+    }
+    .wrap-radio label span,
+    .wrap-radio label div,
+    .wrap-radio span {
+        font-weight: 400 !important;
     }
     .wrap-radio label:hover { background: #f8fafc !important; border-color: #9c0014 !important; }
     .wrap-radio label:has(input:checked) {
@@ -1671,6 +1691,12 @@ APP_CSS = """
         padding: 7px 12px !important;
         margin-bottom: 3px !important;
         font-size: 13.5px !important;
+        font-weight: 400 !important;
+    }
+    .wrap-radio label span,
+    .wrap-radio label div,
+    .wrap-radio span {
+        font-weight: 400 !important;
     }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
     body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer { display: none !important; }
