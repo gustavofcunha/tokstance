@@ -903,6 +903,98 @@ def test_workspace_layout_horizontal_e_proporcoes_cards() -> None:
     assert "margin-top: 26px !important;" in APP_CSS
 
 
+@pytest.mark.unit
+def test_admin_console_remove_visoes_logins_e_sessoes() -> None:
+    #arrange
+    from tokstance.frontend.components import agreement_summary
+
+    #act
+    html = agreement_summary(
+        agreement_data={},
+        assignments_df=pd.DataFrame(),
+        results_df=pd.DataFrame(),
+        errors_df=pd.DataFrame(),
+        videos_df=pd.DataFrame(),
+        logs_df=pd.DataFrame(),
+        version_name="rodada_teste",
+    )
+
+    #assert
+    assert "Logins por dia" not in html
+    assert "Sessões por anotador" not in html
+    assert "Média geral:" not in html
+
+
+@pytest.mark.unit
+def test_admin_service_retorna_distribuicao_por_target(servicos: Dict[str, Any]) -> None:
+    #arrange
+    auth = servicos["auth"]
+    admin = servicos["admin"]
+    u = auth.cadastrar_usuario("adm_targets", "SenhaForte123")
+    pool = pd.DataFrame(
+        [
+            {"id": "v1", "url": "https://tiktok.com/1", "target": "Escala 6x1", "video_description": "d1", "voice_to_text": "t1", "video_duration": "10.0"},
+            {"id": "v2", "url": "https://tiktok.com/2", "target": "Escala 6x1", "video_description": "d2", "voice_to_text": "t2", "video_duration": "10.0"},
+            {"id": "v3", "url": "https://tiktok.com/3", "target": "Economia", "video_description": "d3", "voice_to_text": "t3", "video_duration": "10.0"},
+            {"id": "v4", "url": "https://tiktok.com/4", "target": "Economia", "video_description": "d4", "voice_to_text": "t4", "video_duration": "10.0"},
+        ]
+    )
+
+    #act: distribui 2 principais e 2 vao para reserva
+    tarefa = admin.criar_nova_tarefa(
+        usuario_administrador_id=int(u["usuario_id"]),
+        pool_videos=pool,
+        quantidade_videos_principal=2,
+    )
+    metricas = admin.obter_metricas_operacionais(tarefa_id=int(tarefa["tarefa_id"]))
+
+    #assert
+    assert metricas["total_videos_acervo"] == 4
+    assert metricas["total_videos_principais"] == 2
+    assert metricas["total_videos_reservas"] == 2
+    distribuicao = metricas["distribuicao_targets"]
+    assert len(distribuicao) == 2
+    alvos = {d["target"]: d for d in distribuicao}
+    assert "Escala 6x1" in alvos
+    assert "Economia" in alvos
+    assert alvos["Escala 6x1"]["total"] == 2
+    assert alvos["Economia"]["total"] == 2
+    assert alvos["Escala 6x1"]["percentual"] == 50.0
+
+
+@pytest.mark.unit
+def test_renderizar_visao_geral_acervo_html() -> None:
+    #arrange
+    from tokstance.frontend.components import renderizar_visao_geral_acervo_html
+
+    metricas = {
+        "total_videos_acervo": 60,
+        "total_videos_principais": 30,
+        "total_videos_reservas": 30,
+        "total_atribuicoes": 42,
+        "distribuicao_targets": [
+            {"target": "Reforma Tributária", "principais": 15, "reservas": 15, "total": 30, "percentual": 50.0},
+            {"target": "Escala 6x1", "principais": 15, "reservas": 15, "total": 30, "percentual": 50.0},
+        ],
+    }
+
+    #act
+    html = renderizar_visao_geral_acervo_html(metricas)
+
+    #assert
+    assert "admin-collection-overview" in html
+    assert "Visão Geral do Acervo e Distribuição Temática" in html
+    assert "Total no Acervo" in html
+    assert "60" in html
+    assert "Vídeos a Distribuir" in html
+    assert "Vídeos de Reserva" in html
+    assert "Reforma Tributária" in html
+    assert "Escala 6x1" in html
+    assert "target-distribution-table" in html
+    assert "Total Geral" in html
+
+
+
 
 
 

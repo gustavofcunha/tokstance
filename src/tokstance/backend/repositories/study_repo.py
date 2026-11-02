@@ -184,31 +184,33 @@ class RepositorioEstudo:
         if pool_norm.empty:
             raise ValueError("O conjunto de vídeos da tarefa não pode estar vazio.")
 
+        total_disponivel = len(pool_norm)
+        qtd_distribuir = (
+            int(quantidade_videos_principal)
+            if quantidade_videos_principal is not None
+            else total_disponivel
+        )
+        if qtd_distribuir <= 0:
+            raise ValueError(
+                "A quantidade de vídeos a distribuir (vídeos principais) deve ser maior que zero."
+            )
+        if qtd_distribuir > total_disponivel:
+            raise ValueError(
+                f"A quantidade de vídeos a distribuir ({qtd_distribuir}) não pode ser maior que o total disponível na coleção ({total_disponivel})."
+            )
+
+        principais_df, excedente_reserva = dividir_videos_principal_e_reserva(
+            pool_norm, qtd_distribuir
+        )
         if videos_reserva_explicitos is not None:
             res_norm = _normalizar_dataframe_videos(videos_reserva_explicitos)
-            if (
-                quantidade_videos_principal is not None
-                and 0 < int(quantidade_videos_principal) < len(pool_norm)
-            ):
-                principais_df = pool_norm.iloc[: int(quantidade_videos_principal)].copy()
-                excedente = pool_norm.iloc[int(quantidade_videos_principal) :].copy()
-                reservas_df = pd.concat([excedente, res_norm], ignore_index=True)
-            else:
-                principais_df = pool_norm
-                reservas_df = res_norm
+            reservas_df = (
+                pd.concat([excedente_reserva, res_norm], ignore_index=True)
+                if not excedente_reserva.empty
+                else res_norm
+            )
         else:
-            qtd_principal = (
-                int(quantidade_videos_principal)
-                if quantidade_videos_principal is not None
-                else len(pool_norm)
-            )
-            if qtd_principal <= 0:
-                raise ValueError(
-                    "A quantidade de vídeos principais deve ser maior que zero."
-                )
-            principais_df, reservas_df = dividir_videos_principal_e_reserva(
-                pool_norm, qtd_principal
-            )
+            reservas_df = excedente_reserva
 
         if principais_df.empty:
             raise ValueError("Nenhum vídeo principal selecionado para a tarefa.")

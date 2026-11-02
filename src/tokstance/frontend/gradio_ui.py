@@ -32,6 +32,7 @@ from tokstance.frontend.components import (
     generate_progress_bar,
     render_video_card,
     renderizar_toast_html,
+    renderizar_visao_geral_acervo_html,
     video_outputs,
 )
 from tokstance.frontend.theme import (
@@ -597,10 +598,11 @@ def construir_interface(
                                     elem_classes=["wizard-file-upload"],
                                 )
                                 wizard_qtd_principal = gr.Number(
-                                    label="Vídeos no pool principal",
-                                    info="0 = automático (inclui todos os vídeos da coleção)",
-                                    value=0,
+                                    label="Quantidade de vídeos a distribuir",
+                                    info="O restante dos vídeos da coleção será direcionado para a reserva técnica.",
+                                    value=30,
                                     precision=0,
+                                    minimum=1,
                                     elem_classes=["wizard-number-input"],
                                 )
 
@@ -661,8 +663,9 @@ def construir_interface(
                         btn_excluir_tarefa_admin = gr.Button("Excluir esta Tarefa", elem_classes=["ufmg-btn", "hub-btn", "btn-icon-trash"], scale=0, min_width=170)
                         btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
 
+                #primeira visao oficial: visao geral do acervo e distribuicao por target
+                admin_visao_acervo_html = gr.HTML(elem_classes="admin-collection-overview-container")
                 admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")
-                admin_status_view = gr.Markdown(elem_classes="admin-status")
 
                 gr.Markdown("### Dados Coletados e Análise Operacional")
                 admin_dashboard_html = gr.HTML()
@@ -1087,7 +1090,24 @@ def construir_interface(
                     msg = "⚠️ Arquivos de vídeo padrão não encontrados no servidor."
                     return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline("Arquivos de vídeo padrão não encontrados no servidor.", tipo="erro")
 
-            qtd_p = int(qtd_principal) if qtd_principal and int(qtd_principal) > 0 else None
+            total_disponivel = len(pool_videos)
+
+            #verificacoes de integridade da quantidade de videos a distribuir
+            try:
+                qtd_distribuir = int(qtd_principal) if qtd_principal is not None else total_disponivel
+            except (ValueError, TypeError):
+                msg = "⚠️ Quantidade de vídeos a distribuir inválida."
+                return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline("Quantidade de vídeos a distribuir inválida.", tipo="erro")
+
+            if qtd_distribuir <= 0:
+                msg = "⚠️ A quantidade de vídeos a distribuir deve ser maior que zero."
+                return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline("A quantidade de vídeos a distribuir deve ser maior que zero.", tipo="erro")
+
+            if qtd_distribuir > total_disponivel:
+                msg = f"⚠️ A quantidade de vídeos a distribuir ({qtd_distribuir}) não pode ser maior que o total disponível ({total_disponivel})."
+                return renderizar_toast_html(msg), gr.update(), renderizar_aviso_inline(f"A quantidade de vídeos a distribuir ({qtd_distribuir}) não pode ser maior que o total disponível na coleção ({total_disponivel}).", tipo="erro")
+
+            qtd_p = qtd_distribuir
 
             try:
                 tarefa = admin.criar_nova_tarefa(
@@ -1402,13 +1422,7 @@ def construir_interface(
             tarefa_meta = repo_e.buscar_tarefa_por_id(t_id) or {}
             titulo_tela = f"## Console de Administração: **{escape(str(tarefa_meta.get('titulo', f'Tarefa #{t_id}')))}**"
             config_view = renderizar_configuracao_admin_html(tarefa_meta)
-
-            status_msg = (
-                f"{metricas['total_videos_principais']} vídeos principais | "
-                f"{metricas['total_videos_reservas']} vídeos reserva | "
-                f"{metricas['total_anotacoes']} anotações registradas | "
-                f"{metricas['total_atribuicoes']} atribuições na rodada."
-            )
+            visao_acervo_html = renderizar_visao_geral_acervo_html(metricas, tarefa_meta)
 
             df_atrib = repo_e.carregar_atribuicoes_tarefa_df(t_id)
             df_anot = repo_e.carregar_anotacoes_tarefa_df(t_id)
@@ -1441,7 +1455,7 @@ def construir_interface(
                 gr.update(visible=True),  #painel_admin
                 titulo_tela,
                 config_view,
-                status_msg,
+                visao_acervo_html,
                 dashboard_html,
                 gr.update(value=res_path),
                 gr.update(value=log_path),
@@ -1508,7 +1522,7 @@ def construir_interface(
         saidas_hub = [
             painel_hub, painel_wizard, painel_rotulador, painel_admin, painel_aviso_sensivel, painel_controles_anotacao,
             rotulador_radio, rotulador_cabecalho, rotulador_video_html, rotulador_pergunta_html, rotulador_progresso,
-            admin_titulo_tarefa, admin_configuracao_view, admin_status_view, admin_dashboard_html,
+            admin_titulo_tarefa, admin_configuracao_view, admin_visao_acervo_html, admin_dashboard_html,
             admin_download_resultados, admin_download_logs, admin_download_erros, admin_download_concordancia,
             admin_tabela_atribuicoes,
             hub_admin_cards_html, hub_rotulador_cards_html, hub_saudacao, toast_host, estado_sessao,
@@ -1705,6 +1719,37 @@ def construir_interface(
                 hub_saudacao,
                 wizard_aviso,
             ],
+        )
+
+        def atualizar_qtd_videos_upload(arquivo_upload: Any) -> Any:
+            """Atualiza dinamicamente a contagem pre-preenchida de videos a distribuir conforme upload."""
+            if arquivo_upload is None:
+                return gr.update(
+                    value=30,
+                    info="O restante dos vídeos da coleção padrão será direcionado para a reserva técnica.",
+                )
+            try:
+                caminho = getattr(arquivo_upload, "name", str(arquivo_upload))
+                df = pd.read_csv(caminho, dtype=str).fillna("")
+                total = len(df.drop_duplicates(subset=["id"] if "id" in df.columns else None))
+                if total <= 0:
+                    return gr.update(
+                        value=0,
+                        info="⚠️ Arquivo CSV vazio ou sem registros válidos.",
+                    )
+                return gr.update(
+                    value=total,
+                    info=f"Coleção carregada com {total} vídeos. O restante irá para a reserva técnica.",
+                )
+            except Exception as exc:
+                return gr.update(
+                    info=f"⚠️ Erro ao processar CSV: {str(exc)}",
+                )
+
+        wizard_arquivo_videos.change(
+            atualizar_qtd_videos_upload,
+            inputs=[wizard_arquivo_videos],
+            outputs=[wizard_qtd_principal],
         )
 
         btn_atualizar_pares.click(

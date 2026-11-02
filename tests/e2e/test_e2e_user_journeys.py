@@ -398,7 +398,9 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
 
     #act solicitar recuperacao de senha
     pagina_navegador.get_by_role("tab", name="Recuperar Senha").click()
-    pagina_navegador.get_by_label("Nome de Usuário ou E-mail Cadastrado").fill(usuario_recup)
+    campo_ident = pagina_navegador.get_by_label("Nome de Usuário ou E-mail Cadastrado")
+    campo_ident.wait_for(state="visible", timeout=8000)
+    campo_ident.fill(usuario_recup)
     pagina_navegador.get_by_role("button", name="Enviar Código de Recuperação").click()
 
     #aguarda o campo do codigo de verificacao ficar visivel e aviso inline
@@ -648,11 +650,13 @@ def test_e2e_redefinicao_senha_preserva_tarefas_administradas_atribuidas_e_progr
 
     #solicita recuperacao de senha
     pagina_navegador.get_by_role("tab", name="Recuperar Senha").click()
-    pagina_navegador.get_by_label("Nome de Usuário ou E-mail Cadastrado").fill(email)
+    campo_ident_pres = pagina_navegador.get_by_label("Nome de Usuário ou E-mail Cadastrado")
+    campo_ident_pres.wait_for(state="visible", timeout=8000)
+    campo_ident_pres.fill(usuario)
     pagina_navegador.get_by_role("button", name="Enviar Código de Recuperação").click()
 
     campo_codigo = pagina_navegador.get_by_label("Código de Verificação (6 dígitos)")
-    campo_codigo.wait_for(state="visible", timeout=15000)
+    campo_codigo.wait_for(state="visible", timeout=10000)
 
     #obtem codigo gerado no banco de dados sqlite
     banco = BancoDadosSQLite(Path(caminho_banco) / "tokstance.db")
