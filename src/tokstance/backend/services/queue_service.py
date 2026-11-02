@@ -4,6 +4,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from tokstance.backend.domain.replacements import (
     aplicar_substituicoes_reserva,
     ler_erros_atribuicoes,
@@ -44,29 +46,42 @@ class ServicoFilaAnotacao:
         if tarefa is None:
             raise ValueError(f"Tarefa {tarefa_id} não encontrada.")
 
-        fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
-            int(tarefa_id), rotulador=nome_limpo
-        )
+        u_info = self.repo_usuarios.buscar_por_identificador(nome_limpo)
         vaga_rot = ""
-        u_info = self.repo_usuarios.buscar_por_nome_usuario(nome_limpo)
+        email_u = str(u_info.get("email", "") or "").strip() if u_info else ""
         if u_info:
             membro = self.repo_usuarios.buscar_membro_tarefa(
                 int(tarefa_id), int(u_info["usuario_id"]), papel="rotulador"
             )
             if membro and membro.get("vaga_atribuida"):
                 vaga_rot = str(membro["vaga_atribuida"]).strip()
-                if fila_df.empty and vaga_rot:
-                    fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
-                        int(tarefa_id), rotulador=vaga_rot
-                    )
 
-        anotadas_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
-            int(tarefa_id), rotulador=nome_limpo
-        )
-        if anotadas_df.empty and vaga_rot:
-            anotadas_df = self.repo_estudo.carregar_anotacoes_tarefa_df(
-                int(tarefa_id), rotulador=vaga_rot
-            )
+        rotuladores_candidatos = [nome_limpo]
+        if vaga_rot and vaga_rot.lower() != nome_limpo.lower():
+            rotuladores_candidatos.append(vaga_rot)
+        if email_u and email_u.lower() not in [c.lower() for c in rotuladores_candidatos]:
+            rotuladores_candidatos.append(email_u)
+
+        quadros_fila = []
+        for rot_cand in rotuladores_candidatos:
+            df_c = self.repo_estudo.carregar_atribuicoes_tarefa_df(int(tarefa_id), rotulador=rot_cand)
+            if not df_c.empty:
+                quadros_fila.append(df_c)
+        if quadros_fila:
+            fila_df = pd.concat(quadros_fila, ignore_index=True).drop_duplicates(subset=["assignment_id"])
+        else:
+            fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(int(tarefa_id), rotulador=nome_limpo)
+
+        quadros_anot = []
+        for rot_cand in rotuladores_candidatos:
+            df_a = self.repo_estudo.carregar_anotacoes_tarefa_df(int(tarefa_id), rotulador=rot_cand)
+            if not df_a.empty:
+                quadros_anot.append(df_a)
+        if quadros_anot:
+            anotadas_df = pd.concat(quadros_anot, ignore_index=True).drop_duplicates(subset=["assignment_id"])
+        else:
+            anotadas_df = self.repo_estudo.carregar_anotacoes_tarefa_df(int(tarefa_id), rotulador=nome_limpo)
+
         erros_df = self.repo_estudo.carregar_erros_videos_tarefa_df(int(tarefa_id))
 
         ids_anotados = (
@@ -76,8 +91,9 @@ class ServicoFilaAnotacao:
         )
         ids_erros_sem_reserva: set[str] = set()
         if not erros_df.empty:
+            alvos_erros = {c.lower() for c in rotuladores_candidatos}
             erros_rotulador = erros_df[
-                erros_df["labeler"].astype(str).eq(nome_limpo)
+                erros_df["labeler"].astype(str).str.lower().isin(alvos_erros)
                 & erros_df["replacement_assignment_id"].astype(str).str.strip().eq("")
             ]
             ids_erros_sem_reserva = set(
@@ -182,19 +198,32 @@ class ServicoFilaAnotacao:
             raise ValueError("Selecione uma opção de resposta antes de salvar.")
 
         nome_limpo = validar_nome_usuario(nome_usuario)
-        fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
-            int(tarefa_id), rotulador=nome_limpo
-        )
-        if fila_df.empty:
-            u_info = self.repo_usuarios.buscar_por_nome_usuario(nome_limpo)
-            if u_info:
-                membro = self.repo_usuarios.buscar_membro_tarefa(
-                    int(tarefa_id), int(u_info["usuario_id"]), papel="rotulador"
-                )
-                if membro and membro.get("vaga_atribuida"):
-                    fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(
-                        int(tarefa_id), rotulador=str(membro["vaga_atribuida"]).strip()
-                    )
+        u_info = self.repo_usuarios.buscar_por_identificador(nome_limpo)
+        vaga_rot = ""
+        email_u = str(u_info.get("email", "") or "").strip() if u_info else ""
+        if u_info:
+            membro = self.repo_usuarios.buscar_membro_tarefa(
+                int(tarefa_id), int(u_info["usuario_id"]), papel="rotulador"
+            )
+            if membro and membro.get("vaga_atribuida"):
+                vaga_rot = str(membro["vaga_atribuida"]).strip()
+
+        rotuladores_candidatos = [nome_limpo]
+        if vaga_rot and vaga_rot.lower() != nome_limpo.lower():
+            rotuladores_candidatos.append(vaga_rot)
+        if email_u and email_u.lower() not in [c.lower() for c in rotuladores_candidatos]:
+            rotuladores_candidatos.append(email_u)
+
+        quadros_fila = []
+        for rot_cand in rotuladores_candidatos:
+            df_c = self.repo_estudo.carregar_atribuicoes_tarefa_df(int(tarefa_id), rotulador=rot_cand)
+            if not df_c.empty:
+                quadros_fila.append(df_c)
+        if quadros_fila:
+            fila_df = pd.concat(quadros_fila, ignore_index=True).drop_duplicates(subset=["assignment_id"])
+        else:
+            fila_df = self.repo_estudo.carregar_atribuicoes_tarefa_df(int(tarefa_id), rotulador=nome_limpo)
+
         correspondentes = fila_df[
             fila_df["assignment_id"].astype(str).eq(str(assignment_id).strip())
         ]
@@ -212,6 +241,7 @@ class ServicoFilaAnotacao:
             posicao=str(posicao).strip(),
             tempo_analise_segundos=float(tempo_analise_segundos or 0.0),
             video_duration=str(item.get("video_duration", "")),
+            usuario_id=int(u_info["usuario_id"]) if u_info else None,
         )
         proximo_estado = self.obter_estado_fila(
             tarefa_id=int(tarefa_id),

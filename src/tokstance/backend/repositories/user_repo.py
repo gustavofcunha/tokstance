@@ -88,6 +88,10 @@ class RepositorioUsuarios:
             (limpo, limpo),
         )
 
+    def buscar_por_identificador(self, identificador: str) -> dict[str, Any] | None:
+        """Alias para buscar_por_nome_ou_email_case_insensitive."""
+        return self.buscar_por_nome_ou_email_case_insensitive(identificador)
+
     def buscar_por_id(self, usuario_id: int) -> dict[str, Any] | None:
         """Busca um usuario pela chave primaria usuario_id."""
         return self.banco.consultar_um(
@@ -239,6 +243,90 @@ class RepositorioUsuarios:
             raise RuntimeError("Falha ao registrar associação do membro na tarefa.")
         return criado
 
+    def vincular_atribuicoes_e_membros_pendentes(
+        self,
+        usuario_id: int,
+        nome_usuario: str,
+        email: str = "",
+    ) -> int:
+        """Garante que atribuicoes membros_tarefa e anotacoes pre-existentes fiquem vinculados ao usuario."""
+        u_id = int(usuario_id)
+        nome_limpo = str(nome_usuario or "").strip()
+        email_limpo = str(email or "").strip()
+        modificados = 0
+        with self.banco.conectar() as conexao:
+            #atualiza atribuicoes com usuario_id nulo ou correspondente por nome ou email
+            if email_limpo:
+                cur = conexao.execute(
+                    """
+                    UPDATE atribuicoes
+                    SET usuario_id = ?
+                    WHERE (usuario_id IS NULL OR usuario_id = ?)
+                      AND (labeler = ? COLLATE NOCASE OR labeler = ? COLLATE NOCASE);
+                    """,
+                    (u_id, u_id, nome_limpo, email_limpo),
+                )
+            else:
+                cur = conexao.execute(
+                    """
+                    UPDATE atribuicoes
+                    SET usuario_id = ?
+                    WHERE (usuario_id IS NULL OR usuario_id = ?)
+                      AND labeler = ? COLLATE NOCASE;
+                    """,
+                    (u_id, u_id, nome_limpo),
+                )
+            modificados += cur.rowcount
+
+            #atualiza anotacoes com usuario_id nulo ou correspondente por nome ou email
+            if email_limpo:
+                cur = conexao.execute(
+                    """
+                    UPDATE anotacoes
+                    SET usuario_id = ?
+                    WHERE (usuario_id IS NULL OR usuario_id = ?)
+                      AND (labeler = ? COLLATE NOCASE OR labeler = ? COLLATE NOCASE);
+                    """,
+                    (u_id, u_id, nome_limpo, email_limpo),
+                )
+            else:
+                cur = conexao.execute(
+                    """
+                    UPDATE anotacoes
+                    SET usuario_id = ?
+                    WHERE (usuario_id IS NULL OR usuario_id = ?)
+                      AND labeler = ? COLLATE NOCASE;
+                    """,
+                    (u_id, u_id, nome_limpo),
+                )
+            modificados += cur.rowcount
+
+            #garante vinculo em membros_tarefa como rotulador para tarefas com atribuicoes
+            instante = formatar_data_hora_brt()
+            conexao.execute(
+                """
+                INSERT OR IGNORE INTO membros_tarefa (tarefa_id, usuario_id, papel, vaga_atribuida, entrou_em)
+                SELECT DISTINCT a.tarefa_id, ?, 'rotulador', a.labeler, ?
+                FROM atribuicoes a
+                WHERE a.usuario_id = ?
+                   OR a.labeler = ? COLLATE NOCASE
+                   OR (? != '' AND a.labeler = ? COLLATE NOCASE);
+                """,
+                (u_id, instante, u_id, nome_limpo, email_limpo, email_limpo),
+            )
+
+            #garante vinculo em membros_tarefa como administrador para tarefas criadas pelo usuario
+            conexao.execute(
+                """
+                INSERT OR IGNORE INTO membros_tarefa (tarefa_id, usuario_id, papel, vaga_atribuida, entrou_em)
+                SELECT t.tarefa_id, ?, 'administrador', '', t.criado_em
+                FROM tarefas t
+                WHERE t.criado_por_usuario_id = ?;
+                """,
+                (u_id, u_id),
+            )
+        return modificados
+
     def buscar_membro_tarefa(
         self,
         tarefa_id: int,
@@ -354,7 +442,9 @@ class RepositorioUsuarios:
                    OR (t.criado_por_usuario_id = ? AND ? = 'administrador')
                    OR (? = 'rotulador' AND t.tarefa_id IN (
                        SELECT DISTINCT tarefa_id FROM atribuicoes
-                       WHERE usuario_id = ? OR labeler = (SELECT nome_usuario FROM usuarios WHERE usuario_id = ?)
+                       WHERE usuario_id = ?
+                          OR labeler = (SELECT nome_usuario FROM usuarios WHERE usuario_id = ?)
+                          OR (labeler != '' AND labeler = (SELECT email FROM usuarios WHERE usuario_id = ? AND email IS NOT NULL AND email != ''))
                    ))
                 ORDER BY t.tarefa_id DESC;
                 """,
@@ -363,7 +453,7 @@ class RepositorioUsuarios:
                     u_id, p_limpo,
                     p_limpo,
                     u_id, p_limpo,
-                    p_limpo, u_id, u_id,
+                    p_limpo, u_id, u_id, u_id,
                 ),
             )
             return [self._deserializar_item_tarefa(linha) for linha in linhas]
@@ -389,8 +479,21 @@ class RepositorioUsuarios:
                   SELECT 1 FROM membros_tarefa m2
                   WHERE m2.tarefa_id = t.tarefa_id AND m2.usuario_id = ? AND m2.papel = 'administrador'
               )
+            UNION
+            SELECT t.tarefa_id, t.slug_tarefa, t.titulo, t.pergunta,
+                   t.opcoes_json, t.distancias_rotulos_json,
+                   t.numero_vagas, t.videos_por_rotulador, t.percentual_sobreposicao,
+                   t.codigo_convite, t.versao_atribuicao, t.criado_em,
+                   'rotulador' AS papel, '' AS vaga_atribuida, t.criado_em AS entrou_em
+            FROM tarefas t
+            WHERE t.tarefa_id IN (
+                SELECT DISTINCT tarefa_id FROM atribuicoes
+                WHERE usuario_id = ?
+                   OR labeler = (SELECT nome_usuario FROM usuarios WHERE usuario_id = ?)
+                   OR (labeler != '' AND labeler = (SELECT email FROM usuarios WHERE usuario_id = ? AND email IS NOT NULL AND email != ''))
+            )
             ORDER BY tarefa_id DESC;
             """,
-            (u_id, u_id, u_id),
+            (u_id, u_id, u_id, u_id, u_id, u_id),
         )
         return [self._deserializar_item_tarefa(linha) for linha in linhas]

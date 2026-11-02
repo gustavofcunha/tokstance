@@ -284,7 +284,7 @@ class RepositorioEstudo:
 
         for rotulador_inicial in rotuladores_base:
             if not rotulador_inicial.startswith("vaga_"):
-                usuario_rot = self.repo_usuarios.buscar_por_nome_usuario(
+                usuario_rot = self.repo_usuarios.buscar_por_identificador(
                     rotulador_inicial
                 )
                 if usuario_rot is not None:
@@ -447,11 +447,11 @@ class RepositorioEstudo:
                 FROM atribuicoes
                 WHERE tarefa_id = ? AND (
                     labeler = ? COLLATE NOCASE
-                    OR usuario_id = (SELECT usuario_id FROM usuarios WHERE nome_usuario = ? COLLATE NOCASE)
+                    OR usuario_id = (SELECT usuario_id FROM usuarios WHERE nome_usuario = ? COLLATE NOCASE OR email = ? COLLATE NOCASE)
                 )
                 ORDER BY ordem_fila ASC, atribuicao_pk ASC;
                 """,
-                (int(tarefa_id), rot_limpo, rot_limpo),
+                (int(tarefa_id), rot_limpo, rot_limpo, rot_limpo),
             )
         else:
             linhas = self.banco.consultar_todos(
@@ -481,10 +481,17 @@ class RepositorioEstudo:
             if atribuicoes_df is not None and not atribuicoes_df.empty
             else pd.DataFrame(columns=colunas)
         )
-        usuarios_mapa = {
-            str(u["nome_usuario"]): int(u["usuario_id"])
-            for u in self.repo_usuarios.listar_usuarios()
-        }
+        usuarios_mapa: dict[str, int] = {}
+        for u in self.repo_usuarios.listar_usuarios():
+            uid = int(u["usuario_id"])
+            nu = str(u.get("nome_usuario", "") or "").strip()
+            em = str(u.get("email", "") or "").strip()
+            if nu:
+                usuarios_mapa[nu] = uid
+                usuarios_mapa[nu.lower()] = uid
+            if em:
+                usuarios_mapa[em] = uid
+                usuarios_mapa[em.lower()] = uid
         contadores_ordem: dict[str, int] = {}
 
         with self.banco.conectar() as conexao:
@@ -496,6 +503,7 @@ class RepositorioEstudo:
                 rotulador = str(linha["labeler"]).strip()
                 ordem = contadores_ordem.get(rotulador, 0)
                 contadores_ordem[rotulador] = ordem + 1
+                uid_resolvido = usuarios_mapa.get(rotulador) or usuarios_mapa.get(rotulador.lower())
                 conexao.execute(
                     """
                     INSERT INTO atribuicoes (
@@ -510,7 +518,7 @@ class RepositorioEstudo:
                         str(linha["assignment_version"]).strip(),
                         str(linha["assignment_id"]).strip(),
                         rotulador,
-                        usuarios_mapa.get(rotulador),
+                        uid_resolvido,
                         str(linha["video_id"]).strip(),
                         str(linha["url"]).strip(),
                         str(linha["target"]),
@@ -602,9 +610,9 @@ class RepositorioEstudo:
                 f"A resposta '{posicao_limpa}' não pertence às opções desta tarefa."
             )
 
-        rotulador_limpo = validar_nome_usuario(rotulador)
+        rotulador_limpo = str(rotulador or "").strip()
         if usuario_id is None:
-            usuario = self.repo_usuarios.buscar_por_nome_usuario(rotulador_limpo)
+            usuario = self.repo_usuarios.buscar_por_identificador(rotulador_limpo)
             usuario_id = int(usuario["usuario_id"]) if usuario is not None else None
 
         instante = str(timestamp or formatar_data_hora_brt())
@@ -660,11 +668,11 @@ class RepositorioEstudo:
                 FROM anotacoes
                 WHERE tarefa_id = ? AND (
                     labeler = ? COLLATE NOCASE
-                    OR usuario_id = (SELECT usuario_id FROM usuarios WHERE nome_usuario = ? COLLATE NOCASE)
+                    OR usuario_id = (SELECT usuario_id FROM usuarios WHERE nome_usuario = ? COLLATE NOCASE OR email = ? COLLATE NOCASE)
                 )
                 ORDER BY anotacao_id ASC;
                 """,
-                (int(tarefa_id), rot_limpo, rot_limpo),
+                (int(tarefa_id), rot_limpo, rot_limpo, rot_limpo),
             )
         else:
             linhas = self.banco.consultar_todos(
@@ -697,9 +705,9 @@ class RepositorioEstudo:
         timestamp: str | None = None,
     ) -> dict[str, Any]:
         """Persiste um erro de video e sua substituicao por reserva em erros_videos."""
-        rotulador_limpo = validar_nome_usuario(rotulador)
+        rotulador_limpo = str(rotulador or "").strip()
         if usuario_id is None:
-            usuario = self.repo_usuarios.buscar_por_nome_usuario(rotulador_limpo)
+            usuario = self.repo_usuarios.buscar_por_identificador(rotulador_limpo)
             usuario_id = int(usuario["usuario_id"]) if usuario is not None else None
         instante = str(timestamp or formatar_data_hora_brt())
 
