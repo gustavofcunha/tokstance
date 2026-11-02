@@ -387,7 +387,7 @@ def test_pergunta_em_negrito_e_alternativas_sem_negrito() -> None:
 
 
 @pytest.mark.unit
-def test_destaque_target_vermelho_e_embedado_na_pergunta() -> None:
+def test_destaque_target_vermelho_apenas_no_card_e_pergunta_com_formatacao_padrao() -> None:
     #arrange
     from tokstance.frontend.theme import APP_CSS
     from tokstance.frontend.components import formatar_pergunta_com_target, render_video_card
@@ -400,15 +400,18 @@ def test_destaque_target_vermelho_e_embedado_na_pergunta() -> None:
     )
     card_html = render_video_card(item, highlight_target=True)
 
-    #assert target embedded with badge
-    assert 'target-name-badge' in pergunta_formatada
+    #assert target na pergunta segue a formatacao dela sem badge vermelho
+    assert "target-name-badge" not in pergunta_formatada
     assert '"Lula"' in pergunta_formatada
-    assert 'target-name-badge' in card_html
-    assert 'Lula' in card_html
 
-    #assert css styling has intense red accents and animations
+    #assert target no card ao lado do video permanece com badge destacado
+    assert "target-name-badge" in card_html
+    assert "Lula" in card_html
+
+    #assert css styling do badge vermelho para o card e reset neutro na pergunta
     assert ".target-name-badge" in APP_CSS
-    assert "color: #9c0014 !important;" in APP_CSS
+    assert ".target-question .target-name-badge" in APP_CSS
+    assert "color: inherit !important;" in APP_CSS
     assert "target-badge-pulse" in APP_CSS
     assert "target-highlight" in APP_CSS
 

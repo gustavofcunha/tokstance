@@ -1508,10 +1508,15 @@ APP_CSS = """
         font-weight: 700 !important;
     }
     .target-question .target-name-badge {
-        font-size: 15px !important;
-        font-weight: 800 !important;
-        margin: 0 3px !important;
-        vertical-align: baseline !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        color: inherit !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: inline !important;
     }
 
     .wrap-radio form, .wrap-radio > div, .wrap-radio fieldset { display: flex !important; flex-direction: column !important; width: 100% !important; }
@@ -2117,8 +2122,15 @@ APP_CSS = """
         border-left: 4px solid #9c0014 !important;
     }
     .annotation-controls .target-question .target-name-badge {
-        font-size: 13px !important;
-        padding: 1px 5px !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        color: inherit !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: inline !important;
     }
     .annotation-controls .wrap-radio {
         margin: 0 0 2px 0 !important;
