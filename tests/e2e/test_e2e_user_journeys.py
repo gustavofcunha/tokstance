@@ -303,3 +303,41 @@ def test_e2e_anotacao_completa_e_avanco_da_barra_de_progresso(
     pagina_navegador.wait_for_selector("text=1 de ", timeout=10000)
     texto_progresso = pagina_navegador.locator(".labeler-controls-column").inner_text()
     assert "1 de " in texto_progresso
+
+
+@pytest.mark.e2e
+def test_e2e_criacao_de_tarefa_e_auditoria_console_administrador(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange
+    url_base, _, _ = servidor_e2e
+    coord_usuario = f"coord_adm_{int(time.time() * 1000) % 100000}"
+
+    #act register new coordinator
+    pagina_navegador.goto(url_base)
+    pagina_navegador.wait_for_selector(".auth-card")
+    pagina_navegador.get_by_role("tab", name="Criar Conta").click()
+    pagina_navegador.get_by_label("Nome de Usuário").nth(1).fill(coord_usuario)
+    pagina_navegador.get_by_label("E-mail (usado na recuperação de senha)").fill(f"{coord_usuario}@ufmg.br")
+    pagina_navegador.get_by_label("Senha de Acesso").nth(1).fill("senhaForte123")
+    pagina_navegador.get_by_label("Confirmar Senha").fill("senhaForte123")
+    pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
+
+    pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
+
+    #act open wizard
+    pagina_navegador.get_by_role("button", name="+ Criar Nova Tarefa").click()
+    pagina_navegador.wait_for_selector(".admin-panel", timeout=10000)
+
+    #act submit task with default videos
+    pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
+
+    #assert toast with direct action button appears
+    pagina_navegador.wait_for_selector(".toast-acao", timeout=10000)
+    pagina_navegador.locator(".toast-acao").click()
+
+    #assert admin console opened with kpis and downloads section
+    pagina_navegador.wait_for_selector(".admin-command-center", timeout=10000)
+    assert pagina_navegador.locator(".admin-kpis, .dashboard-grid, .admin-command-center").count() > 0
+    assert pagina_navegador.locator(".admin-downloads").count() > 0
+
