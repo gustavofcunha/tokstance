@@ -24,13 +24,63 @@ JS_FORCAR_MODO_CLARO = """
         document.documentElement.setAttribute('data-theme', 'light');
     }
     travarModoClaro();
-    const observer = new MutationObserver(() => {
+    const observerModo = new MutationObserver(() => {
         if (document.documentElement.classList.contains('dark') || document.body.classList.contains('dark')) {
             travarModoClaro();
         }
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    observerModo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    observerModo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    const svgOlho = '<svg class="icone-olho-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const svgOlhoFechado = '<svg class="icone-olho-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>';
+
+    function configurarOlhoSenha(inp) {
+        if (!inp || inp.dataset.olhoConfigurado) return;
+        inp.dataset.olhoConfigurado = '1';
+        inp.classList.add('tem-olho-senha');
+        const container = inp.closest('.input-container') || inp.parentElement;
+        if (!container) return;
+        container.classList.add('container-olho-senha');
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-olho-senha';
+        btn.setAttribute('aria-label', 'Mostrar senha');
+        btn.title = 'Mostrar senha';
+        btn.innerHTML = svgOlho;
+
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const visivel = inp.type === 'text';
+            inp.type = visivel ? 'password' : 'text';
+            btn.innerHTML = visivel ? svgOlho : svgOlhoFechado;
+            const rotulo = visivel ? 'Mostrar senha' : 'Ocultar senha';
+            btn.setAttribute('aria-label', rotulo);
+            btn.title = rotulo;
+            inp.focus();
+        });
+
+        container.appendChild(btn);
+    }
+
+    function varrerCamposSenha() {
+        document.querySelectorAll('input[type="password"], input.tem-olho-senha').forEach(configurarOlhoSenha);
+    }
+
+    varrerCamposSenha();
+    const observadorSenha = new MutationObserver(varrerCamposSenha);
+    if (document.body) {
+        observadorSenha.observe(document.body, { childList: true, subtree: true });
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            observadorSenha.observe(document.body, { childList: true, subtree: true });
+        });
+    }
+    if (!window._tokstanceOlhoInterval) {
+        window._tokstanceOlhoInterval = setInterval(varrerCamposSenha, 400);
+    }
 }
 """
 
@@ -1798,6 +1848,50 @@ APP_CSS = """
     }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
     body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer { display: none !important; }
+
+    /* botao de visibilidade de senha com icone de olho */
+    .container-olho-senha {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+    .container-olho-senha input.tem-olho-senha {
+        padding-right: 42px !important;
+    }
+    .btn-olho-senha {
+        position: absolute !important;
+        right: 8px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        cursor: pointer !important;
+        padding: 4px !important;
+        margin: 0 !important;
+        min-width: 30px !important;
+        width: 30px !important;
+        height: 30px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #64748b !important;
+        border-radius: 6px !important;
+        z-index: 5 !important;
+        transition: color 0.15s ease, background-color 0.15s ease !important;
+    }
+    .btn-olho-senha:hover {
+        color: #0f172a !important;
+        background-color: #f1f5f9 !important;
+    }
+    .btn-olho-senha:focus-visible {
+        outline: 2px solid #9c0014 !important;
+        outline-offset: 1px !important;
+    }
+    .btn-olho-senha svg {
+        pointer-events: none !important;
+        display: block !important;
+    }
 
     /* Ocultar footer do Gradio */
     footer, .footer { display: none !important; }
