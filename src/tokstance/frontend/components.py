@@ -105,7 +105,7 @@ def video_outputs(
     else:
         texto_pergunta = f'Com relação ao target <strong>"{escape(target)}"</strong>, como você classifica a posição deste vídeo?'
 
-    pergunta_markdown = f'<div class="target-question">{texto_pergunta}</div>'
+    pergunta_markdown = f'<div class="target-question"><strong>{texto_pergunta}</strong></div>'
     pb = generate_progress_bar(position, total)
 
     previous_target = (

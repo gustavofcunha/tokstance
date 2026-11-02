@@ -965,7 +965,7 @@ def construir_interface(
             else:
                 texto_pergunta = f'Com relação ao target <strong>"{escape(target)}"</strong>, como você classifica a posição deste vídeo?'
 
-            pergunta_html = f'<div class="target-question">{texto_pergunta}</div>'
+            pergunta_html = f'<div class="target-question"><strong>{texto_pergunta}</strong></div>'
             pb = generate_progress_bar(posicao, total)
             target_mudou = bool(previous_target and previous_target != target)
             v_html = render_video_card(video_item, target_mudou)
