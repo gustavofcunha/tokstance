@@ -441,3 +441,53 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
     assert pagina_navegador.locator(".hub-header-bar").is_visible()
 
 
+@pytest.mark.e2e
+def test_e2e_login_olho_visualizar_senha_alterna_visibilidade_e_permite_login(
+    servidor_e2e: Tuple[str, str, str], pagina_navegador: Page
+) -> None:
+    #arrange carregar tela de login
+    url_base, _, _ = servidor_e2e
+    pagina_navegador.goto(url_base)
+    pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
+
+    #garantir aba entrar selecionada
+    pagina_navegador.get_by_role("tab", name="Entrar").click()
+
+    campo_senha = pagina_navegador.locator("#login_senha input")
+    campo_senha.wait_for(state="visible", timeout=8000)
+
+    #assert botao do olho de visibilidade presente no campo de senha
+    btn_olho = pagina_navegador.locator("#login_senha .btn-olho-senha")
+    btn_olho.wait_for(state="visible", timeout=8000)
+    assert btn_olho.count() == 1
+    assert campo_senha.get_attribute("type") == "password"
+    assert btn_olho.get_attribute("aria-label") == "Mostrar senha"
+
+    #act digitar senha e alternar visibilidade com o botao do olho
+    campo_senha.fill("senhaForte123")
+    btn_olho.click()
+
+    #assert tipo de campo alternado para texto visivel
+    assert campo_senha.get_attribute("type") == "text"
+    assert btn_olho.get_attribute("aria-label") == "Ocultar senha"
+
+    #act clicar novamente no olho para ocultar
+    btn_olho.click()
+
+    #assert tipo de campo restaurado para password
+    assert campo_senha.get_attribute("type") == "password"
+    assert btn_olho.get_attribute("aria-label") == "Mostrar senha"
+
+    #act alternar para visivel e fazer login
+    btn_olho.click()
+    assert campo_senha.get_attribute("type") == "text"
+
+    pagina_navegador.get_by_label("Nome de Usuário").first.fill("coordenador_e2e")
+    pagina_navegador.get_by_role("button", name="Entrar no Sistema").click()
+
+    #assert login concluido com sucesso no hub com senha autenticada
+    pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
+    assert pagina_navegador.locator(".hub-header-bar").is_visible()
+
+
+
