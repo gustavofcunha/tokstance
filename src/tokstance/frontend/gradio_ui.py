@@ -74,11 +74,7 @@ def renderizar_aviso_inline(mensagem: str, tipo: str = "erro") -> str:
     )
 
 
-def renderizar_hub_tabelas_html(
-    tarefas_admin: List[Dict[str, Any]],
-    tarefas_rotulador: List[Dict[str, Any]],
-    deduplicar_atribuidas: bool = False,
-) -> Tuple[str, str]:
+def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotulador: List[Dict[str, Any]]) -> Tuple[str, str]:
     """Renderiza tabelas modernas e responsivas para o Hub Inicial com botoes diretos de acao."""
     # Tabela de Administracao
     if not tarefas_admin:
@@ -97,39 +93,6 @@ def renderizar_hub_tabelas_html(
             total_v = t.get("numero_vagas", 0)
             prog = float(t.get("progresso_percentual", 0.0))
             prog_clamped = min(100.0, max(0.0, prog))
-
-            rot_info = next(
-                (r for r in tarefas_rotulador if str(r.get("tarefa_id")) == str(t_id)),
-                None,
-            )
-            btn_rotular = ""
-            if rot_info is not None:
-                pos = int(rot_info.get("videos_concluidos", 0))
-                tot = int(rot_info.get("total_videos_fila", 0))
-                if tot == 0 or pos == 0:
-                    btn_class = "primary"
-                    btn_texto = (
-                        '<svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">'
-                        '<polygon points="5 3 19 12 5 21 5 3"/></svg> Iniciar Rotulação'
-                    )
-                elif pos < tot:
-                    btn_class = "in-progress"
-                    btn_texto = (
-                        '<svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">'
-                        '<polygon points="5 3 19 12 5 21 5 3"/></svg> Continuar Rotulação'
-                    )
-                else:
-                    btn_class = "completed"
-                    btn_texto = (
-                        '<svg class="hub-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" '
-                        'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
-                        '<polyline points="20 6 9 17 4 12"/></svg> Ver Concluída'
-                    )
-                btn_rotular = (
-                    f'<button type="button" class="hub-table-btn {btn_class}" '
-                    f'onclick="window.tokstanceAcao(\'rotular\', \'{t_id}\')">{btn_texto}</button>'
-                )
-
             linhas_admin.append(f"""
             <tr>
                 <td>
@@ -139,15 +102,14 @@ def renderizar_hub_tabelas_html(
                 <td>
                     <span class="config-val-badge convite">{convite}</span>
                 </td>
-                <td style="text-align: center; white-space: nowrap;">
-                    <span style="font-weight: 700; color: #334155; white-space: nowrap;">{vagas} de {total_v}</span>
+                <td>
+                    <span style="font-weight: 700; color: #334155;">{vagas} de {total_v}</span>
                 </td>
-                <td style="white-space: nowrap;">
+                <td>
                     <span class="table-bar-track" style="display:inline-block; width:100px; height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; vertical-align:middle; margin-right:8px;"><span class="table-bar-fill" style="display:block; height:100%; width:{prog_clamped:.0f}%; background:#9c0014; border-radius:999px;"></span></span>
                     <span style="font-weight: 700; font-size: 13px; color: #334155;">{prog:.0f}%</span>
                 </td>
                 <td style="text-align: right; white-space: nowrap;">
-                    {btn_rotular}
                     <button type="button" class="hub-table-btn primary" onclick="window.tokstanceAcao('admin', '{t_id}')"><svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Abrir Console</button>
                     <button type="button" class="hub-table-btn danger" onclick="window.tokstanceAcao('excluir', '{t_id}')"><svg class="hub-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Excluir</button>
                 </td>
@@ -160,9 +122,9 @@ def renderizar_hub_tabelas_html(
                     <tr>
                         <th>Tarefa</th>
                         <th>Código Convite</th>
-                        <th style="text-align: center; white-space: nowrap;">Vagas Preenchidas</th>
+                        <th>Vagas</th>
                         <th>Progresso</th>
-                        <th style="text-align: right; white-space: nowrap;">Ações</th>
+                        <th style="text-align: right;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -172,22 +134,16 @@ def renderizar_hub_tabelas_html(
         </div>
         """
 
-    # Tabela de Rotulador (deduplicada contra tarefas administradas se habilitado)
-    if deduplicar_atribuidas and tarefas_admin:
-        admin_ids = {str(t.get("tarefa_id")) for t in tarefas_admin if t.get("tarefa_id")}
-        tarefas_rot_efetivas = [t for t in tarefas_rotulador if str(t.get("tarefa_id")) not in admin_ids]
-    else:
-        tarefas_rot_efetivas = list(tarefas_rotulador)
-
-    if not tarefas_rot_efetivas:
+    # Tabela de Rotulador
+    if not tarefas_rotulador:
         html_rotulador = (
             "<div class='hub-table-empty'>"
-            "Você ainda não está inscrito em nenhuma tarefa para rotular. Use o botão <strong>+</strong> acima para entrar com um código de convite."
+            "Você ainda não está inscrito em nenhuma tarefa para rotular. Use o campo de código de convite abaixo para entrar."
             "</div>"
         )
     else:
         linhas_rot = []
-        for t in tarefas_rot_efetivas:
+        for t in tarefas_rotulador:
             t_id = t.get("tarefa_id", "")
             titulo = escape(str(t.get("titulo", f"Tarefa #{t_id}")))
             pos = int(t.get("videos_concluidos", 0))
@@ -237,7 +193,7 @@ def renderizar_hub_tabelas_html(
                         <th>Tarefa</th>
                         <th>Progresso da Fila</th>
                         <th>Status</th>
-                        <th style="text-align: right; white-space: nowrap;">Ação</th>
+                        <th style="text-align: right;">Ação</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -498,7 +454,7 @@ def construir_interface(
                             gr.HTML("""
                             <div class="hub-box-header">
                                 <h3>Tarefas Atribuídas a Você</h3>
-                                <p>Fila individual de vídeos atribuídos a você por outros pesquisadores</p>
+                                <p>Fila individual de vídeos atribuídos para sua análise</p>
                             </div>
                             """)
                             btn_abrir_convite = gr.Button("+", elem_id="btn_abrir_modal_convite", elem_classes=["ufmg-btn", "hub-plus-btn", "hub-plus-rotulador"], scale=0, min_width=44)
@@ -756,9 +712,7 @@ def construir_interface(
             admin_tarefas = painel["tarefas_administrador"]
             rot_tarefas = painel["tarefas_rotulador"]
 
-            html_admin, html_rot = renderizar_hub_tabelas_html(
-                admin_tarefas, rot_tarefas, deduplicar_atribuidas=True
-            )
+            html_admin, html_rot = renderizar_hub_tabelas_html(admin_tarefas, rot_tarefas)
             nome_display = escape(str(sessao.get("nome_completo") or sessao.get("nome_usuario", "")))
             saudacao = (
                 f"<div>"
