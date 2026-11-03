@@ -2182,6 +2182,21 @@ APP_CSS = """
         margin: 0 !important;
         display: inline !important;
     }
+    .annotation-controls .form,
+    .annotation-controls > .form,
+    .annotation-controls div.form,
+    .annotation-controls fieldset.wrap-radio,
+    .annotation-controls .wrap-radio,
+    .annotation-controls .wrap-radio.block,
+    .annotation-controls .wrap-radio .wrap,
+    .annotation-controls div[data-testid="block"] {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        padding: 0 !important;
+    }
     .annotation-controls .wrap-radio {
         margin: 0 0 2px 0 !important;
         padding: 0 !important;
@@ -2217,6 +2232,19 @@ APP_CSS = """
         margin: 3px 0 2px 0 !important;
         padding: 0 10px !important;
         flex: 0 0 auto !important;
+    }
+    .annotation-controls button.btn-icon-alerta {
+        background: #ffffff !important;
+        color: #475569 !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        font-weight: 600 !important;
+    }
+    .annotation-controls button.btn-icon-alerta:hover {
+        background: #f8fafc !important;
+        color: #9c0014 !important;
+        border-color: #9c0014 !important;
+        transform: none !important;
     }
     .annotation-controls .error-btn {
         height: 26px !important;
