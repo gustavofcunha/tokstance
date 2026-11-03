@@ -1954,10 +1954,10 @@ APP_CSS = """
         min-height: 0 !important;
     }
     .video-context-column {
-        flex: 0 0 340px !important;
-        width: 340px !important;
-        min-width: 240px !important;
-        max-width: 360px !important;
+        flex: 0 0 440px !important;
+        width: 440px !important;
+        min-width: 340px !important;
+        max-width: 480px !important;
         height: auto !important;
         min-height: var(--altura-player) !important;
         max-height: none !important;
@@ -2062,8 +2062,8 @@ APP_CSS = """
     .labeler-controls-column {
         flex: 1 1 auto !important;
         width: auto !important;
-        min-width: 420px !important;
-        max-width: 720px !important;
+        min-width: 380px !important;
+        max-width: 500px !important;
         height: var(--altura-player) !important;
         max-height: var(--altura-player) !important;
         min-height: 560px !important;

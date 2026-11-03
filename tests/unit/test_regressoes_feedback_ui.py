@@ -892,8 +892,8 @@ def test_workspace_layout_horizontal_e_proporcoes_cards() -> None:
 
     #assert coluna de metadados proporcional como informacao auxiliar
     assert ".video-context-column {" in APP_CSS
-    assert "min-width: 240px !important;" in APP_CSS
-    assert "max-width: 360px !important;" in APP_CSS
+    assert "min-width: 340px !important;" in APP_CSS
+    assert "max-width: 480px !important;" in APP_CSS
 
     #assert cards de transcricao e descricao com proporcao elegante
     assert ".video-transcription.unavailable," in APP_CSS
