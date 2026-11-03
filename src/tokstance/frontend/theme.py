@@ -119,11 +119,30 @@ APP_CSS = """
         color: #0f172a !important;
     }
 
+    /* remove o espaco em branco superior em todas as telas */
+    .gradio-container .main,
+    .gradio-container > .main.fillable,
+    .gradio-container .main.fillable.app {
+        padding: 0 !important;
+    }
+    .gradio-container .column:has(> .shell),
+    .gradio-container .column:has(.shell) {
+        gap: 0 !important;
+    }
+    .gradio-container .form:has(+ .shell) {
+        height: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        overflow: hidden !important;
+    }
+
     /* Container Principal com Otimizacao Total para Telas Widescreen (16:9, 16:10, 21:9) */
     .shell {
         width: min(98%, 1880px) !important;
         max-width: 1880px !important;
-        margin: 4px auto !important;
+        margin: 0 auto !important;
         background: #ffffff !important;
         padding: 14px 22px !important;
         border-radius: 12px !important;
@@ -1798,71 +1817,48 @@ APP_CSS = """
     .wizard-submit-btn { min-width: 280px !important; height: 44px !important; }
     .form-wizard-card { padding: 16px !important; }
 
-    /* Workspace de rotulacao sem rolagem vertical: o player usa a altura disponivel da janela */
+    /* workspace de rotulacao com rolagem normal da pagina e rodape visivel */
     body:has(.labeler-panel:not(.hide):not(.hidden)),
     html:has(.labeler-panel:not(.hide):not(.hidden)) {
-        overflow-y: hidden !important;
+        overflow-y: auto !important;
         overflow-x: hidden !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
+        height: auto !important;
+        max-height: none !important;
     }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .gradio-container,
     body:has(.labeler-panel:not(.hide):not(.hidden)) main.contain {
-        padding: 0 !important;
-        margin: 0 !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
-        overflow: hidden !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .shell {
         width: 100% !important;
-        max-width: 100vw !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
-        margin: 0 !important;
-        padding: 6px 16px !important;
+        max-width: 1640px !important;
+        height: auto !important;
+        max-height: none !important;
+        margin: 0 auto !important;
         box-sizing: border-box !important;
-        overflow: hidden !important;
+        overflow: visible !important;
     }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
     body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.brand-header) {
         display: block !important;
-        margin-bottom: 6px !important;
-        padding-bottom: 6px !important;
-    }
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer,
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.app-footer) {
-        display: none !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        max-height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-    }
-    html:has(.labeler-panel:not(.hide):not(.hidden)),
-    body:has(.labeler-panel:not(.hide):not(.hidden)) {
-        overflow: hidden !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
     }
     .gradio-container:has(.labeler-panel:not(.hide):not(.hidden)) {
         max-width: 100% !important;
         width: 100% !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
-        padding: 6px 16px !important;
-        margin: 0 !important;
-        overflow: hidden !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
         box-sizing: border-box !important;
     }
     .labeler-panel {
-        --altura-player: clamp(560px, calc(100vh - 150px), 600px);
+        --altura-player: clamp(560px, calc(100vh - 210px), 640px);
         display: flex !important;
         flex-direction: column !important;
         height: auto !important;
-        max-height: calc(100vh - 84px) !important;
-        overflow: hidden !important;
+        max-height: none !important;
+        overflow: visible !important;
         box-sizing: border-box !important;
         padding: 0 !important;
         margin: 0 !important;
@@ -1874,7 +1870,7 @@ APP_CSS = """
         flex-direction: column !important;
         flex: 1 1 auto !important;
         width: 100% !important;
-        max-width: 1260px !important;
+        max-width: 1560px !important;
         margin: 0 auto !important;
         height: auto !important;
         min-height: 0 !important;
@@ -1891,7 +1887,7 @@ APP_CSS = """
         justify-content: space-between !important;
         flex: 0 0 auto !important;
         width: 100% !important;
-        max-width: 1260px !important;
+        max-width: 1560px !important;
         margin-left: auto !important;
         margin-right: auto !important;
     }
@@ -1910,9 +1906,9 @@ APP_CSS = """
         flex-wrap: nowrap !important;
         align-items: flex-start !important;
         justify-content: center !important;
-        gap: 28px !important;
+        gap: 32px !important;
         width: 100% !important;
-        max-width: 1260px !important;
+        max-width: 1560px !important;
         margin: 0 auto !important;
         min-height: 0 !important;
     }
@@ -1958,12 +1954,13 @@ APP_CSS = """
         min-height: 0 !important;
     }
     .video-context-column {
-        flex: 0 0 300px !important;
-        width: 300px !important;
+        flex: 0 0 340px !important;
+        width: 340px !important;
         min-width: 240px !important;
-        max-width: 310px !important;
-        height: var(--altura-player) !important;
-        max-height: var(--altura-player) !important;
+        max-width: 360px !important;
+        height: auto !important;
+        min-height: var(--altura-player) !important;
+        max-height: none !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: flex-start !important;
@@ -1972,10 +1969,8 @@ APP_CSS = """
         border-radius: 12px !important;
         padding: 16px 18px !important;
         gap: 12px !important;
-        min-height: 0 !important;
-        overflow-y: auto !important;
+        overflow: visible !important;
         box-sizing: border-box !important;
-        scrollbar-width: thin !important;
     }
     .video-meta {
         background: transparent !important;
@@ -2005,10 +2000,10 @@ APP_CSS = """
         font-size: 13px !important;
         line-height: 1.5 !important;
         color: #334155 !important;
-        overflow-y: auto !important;
-        flex: 1 1 auto !important;
-        max-height: calc(50% - 10px) !important;
-        min-height: 40px !important;
+        overflow: visible !important;
+        flex: 0 0 auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
         box-sizing: border-box !important;
         scrollbar-width: thin !important;
     }
@@ -2016,7 +2011,7 @@ APP_CSS = """
     .video-description.unavailable {
         flex: 0 0 auto !important;
         min-height: 36px !important;
-        max-height: 68px !important;
+        max-height: none !important;
         color: #64748b !important;
     }
     .metadata-title {
@@ -2067,8 +2062,8 @@ APP_CSS = """
     .labeler-controls-column {
         flex: 1 1 auto !important;
         width: auto !important;
-        min-width: clamp(380px, 32vw, 440px) !important;
-        max-width: 500px !important;
+        min-width: 420px !important;
+        max-width: 720px !important;
         height: var(--altura-player) !important;
         max-height: var(--altura-player) !important;
         min-height: 560px !important;
