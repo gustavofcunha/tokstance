@@ -224,7 +224,7 @@ def fast_annotations_html(fast_annotations: List[Dict[str, Any]]) -> str:
 
 
 def annotation_daily_chart(results: Union[pd.DataFrame, List[Dict[str, Any]], None]) -> str:
-    """Gera o grafico visual de barras por dia e por rotulador."""
+    """Gera grafico de linhas SVG: uma linha por rotulador, eixo x em dias e eixo y em videos concluidos."""
     df_results = _garantir_dataframe(results)
     if df_results.empty or not {"timestamp", "labeler"}.issubset(df_results.columns):
         return "<p class='muted'>Ainda não há anotações para desenhar a série diária.</p>"
@@ -238,28 +238,76 @@ def annotation_daily_chart(results: Union[pd.DataFrame, List[Dict[str, Any]], No
     daily["dia"] = daily["timestamp"].dt.strftime("%Y-%m-%d")
     counts = daily.groupby(["dia", "labeler"]).size().reset_index(name="quantidade")
     labelers = sorted(counts["labeler"].astype(str).unique())
+    dias = sorted(counts["dia"].unique())
     colors = ["#9c0014", "#176b87", "#b56b00", "#4f6f52", "#704c8a", "#8b5e3c"]
     color_map = {labeler: colors[idx % len(colors)] for idx, labeler in enumerate(labelers)}
+
     max_count = max(int(counts["quantidade"].max()), 1)
+    #topo do eixo y arredondado para inteiro com ticks inteiros
+    passo = max(1, -(-max_count // 5))
+    topo = passo * (-(-max_count // passo))
+
+    largura, altura = 760, 320
+    margem_esq, margem_dir, margem_top, margem_base = 48, 24, 16, 48
+    area_l = largura - margem_esq - margem_dir
+    area_a = altura - margem_top - margem_base
+
+    def pos_x(i: int) -> float:
+        if len(dias) == 1:
+            return margem_esq + area_l / 2
+        return margem_esq + area_l * i / (len(dias) - 1)
+
+    def pos_y(valor: float) -> float:
+        return margem_top + area_a * (1 - valor / topo)
+
+    grade = []
+    for tick in range(0, topo + 1, passo):
+        y = pos_y(tick)
+        grade.append(
+            f"<line x1='{margem_esq}' y1='{y:.1f}' x2='{largura - margem_dir}' y2='{y:.1f}' stroke='#e2e8f0' stroke-width='1'/>"
+            f"<text x='{margem_esq - 8}' y='{y + 4:.1f}' text-anchor='end' font-size='11' fill='#64748b'>{tick}</text>"
+        )
+    passo_rotulo = max(1, -(-len(dias) // 8))
+    for i, dia in enumerate(dias):
+        if i % passo_rotulo == 0 or i == len(dias) - 1:
+            rotulo = f"{dia[8:10]}/{dia[5:7]}"
+            grade.append(
+                f"<text x='{pos_x(i):.1f}' y='{altura - margem_base + 18}' text-anchor='middle' font-size='11' fill='#64748b'>{escape(rotulo)}</text>"
+            )
+
+    series = []
+    for labeler in labelers:
+        valores = dict(zip(
+            counts.loc[counts["labeler"].astype(str) == labeler, "dia"],
+            counts.loc[counts["labeler"].astype(str) == labeler, "quantidade"],
+        ))
+        pontos = [(pos_x(i), pos_y(int(valores.get(dia, 0))), int(valores.get(dia, 0)), dia) for i, dia in enumerate(dias)]
+        cor = color_map[labeler]
+        caminho = " ".join(f"{x:.1f},{y:.1f}" for x, y, _, _ in pontos)
+        linha = f"<polyline points='{caminho}' fill='none' stroke='{cor}' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/>"
+        marcas = "".join(
+            f"<circle cx='{x:.1f}' cy='{y:.1f}' r='4' fill='{cor}' stroke='#ffffff' stroke-width='1.5'>"
+            f"<title>{escape(labeler)}: {qtd} vídeo(s) em {escape(dia)}</title></circle>"
+            for x, y, qtd, dia in pontos
+        )
+        series.append(f"<g class='line-series'>{linha}{marcas}</g>")
 
     legend = "".join(
         f"<span class='chart-legend-item'><i style='background:{color_map[labeler]}'></i>{escape(labeler)}</span>"
         for labeler in labelers
     )
-    days = []
-    for day, day_rows in counts.groupby("dia", sort=True):
-        values = dict(zip(day_rows["labeler"].astype(str), day_rows["quantidade"]))
-        bars = "".join(
-            f"<div class='daily-bar-row'><span>{escape(labeler)}</span>"
-            f"<div class='daily-bar-track'><div class='daily-bar-fill' style='width:{values.get(labeler, 0) / max_count:.0%}; background:{color_map[labeler]}'></div></div>"
-            f"<strong>{int(values.get(labeler, 0))}</strong></div>"
-            for labeler in labelers
-        )
-        total_dia = int(day_rows["quantidade"].sum())
-        days.append(
-            f"<div class='daily-annotation-day'><div class='daily-day-label'>{escape(str(day))}<span>{total_dia} no total</span></div>{bars}</div>"
-        )
-    return f"<div class='chart-legend'>{legend}</div>{''.join(days)}"
+    svg = (
+        f"<svg class='daily-line-chart' viewBox='0 0 {largura} {altura}' width='100%' role='img' "
+        f"aria-label='Vídeos concluídos por dia e rotulador' preserveAspectRatio='xMidYMid meet'>"
+        f"{''.join(grade)}"
+        f"<line x1='{margem_esq}' y1='{margem_top}' x2='{margem_esq}' y2='{margem_top + area_a}' stroke='#94a3b8'/>"
+        f"<line x1='{margem_esq}' y1='{margem_top + area_a}' x2='{largura - margem_dir}' y2='{margem_top + area_a}' stroke='#94a3b8'/>"
+        f"{''.join(series)}"
+        f"<text x='{margem_esq + area_l / 2:.1f}' y='{altura - 6}' text-anchor='middle' font-size='12' fill='#475569'>Data</text>"
+        f"<text transform='translate(12 {margem_top + area_a / 2:.1f}) rotate(-90)' text-anchor='middle' font-size='12' fill='#475569'>Vídeos concluídos</text>"
+        f"</svg>"
+    )
+    return f"<div class='chart-legend'>{legend}</div>{svg}"
 
 
 def access_statistics(log_df: Union[pd.DataFrame, List[Dict[str, Any]], None] = None) -> Dict[str, Any]:
@@ -530,7 +578,7 @@ def agreement_summary(
         <section class='analytics-grid'>
             <section class='dashboard-card daily-annotation-chart'>
                 <h3>Vídeos concluídos por dia e rotulador</h3>
-                <p class='metric-note'>Cada barra mostra quantos vídeos foram registrados por pessoa em cada dia da rodada selecionada.</p>
+                <p class='metric-note'>Cada linha representa um rotulador: o eixo x mostra a data e o eixo y a quantidade de vídeos concluídos no dia.</p>
                 {daily_chart}
             </section>
         </section>

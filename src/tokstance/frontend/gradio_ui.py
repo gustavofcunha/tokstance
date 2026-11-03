@@ -210,6 +210,12 @@ def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rot
 renderizar_hub_cards_html = renderizar_hub_tabelas_html
 
 
+COLUNAS_TABELA_AUDITORIA = [
+    "assignment_version", "assignment_id", "labeler", "video_id", "target", "url",
+    "video_description", "voice_to_text", "video_duration",
+]
+
+
 def renderizar_configuracao_admin_html(tarefa_meta: Dict[str, Any]) -> str:
     """Renderiza a configuracao vigente da tarefa em cartao HTML de alto contraste sem blocos escuros."""
     t_id = tarefa_meta.get("tarefa_id", "")
@@ -664,21 +670,20 @@ def construir_interface(
                         btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
 
                 #primeira visao oficial: visao geral do acervo e distribuicao por target
-                admin_visao_acervo_html = gr.HTML(elem_classes="admin-collection-overview-container")
                 admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")
+                admin_visao_acervo_html = gr.HTML(elem_classes="admin-collection-overview-container")
 
                 gr.Markdown("### Dados Coletados e Análise Operacional")
                 admin_dashboard_html = gr.HTML()
 
                 with gr.Row(elem_classes="admin-downloads"):
                     admin_download_resultados = gr.File(label="Resultados Anotação (CSV)")
-                    admin_download_logs = gr.File(label="Metadados e Tempos (CSV)")
                     admin_download_erros = gr.File(label="Vídeos com Erro (CSV)")
                     admin_download_concordancia = gr.File(label="Concordância (JSON)")
 
                 gr.Markdown("### Auditoria de Atribuições", elem_classes="admin-audit")
                 admin_tabela_atribuicoes = gr.Dataframe(
-                    headers=["assignment_version", "assignment_id", "labeler", "video_id", "url", "target", "video_description", "voice_to_text", "video_duration"],
+                    headers=["assignment_version", "assignment_id", "labeler", "video_id", "target", "url", "video_description", "voice_to_text", "video_duration"],
                     interactive=False,
                     elem_classes="assignment-table",
                     max_height=380,
@@ -1476,7 +1481,7 @@ def construir_interface(
                 gr.update(value=log_path),
                 gr.update(value=err_path),
                 gr.update(value=agr_path),
-                df_atrib,
+                df_atrib[[c for c in COLUNAS_TABELA_AUDITORIA if c in df_atrib.columns]] if not df_atrib.empty else df_atrib,
                 sessao_atualizada,
             )
 
@@ -1531,14 +1536,14 @@ def construir_interface(
             "painel_hub", "painel_wizard", "painel_rotulador", "painel_admin", "painel_aviso", "painel_controles",
             "radio", "cabecalho", "video", "pergunta", "progresso",
             "adm_titulo", "adm_config", "adm_status", "adm_dashboard",
-            "adm_res", "adm_log", "adm_err", "adm_agr", "adm_tabela",
+            "adm_res", "adm_err", "adm_agr", "adm_tabela",
             "hub_admin", "hub_rot", "saudacao", "toast", "sessao",
         ]
         saidas_hub = [
             painel_hub, painel_wizard, painel_rotulador, painel_admin, painel_aviso_sensivel, painel_controles_anotacao,
             rotulador_radio, rotulador_cabecalho, rotulador_video_html, rotulador_pergunta_html, rotulador_progresso,
             admin_titulo_tarefa, admin_configuracao_view, admin_visao_acervo_html, admin_dashboard_html,
-            admin_download_resultados, admin_download_logs, admin_download_erros, admin_download_concordancia,
+            admin_download_resultados, admin_download_erros, admin_download_concordancia,
             admin_tabela_atribuicoes,
             hub_admin_cards_html, hub_rotulador_cards_html, hub_saudacao, toast_host, estado_sessao,
         ]
@@ -1567,7 +1572,7 @@ def construir_interface(
                 return montar_saida_hub(
                     painel_hub=p_hub, painel_wizard=gr.update(visible=False), painel_admin=p_adm,
                     adm_titulo=gr.update() if erro_ao_abrir else a_tit, adm_config=a_cfg, adm_status=a_stat,
-                    adm_dashboard=a_dash, adm_res=d_res, adm_log=d_log, adm_err=d_err, adm_agr=d_agr,
+                    adm_dashboard=a_dash, adm_res=d_res, adm_err=d_err, adm_agr=d_agr,
                     adm_tabela=df_atrib, toast=renderizar_toast_html(a_tit) if erro_ao_abrir else gr.update(),
                     sessao=sessao_nova,
                 )
