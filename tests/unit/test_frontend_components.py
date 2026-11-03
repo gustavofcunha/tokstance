@@ -281,3 +281,10 @@ def test_campo_nome_completo_nao_reescreve_valor_pelo_servidor() -> None:
     from pathlib import Path
     fonte = Path("src/tokstance/frontend/gradio_ui.py").read_text(encoding="utf-8")
     assert "cadastro_nome_completo.change(" not in fonte
+
+
+def test_botao_video_nao_carregou_branco_e_radio_sem_moldura() -> None:
+    from tokstance.frontend.theme import APP_CSS
+    assert ".annotation-controls button.btn-icon-alerta {" in APP_CSS
+    assert "background: #ffffff !important;" in APP_CSS
+    assert ".annotation-controls .wrap-radio.block," in APP_CSS
