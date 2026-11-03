@@ -81,21 +81,35 @@ def povoar_banco_demonstrativo(
         caminho_videos_oficial = Path(__file__).resolve().parent.parent / "data" / "videos.csv"
         caminho_reserva_oficial = Path(__file__).resolve().parent.parent / "data" / "videos_reserva.csv"
 
-        if caminho_videos_oficial.exists():
+        if caminho_videos_oficial.exists() and caminho_videos_oficial.stat().st_size > 100:
             df_videos = pd.read_csv(caminho_videos_oficial)
-        elif caminhos.arquivo_videos.exists():
-            df_videos = pd.read_csv(caminhos.arquivo_videos)
         else:
             df_videos = pd.DataFrame([
-                {"id": f"vid_real_{idx}", "url": f"https://www.tiktok.com/@canal/video/{1000 + idx}", "target": "Fim da Escala de Trabalho 6x1"}
+                {
+                    "id": f"vid_real_{idx}",
+                    "url": f"https://www.tiktok.com/@canal/video/{1000 + idx}",
+                    "target": "Fim da Escala de Trabalho 6x1" if idx <= 20 else "Reforma Tributária",
+                    "video_description": f"Vídeo demonstrativo #{idx} sobre temas relevantes",
+                    "voice_to_text": f"Transcrição do áudio do vídeo #{idx}",
+                    "video_duration": "30.0",
+                }
                 for idx in range(1, 31)
             ])
 
-        df_reserva = None
-        if caminho_reserva_oficial.exists():
+        if caminho_reserva_oficial.exists() and caminho_reserva_oficial.stat().st_size > 100:
             df_reserva = pd.read_csv(caminho_reserva_oficial)
-        elif caminhos.arquivo_videos_reserva.exists():
-            df_reserva = pd.read_csv(caminhos.arquivo_videos_reserva)
+        else:
+            df_reserva = pd.DataFrame([
+                {
+                    "id": f"res_real_{idx}",
+                    "url": f"https://www.tiktok.com/@reserva/video/{2000 + idx}",
+                    "target": "Fim da Escala de Trabalho 6x1" if idx <= 6 else "Reforma Tributária",
+                    "video_description": f"Vídeo reserva #{idx}",
+                    "voice_to_text": f"Transcrição do reserva #{idx}",
+                    "video_duration": "25.0",
+                }
+                for idx in range(1, 11)
+            ])
 
         #distancias par a par para o alfa de krippendorff ordinal
         distancias_demo = {
@@ -165,6 +179,14 @@ def povoar_banco_demonstrativo(
     #reportar um erro de video de teste por rotulador_1 para auditar no console admin
     if len(df_rot1) > 10:
         aid_erro = str(df_rot1.iloc[10]["assignment_id"])
+        servico_fila.reportar_erro_video(
+            tarefa_id=tarefa_id,
+            nome_usuario="rotulador_1",
+            assignment_id=aid_erro,
+            tempo_analise_segundos=14.2,
+        )
+    elif len(df_rot1) > 0:
+        aid_erro = str(df_rot1.iloc[-1]["assignment_id"])
         servico_fila.reportar_erro_video(
             tarefa_id=tarefa_id,
             nome_usuario="rotulador_1",

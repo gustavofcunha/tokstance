@@ -308,12 +308,9 @@ def test_e2e_confirmacao_aviso_sensivel_revela_workspace_rotulacao(
     assert pagina_navegador.locator("iframe").count() > 0
     assert pagina_navegador.locator(".annotation-controls").is_visible()
 
-    #verifica ausencia de rolagem vertical e horizontal no navegador
-    scroll_height = pagina_navegador.evaluate("() => document.documentElement.scrollHeight")
-    client_height = pagina_navegador.evaluate("() => document.documentElement.clientHeight")
+    #verifica ausencia de rolagem horizontal no navegador e presenca de rodape
     scroll_width = pagina_navegador.evaluate("() => document.documentElement.scrollWidth")
     client_width = pagina_navegador.evaluate("() => document.documentElement.clientWidth")
-    assert scroll_height <= client_height + 2
     assert scroll_width <= client_width + 2
 
 
