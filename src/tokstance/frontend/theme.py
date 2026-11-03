@@ -709,25 +709,31 @@ APP_CSS = """
         font-size: 24px !important;
         font-weight: 800 !important;
     }
-    /* Hub estruturado em blocos limpos com tarefas organizadas e botoes perfeitamente alinhados */
+    /* Hub em duas colunas com tarefas lado a lado e botoes perfeitamente alinhados */
     .hub-two-col {
         display: flex !important;
-        flex-direction: column !important;
-        gap: 20px !important;
+        flex-direction: row !important;
+        gap: 24px !important;
         width: 100% !important;
         align-items: stretch !important;
         margin-bottom: 20px !important;
     }
+    @media (max-width: 1024px) {
+        .hub-two-col {
+            flex-direction: column !important;
+        }
+    }
     .hub-section-box {
-        width: 100% !important;
-        box-sizing: border-box !important;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
         background: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
         border-radius: 12px !important;
-        padding: 18px 22px !important;
+        padding: 20px 22px !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
         display: flex !important;
         flex-direction: column !important;
+        justify-content: space-between !important;
     }
     .hub-box-header {
         margin-bottom: 12px !important;
@@ -1671,27 +1677,20 @@ APP_CSS = """
     /* Hub */
     .hub-header-bar { margin-bottom: 14px !important; padding-bottom: 12px !important; align-items: center !important; flex-wrap: nowrap !important; }
     .hub-header-bar > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
-    .hub-two-col { display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 20px !important; width: 100% !important; margin-bottom: 20px !important; }
-    .hub-section-box { width: 100% !important; box-sizing: border-box !important; justify-content: flex-start !important; padding: 18px 22px !important; gap: 8px !important; min-width: 0 !important; }
+    .hub-two-col { align-items: flex-start !important; gap: 18px !important; }
+    .hub-section-box { justify-content: flex-start !important; padding: 16px 18px !important; gap: 8px !important; min-width: 0 !important; }
     .hub-box-header h3 { font-size: 18px !important; }
     .hub-box-header p { font-size: 13px !important; }
-    .hub-box-header-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: flex-start !important; justify-content: space-between !important; gap: 10px !important; background: transparent !important; border: none !important; padding: 0 !important; margin-bottom: 12px !important; }
+    .hub-box-header-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: flex-start !important; justify-content: space-between !important; gap: 10px !important; background: transparent !important; border: none !important; padding: 0 !important; }
     .hub-box-header-row > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
     .hub-box-header-row > button { flex: 0 0 auto !important; }
     .hub-section-box .block, .hub-section-box .prose { padding: 0 !important; border: none !important; }
     .hub-table-wrapper { overflow-x: visible !important; margin: 4px 0 0 0 !important; }
-    .hub-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
-    .hub-table th { background: #f8fafc !important; padding: 10px 14px !important; font-size: 11.5px !important; font-weight: 700 !important; text-transform: uppercase !important; color: #475569 !important; letter-spacing: 0.05em !important; border-bottom: 1px solid #e2e8f0 !important; white-space: nowrap !important; }
-    .hub-table td { padding: 12px 14px !important; font-size: 13.5px !important; border-bottom: 1px solid #f1f5f9 !important; color: #1e293b !important; vertical-align: middle !important; }
-    .hub-table tr:last-child td { border-bottom: none !important; }
+    .hub-table { table-layout: auto !important; }
+    .hub-table th { padding: 9px 10px !important; font-size: 11px !important; white-space: nowrap !important; }
+    .hub-table td { padding: 10px !important; }
     .hub-table .config-val-badge { white-space: nowrap !important; font-size: 13px !important; padding: 3px 8px !important; }
-    .hub-table-btn { display: inline-flex !important; align-items: center !important; gap: 5px !important; padding: 7px 12px !important; font-size: 12.5px !important; font-weight: 700 !important; border-radius: 6px !important; cursor: pointer !important; border: 1px solid transparent !important; margin-left: 6px !important; white-space: nowrap !important; }
-    .hub-table-btn.primary { background: #9c0014 !important; color: #ffffff !important; }
-    .hub-table-btn.in-progress { background: #047857 !important; color: #ffffff !important; }
-    .hub-table-btn.completed { background: #176b87 !important; color: #ffffff !important; }
-    .hub-table-btn.danger { background: #ffffff !important; color: #b91c1c !important; border-color: #fca5a5 !important; }
-    .hub-table-btn.danger:hover { background: #fef2f2 !important; border-color: #ef4444 !important; }
-    .hub-table-empty { padding: 22px 16px !important; text-align: center !important; color: #64748b !important; font-size: 13.5px !important; background: #f8fafc !important; border-radius: 8px !important; border: 1px dashed #cbd5e1 !important; margin-top: 4px !important; }
+    .hub-table-btn { padding: 7px 12px !important; font-size: 12.5px !important; margin-left: 4px !important; }
 
     /* Popup de codigo de convite */
     .modal-overlay {

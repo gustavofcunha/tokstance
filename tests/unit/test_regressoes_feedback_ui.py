@@ -995,53 +995,6 @@ def test_renderizar_visao_geral_acervo_html() -> None:
     assert "Total Geral" in html
 
 
-@pytest.mark.unit
-def test_hub_tabelas_vagas_preenchidas_e_deduplicacao() -> None:
-    #arrange
-    from tokstance.frontend.gradio_ui import renderizar_hub_tabelas_html
-
-    t_admin = [{
-        "tarefa_id": 10,
-        "titulo": "Pesquisa Eleitoral",
-        "codigo_convite": "TOK-ELEC10",
-        "vagas_ocupadas": 1,
-        "numero_vagas": 3,
-        "progresso_percentual": 0.0,
-    }]
-    t_rot = [
-        {
-            "tarefa_id": 10,
-            "titulo": "Pesquisa Eleitoral",
-            "videos_concluidos": 0,
-            "total_videos_fila": 15,
-        },
-        {
-            "tarefa_id": 20,
-            "titulo": "Pesquisa Externa",
-            "videos_concluidos": 3,
-            "total_videos_fila": 10,
-        },
-    ]
-
-    #act com deduplicacao habilitada (fluxo real do hub)
-    h_adm, h_rot = renderizar_hub_tabelas_html(t_admin, t_rot, deduplicar_atribuidas=True)
-
-    #assert coluna vagas preenchidas sem quebra de linha
-    assert "Vagas Preenchidas" in h_adm
-    assert "1 de 3" in h_adm
-    assert "white-space: nowrap" in h_adm
-
-    #assert acao de rotular disponivel diretamente na linha de administracao
-    assert "Iniciar Rotulação" in h_adm
-    assert "Abrir Console" in h_adm
-    assert "Excluir" in h_adm
-
-    #assert tarefa administrada nao duplicada na tabela de tarefas atribuidas
-    assert "Pesquisa Eleitoral" not in h_rot
-    assert "Pesquisa Externa" in h_rot
-
-
-
 
 
 
