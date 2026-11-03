@@ -1622,7 +1622,6 @@ def construir_interface(
         login_usuario.submit(**handler_login_params)
         login_senha.submit(**handler_login_params)
 
-        cadastro_nome_completo.change(lambda v: (str(v or "")).upper(), inputs=[cadastro_nome_completo], outputs=[cadastro_nome_completo])
 
         handler_cadastro_params = {
             "fn": executar_cadastro,

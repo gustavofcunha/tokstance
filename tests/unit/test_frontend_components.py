@@ -275,3 +275,9 @@ def test_console_admin_config_antes_do_acervo_sem_download_de_logs_e_com_target(
     assert fonte.index("admin_configuracao_view = gr.HTML") < fonte.index("admin_visao_acervo_html = gr.HTML")
     assert "Metadados e Tempos" not in fonte
     assert '"labeler", "video_id", "target"' in fonte
+
+
+def test_campo_nome_completo_nao_reescreve_valor_pelo_servidor() -> None:
+    from pathlib import Path
+    fonte = Path("src/tokstance/frontend/gradio_ui.py").read_text(encoding="utf-8")
+    assert "cadastro_nome_completo.change(" not in fonte
