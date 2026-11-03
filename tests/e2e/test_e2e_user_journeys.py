@@ -43,8 +43,41 @@ def servidor_e2e() -> Iterator[Tuple[str, str, str]]:
     dados_temp = tempfile.mkdtemp(prefix="tokstance_e2e_srv_")
     caminho_dados = Path(dados_temp)
 
-    shutil.copy(diretorio_base / "data/videos.csv", caminho_dados / "videos.csv")
-    shutil.copy(diretorio_base / "data/videos_reserva.csv", caminho_dados / "videos_reserva.csv")
+    #copiar base real se presente ou gerar dataset sintetico deterministico
+    caminho_videos = diretorio_base / "data/videos.csv"
+    caminho_reserva = diretorio_base / "data/videos_reserva.csv"
+
+    if caminho_videos.exists() and caminho_videos.stat().st_size > 100:
+        shutil.copy(caminho_videos, caminho_dados / "videos.csv")
+    else:
+        df_videos_sinteticos = pd.DataFrame([
+            {
+                "id": f"vid_real_{idx}",
+                "url": f"https://www.tiktok.com/@canal/video/{1000 + idx}",
+                "target": "Fim da Escala de Trabalho 6x1" if idx <= 20 else "Reforma Tributária",
+                "video_description": f"Vídeo demonstrativo #{idx} sobre temas relevantes",
+                "voice_to_text": f"Transcrição do áudio do vídeo #{idx}",
+                "video_duration": "30.0",
+            }
+            for idx in range(1, 31)
+        ])
+        df_videos_sinteticos.to_csv(caminho_dados / "videos.csv", index=False)
+
+    if caminho_reserva.exists() and caminho_reserva.stat().st_size > 100:
+        shutil.copy(caminho_reserva, caminho_dados / "videos_reserva.csv")
+    else:
+        df_reserva_sinteticos = pd.DataFrame([
+            {
+                "id": f"res_real_{idx}",
+                "url": f"https://www.tiktok.com/@reserva/video/{2000 + idx}",
+                "target": "Fim da Escala de Trabalho 6x1" if idx <= 6 else "Reforma Tributária",
+                "video_description": f"Vídeo reserva #{idx}",
+                "voice_to_text": f"Transcrição do reserva #{idx}",
+                "video_duration": "25.0",
+            }
+            for idx in range(1, 11)
+        ])
+        df_reserva_sinteticos.to_csv(caminho_dados / "videos_reserva.csv", index=False)
 
     banco = BancoDadosSQLite(caminho_dados / "tokstance.db")
     repo_usuarios = RepositorioUsuarios(banco)
