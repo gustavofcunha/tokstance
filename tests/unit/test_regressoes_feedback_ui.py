@@ -273,8 +273,7 @@ def test_gatilho_das_acoes_existe_fora_dos_paineis_ocultaveis() -> None:
 
 @pytest.mark.unit
 def test_player_do_workspace_usa_altura_da_janela() -> None:
-    assert "--altura-player: clamp(" in APP_CSS
-    assert "100vh" in APP_CSS
+    assert "--altura-player: clamp(560px, calc(100vh - 210px), 640px);" in APP_CSS
 
 
 @pytest.mark.unit
@@ -353,11 +352,12 @@ def test_workspace_rotulacao_widescreen_sem_rolagem_vertical_e_player_ampliado()
     from tokstance.frontend.theme import APP_CSS
 
     #assert
-    assert "--altura-player: clamp(" in APP_CSS
+    assert "--altura-player: clamp(560px, calc(100vh - 210px), 640px);" in APP_CSS
     assert ".video-context-column" in APP_CSS
     assert ".video-player-column" in APP_CSS
     assert "body:has(.labeler-panel:not(.hide):not(.hidden))" in APP_CSS
-    assert "overflow: hidden !important;" in APP_CSS
+    assert "overflow-y: auto !important;" in APP_CSS
+    assert "max-width: 1560px !important;" in APP_CSS
 
 
 #bold question styling and regular alternative options
@@ -893,11 +893,11 @@ def test_workspace_layout_horizontal_e_proporcoes_cards() -> None:
     #assert coluna de metadados proporcional como informacao auxiliar
     assert ".video-context-column {" in APP_CSS
     assert "min-width: 240px !important;" in APP_CSS
-    assert "max-width: 310px !important;" in APP_CSS
+    assert "max-width: 360px !important;" in APP_CSS
 
     #assert cards de transcricao e descricao com proporcao elegante
     assert ".video-transcription.unavailable," in APP_CSS
-    assert "max-height: 68px !important;" in APP_CSS
+    assert "max-height: none !important;" in APP_CSS
 
     #assert espacamento vertical do botao de upload no card de videos
     assert ".wizard-file-upload button.center .wrap {" in APP_CSS
