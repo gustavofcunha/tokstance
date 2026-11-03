@@ -1525,18 +1525,22 @@ APP_CSS = """
         pointer-events: none !important;
     }
 
-    .target-question {
+    .target-question,
+    .target-question.target-transition {
         font-weight: 700 !important;
-        font-size: 14.5px !important;
-        line-height: 1.5 !important;
+        font-size: 15px !important;
+        line-height: 1.45 !important;
         color: #0f172a !important;
-        margin-bottom: 6px !important;
-        padding: 9px 12px !important;
-        background: #fff8f8 !important;
-        border: 1px solid #fed7da !important;
-        border-left: 5px solid #9c0014 !important;
-        border-radius: 6px !important;
-        transition: all 0.2s ease !important;
+        margin: 4px 0 8px 0 !important;
+        padding: 2px 0 6px 0 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        border-left: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        animation: none !important;
+        transition: none !important;
     }
     .target-question, .target-question strong, .target-question b, .target-question * {
         font-weight: 700 !important;
@@ -1821,11 +1825,13 @@ APP_CSS = """
         overflow: hidden !important;
     }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.brand-header) {
+        display: block !important;
+        margin-bottom: 6px !important;
+        padding-bottom: 6px !important;
+    }
     body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer,
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.brand-header),
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.app-footer),
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header,
-    body:has(.labeler-panel:not(.hide):not(.hidden)) .app-footer {
+    body:has(.labeler-panel:not(.hide):not(.hidden)) .block:has(.app-footer) {
         display: none !important;
         height: 0 !important;
         min-height: 0 !important;
@@ -1851,11 +1857,11 @@ APP_CSS = """
         box-sizing: border-box !important;
     }
     .labeler-panel {
-        --altura-player: clamp(420px, calc(100vh - 85px), 590px);
+        --altura-player: clamp(560px, calc(100vh - 150px), 600px);
         display: flex !important;
         flex-direction: column !important;
-        height: calc(100vh - 12px) !important;
-        max-height: calc(100vh - 12px) !important;
+        height: auto !important;
+        max-height: calc(100vh - 84px) !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
         padding: 0 !important;
@@ -1868,13 +1874,14 @@ APP_CSS = """
         flex-direction: column !important;
         flex: 1 1 auto !important;
         width: 100% !important;
-        max-width: 100% !important;
-        height: calc(100% - 42px) !important;
+        max-width: 1260px !important;
+        margin: 0 auto !important;
+        height: auto !important;
         min-height: 0 !important;
-        overflow: hidden !important;
+        overflow: visible !important;
     }
     .labeler-header-bar {
-        margin-bottom: 6px !important;
+        margin-bottom: 8px !important;
         padding-bottom: 2px !important;
         height: 36px !important;
         min-height: 36px !important;
@@ -1883,6 +1890,10 @@ APP_CSS = """
         align-items: center !important;
         justify-content: space-between !important;
         flex: 0 0 auto !important;
+        width: 100% !important;
+        max-width: 1260px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
     .labeler-exit-btn {
         min-width: 160px !important;
@@ -1897,34 +1908,32 @@ APP_CSS = """
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        align-items: stretch !important;
-        justify-content: space-between !important;
-        gap: clamp(16px, 1.8vw, 24px) !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        gap: 28px !important;
         width: 100% !important;
-        height: 100% !important;
+        max-width: 1260px !important;
+        margin: 0 auto !important;
         min-height: 0 !important;
-        overflow: hidden !important;
     }
     .video-column {
-        flex: 1 1 auto !important;
+        flex: 0 0 auto !important;
         width: auto !important;
         min-width: 0 !important;
         max-width: none !important;
-        height: 100% !important;
+        height: auto !important;
         min-height: 0 !important;
         display: flex !important;
         flex-direction: row !important;
-        overflow: hidden !important;
     }
     .video-column > div,
     .video-column .block,
     .video-column .prose {
-        width: 100% !important;
-        height: 100% !important;
+        width: auto !important;
+        height: auto !important;
         min-height: 0 !important;
         display: flex !important;
         flex-direction: row !important;
-        overflow: hidden !important;
         border: none !important;
         padding: 0 !important;
         margin: 0 !important;
@@ -1932,14 +1941,13 @@ APP_CSS = """
         box-shadow: none !important;
     }
     .video-card {
-        width: 100% !important;
-        height: 100% !important;
-        max-height: 100% !important;
+        width: auto !important;
+        height: auto !important;
         display: flex !important;
         flex-direction: row !important;
-        align-items: stretch !important;
-        justify-content: space-between !important;
-        gap: clamp(16px, 1.8vw, 24px) !important;
+        align-items: flex-start !important;
+        justify-content: flex-start !important;
+        gap: 24px !important;
         padding: 0 !important;
         margin: 0 !important;
         background: transparent !important;
@@ -1948,75 +1956,76 @@ APP_CSS = """
         box-shadow: none !important;
         box-sizing: border-box !important;
         min-height: 0 !important;
-        overflow: hidden !important;
     }
     .video-context-column {
-        flex: 1 1 auto !important;
-        width: auto !important;
-        min-width: 360px !important;
-        max-width: 720px !important;
+        flex: 0 0 300px !important;
+        width: 300px !important;
+        min-width: 240px !important;
+        max-width: 310px !important;
         height: var(--altura-player) !important;
         max-height: var(--altura-player) !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: flex-start !important;
-        gap: 10px !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 16px 18px !important;
+        gap: 12px !important;
         min-height: 0 !important;
-        overflow: hidden !important;
+        overflow-y: auto !important;
         box-sizing: border-box !important;
+        scrollbar-width: thin !important;
     }
     .video-meta {
-        background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-        padding: 8px 14px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
         font-size: 13.5px !important;
         color: #1e293b !important;
         flex: 0 0 auto !important;
         display: flex !important;
         align-items: center !important;
         gap: 8px !important;
-        min-height: 40px !important;
+        min-height: auto !important;
         box-sizing: border-box !important;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
     .video-meta.target-transition {
-        border-color: #9c0014 !important;
-        box-shadow: 0 0 0 3px rgba(156, 0, 20, 0.15) !important;
         animation: pulse-target 1.8s ease-in-out infinite alternate !important;
     }
     .video-description, .video-transcription {
-        background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-        padding: 10px 14px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
         margin: 0 !important;
         font-size: 13px !important;
         line-height: 1.5 !important;
         color: #334155 !important;
         overflow-y: auto !important;
         flex: 1 1 auto !important;
-        max-height: calc(50% - 24px) !important;
-        min-height: 60px !important;
+        max-height: calc(50% - 10px) !important;
+        min-height: 40px !important;
         box-sizing: border-box !important;
         scrollbar-width: thin !important;
     }
     .video-transcription.unavailable,
     .video-description.unavailable {
         flex: 0 0 auto !important;
-        min-height: 54px !important;
+        min-height: 36px !important;
         max-height: 68px !important;
         color: #64748b !important;
     }
     .metadata-title {
-        font-size: 11.5px !important;
+        font-size: 11px !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.4px !important;
-        color: #475569 !important;
-        margin-bottom: 4px !important;
+        letter-spacing: 0.5px !important;
+        color: #64748b !important;
+        margin-bottom: 3px !important;
     }
     .metadata-text {
         font-size: 13px !important;
@@ -2026,12 +2035,10 @@ APP_CSS = """
     .video-player-column {
         width: calc(var(--altura-player) * 0.5625) !important;
         height: var(--altura-player) !important;
-        max-height: var(--altura-player) !important;
-        min-height: 0 !important;
+        min-height: 560px !important;
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        overflow: hidden !important;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
@@ -2048,10 +2055,9 @@ APP_CSS = """
         align-items: center !important;
     }
     .video-player-column iframe {
-        height: var(--altura-player) !important;
-        width: calc(var(--altura-player) * 0.5625) !important;
-        max-height: 100% !important;
-        max-width: 100% !important;
+        height: 100% !important;
+        min-height: 560px !important;
+        width: 100% !important;
         border: 1px solid #cbd5e1 !important;
         border-radius: 12px !important;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
@@ -2059,18 +2065,19 @@ APP_CSS = """
         box-sizing: border-box !important;
     }
     .labeler-controls-column {
-        flex: 0 0 clamp(350px, 28vw, 420px) !important;
-        width: clamp(350px, 28vw, 420px) !important;
-        min-width: 340px !important;
-        max-width: 440px !important;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: clamp(380px, 32vw, 440px) !important;
+        max-width: 500px !important;
         height: var(--altura-player) !important;
         max-height: var(--altura-player) !important;
-        min-height: 0 !important;
+        min-height: 560px !important;
         display: flex !important;
         flex-direction: column !important;
         flex-wrap: nowrap !important;
         gap: 6px !important;
-        overflow: hidden !important;
+        overflow-y: auto !important;
+        scrollbar-width: thin !important;
         box-sizing: border-box !important;
     }
     .labeler-controls-column > div,
@@ -2083,14 +2090,15 @@ APP_CSS = """
         flex: 0 0 auto !important;
     }
     .labeler-header-badge-wrapper {
-        background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-        padding: 4px 10px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 0 10px 0 !important;
+        margin: 0 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
         flex: 0 0 auto !important;
         box-sizing: border-box !important;
-        margin: 0 !important;
     }
     .labeler-info-badge {
         display: flex !important;
@@ -2100,7 +2108,7 @@ APP_CSS = """
         font-size: 12px !important;
         gap: 6px !important;
         color: #64748b !important;
-        line-height: 1.25 !important;
+        line-height: 1.3 !important;
     }
     .labeler-info-badge strong {
         color: #0f172a !important;
@@ -2113,34 +2121,32 @@ APP_CSS = """
         border-radius: 4px !important;
     }
     .annotation-controls {
-        background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 10px !important;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
-        padding: 8px 10px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
         flex: 1 1 auto !important;
         display: flex !important;
         flex-direction: column !important;
         flex-wrap: nowrap !important;
-        gap: 4px !important;
+        gap: 6px !important;
         min-height: 0 !important;
         box-sizing: border-box !important;
-        overflow-y: auto !important;
-        scrollbar-width: thin !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
     }
     .labeler-warning-stack {
-        font-size: 10.5px !important;
-        line-height: 1.3 !important;
-        padding: 4px 6px !important;
-        margin-bottom: 2px !important;
-        gap: 2px !important;
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 6px !important;
-        color: #475569 !important;
+        font-size: 11px !important;
+        line-height: 1.4 !important;
+        padding: 0 !important;
+        margin-bottom: 4px !important;
+        gap: 3px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #64748b !important;
         flex: 0 0 auto !important;
     }
     .annotation-controls .prose {
@@ -2148,12 +2154,27 @@ APP_CSS = """
         padding: 0 !important;
         flex: 0 0 auto !important;
     }
-    .annotation-controls .target-question {
-        padding: 5px 8px !important;
+    .annotation-controls .target-question,
+    .annotation-controls .target-question.target-transition {
+        padding: 2px 0 6px 0 !important;
         margin-bottom: 2px !important;
-        font-size: 12.5px !important;
-        line-height: 1.3 !important;
-        border-left: 4px solid #9c0014 !important;
+        font-size: 14.5px !important;
+        line-height: 1.4 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        border-left: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        animation: none !important;
+    }
+    .hidden-cabecalho {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
     }
     .annotation-controls .target-question .target-name-badge {
         font-size: inherit !important;

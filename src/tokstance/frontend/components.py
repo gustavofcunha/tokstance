@@ -15,9 +15,9 @@ def render_tiktok(url: str) -> str:
     video_id = str(url or "").rstrip("/").split("/")[-1].split("?")[0]
     player_url = f"https://www.tiktok.com/player/v1/{escape(video_id)}?music_info=1&description=1&rel=0"
     return f"""
-    <div style="display: flex; justify-content: center; width: 100%; margin: 0; padding: 0;">
+    <div style="display: flex; justify-content: center; width: 100%; height: 100%; margin: 0; padding: 0;">
         <iframe
-            style="width: min(100%, calc(var(--altura-player, 500px) * 0.5625)); height: var(--altura-player, 500px); border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+            style="width: min(100%, calc(var(--altura-player, 500px) * 0.5625)); height: var(--altura-player, 500px); min-height: 560px; border: none; overflow: hidden; display: block; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);"
             scrolling="no"
             src="{player_url}"
             title="Player do vídeo TikTok"
@@ -68,12 +68,32 @@ def formatar_pergunta_com_target(pergunta_template: Optional[str], target: str) 
     return f'{template} (Target: {target_formatado})'
 
 
-def render_video_card(item: Dict[str, Any], highlight_target: bool = False) -> str:
-    """Renderiza os blocos independentes de metadados (target, descricao, transcricao) e o player TikTok."""
+def render_video_card(
+    item: Dict[str, Any],
+    highlight_target: bool = False,
+    tarefa_titulo: str = "",
+    rotulador_nome: str = "",
+) -> str:
+    """Renderiza os blocos independentes de metadados (tarefa, target, descricao, transcricao) e o player TikTok."""
     target = str(item.get("target", "") or "").strip()
     description = str(item.get("video_description", "") or "").strip()
     transcription = str(item.get("voice_to_text", "") or "").strip()
     url = str(item.get("url", "") or "").strip()
+
+    titulo_t = str(tarefa_titulo or item.get("tarefa_titulo", "") or "").strip()
+    nome_r = str(rotulador_nome or item.get("rotulador_nome", "") or item.get("labeler", "") or "").strip()
+
+    cabecalho_html = ""
+    if titulo_t or nome_r:
+        labeler_badge = f"<span class='user-pill'>{escape(nome_r)}</span>" if nome_r else ""
+        cabecalho_html = (
+            f"<div class='labeler-header-badge-wrapper'>"
+            f"<div class='labeler-info-badge'>"
+            f"<div><span>Tarefa:</span> <strong>{escape(titulo_t)}</strong></div>"
+            f"<div><span>Rotulador:</span> {labeler_badge}</div>"
+            f"</div>"
+            f"</div>"
+        )
 
     description_html = (
         escape(description).replace("\n", "<br>")
@@ -93,6 +113,7 @@ def render_video_card(item: Dict[str, Any], highlight_target: bool = False) -> s
     return f"""
     <div class='video-card'>
         <div class='video-context-column'>
+            {cabecalho_html}
             <div class='video-meta{transicao_classe}'><strong>Target:</strong> {target_badge_html}</div>
             <div class='{description_class}'>
                 <div class='metadata-title'>Descrição do vídeo</div>
@@ -131,6 +152,7 @@ def video_outputs(
     username_clean: str = "",
     pergunta_template: Optional[str] = None,
     highlight_first: bool = False,
+    tarefa_titulo: str = "",
 ) -> Tuple[int, str, Any, str, str]:
     """Prepara os outputs visuais do proximo video da fila do rotulador."""
     total = len(queue)
@@ -159,7 +181,12 @@ def video_outputs(
     transicao_classe = " target-transition" if target_changed else ""
     pergunta_markdown = f'<div class="target-question{transicao_classe}"><strong>{texto_pergunta}</strong></div>'
     pb = generate_progress_bar(position, total)
-    video_html = render_video_card(item, target_changed)
+    video_html = render_video_card(
+        item,
+        target_changed,
+        tarefa_titulo=tarefa_titulo,
+        rotulador_nome=username_clean,
+    )
     return position, video_html, gr.update(visible=True), pergunta_markdown, pb
 
 

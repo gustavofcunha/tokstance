@@ -890,10 +890,10 @@ def test_workspace_layout_horizontal_e_proporcoes_cards() -> None:
     assert "max-width: 100% !important;" in APP_CSS
     assert "max-width: 1200px !important;" not in APP_CSS
 
-    #assert coluna de metadados ampla e proporcional
+    #assert coluna de metadados proporcional como informacao auxiliar
     assert ".video-context-column {" in APP_CSS
-    assert "min-width: 360px !important;" in APP_CSS
-    assert "max-width: 720px !important;" in APP_CSS
+    assert "min-width: 240px !important;" in APP_CSS
+    assert "max-width: 310px !important;" in APP_CSS
 
     #assert cards de transcricao e descricao com proporcao elegante
     assert ".video-transcription.unavailable," in APP_CSS
@@ -993,6 +993,67 @@ def test_renderizar_visao_geral_acervo_html() -> None:
     assert "Escala 6x1" in html
     assert "target-distribution-table" in html
     assert "Total Geral" in html
+
+
+#workspace layout refactor brand header no box question and controls expansion
+
+
+@pytest.mark.unit
+def test_workspace_pergunta_sem_caixa_vermelha_e_sem_borda() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+
+    #assert pergunta sem caixa e sem fundo vermelho
+    assert ".target-question," in APP_CSS
+    assert "background: transparent !important;" in APP_CSS
+    assert "border: none !important;" in APP_CSS
+    assert "border-left: none !important;" in APP_CSS
+    assert "box-shadow: none !important;" in APP_CSS
+
+
+@pytest.mark.unit
+def test_workspace_cabecalho_tarefa_e_rotulador_acima_do_target() -> None:
+    #arrange
+    from tokstance.frontend.components import render_video_card
+
+    item = {
+        "target": "Fim da Escala 6x1",
+        "video_description": "Manifestação contra a escala 6x1.",
+        "voice_to_text": "Texto da transcricao.",
+        "url": "https://www.tiktok.com/@u/video/123",
+    }
+
+    #act
+    html = render_video_card(
+        item,
+        highlight_target=True,
+        tarefa_titulo="Detecção de Posição",
+        rotulador_nome="gustavo",
+    )
+
+    #assert tarefa e rotulador acima do target
+    assert "labeler-header-badge-wrapper" in html
+    assert "Tarefa:" in html
+    assert "Detecção de Posição" in html
+    assert "Rotulador:" in html
+    assert "gustavo" in html
+    idx_cabecalho = html.find("labeler-header-badge-wrapper")
+    idx_target = html.find("video-meta")
+    assert idx_cabecalho < idx_target, "cabecalho da tarefa e rotulador deve ficar acima do target"
+
+
+@pytest.mark.unit
+def test_workspace_inclui_brand_header_visivel_e_controles_expandidos() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+
+    #assert brand header visivel no workspace
+    assert "body:has(.labeler-panel:not(.hide):not(.hidden)) .brand-header," in APP_CSS
+    assert "display: block !important;" in APP_CSS
+
+    #assert coluna de controles expandida
+    assert ".labeler-controls-column {" in APP_CSS
+    assert "flex: 1 1 auto !important;" in APP_CSS
 
 
 
