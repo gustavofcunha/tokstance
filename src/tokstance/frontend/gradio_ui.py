@@ -636,11 +636,11 @@ def construir_interface(
                                 btn_parar_sensivel = gr.Button("Parar de rotular", elem_classes=["error-btn", "sensitive-btn-stop"])
 
                     with gr.Row(elem_classes="labeler-layout"):
-                        with gr.Column(scale=8, min_width=320, elem_classes="video-column"):
+                        with gr.Column(scale=0, min_width=640, elem_classes="video-column"):
                             rotulador_video_html = gr.HTML()
 
-                        with gr.Column(scale=3, min_width=280, elem_classes="labeler-controls-column"):
-                            rotulador_cabecalho = gr.HTML(elem_classes="labeler-header-badge-wrapper")
+                        with gr.Column(scale=1, min_width=380, elem_classes="labeler-controls-column"):
+                            rotulador_cabecalho = gr.HTML(visible=False, elem_classes=["hidden-cabecalho"])
                             rotulador_progresso = gr.HTML()
 
                             with gr.Column(visible=False, elem_classes="annotation-controls") as painel_controles_anotacao:
@@ -1169,6 +1169,8 @@ def construir_interface(
             total: int,
             pergunta_template: str,
             previous_target: str,
+            tarefa_titulo: str = "",
+            rotulador_nome: str = "",
         ) -> Tuple[str, str, str, str]:
             if not video_item or posicao >= total:
                 html_fim = (
@@ -1186,7 +1188,12 @@ def construir_interface(
             transicao_classe = " target-transition" if target_mudou else ""
             pergunta_html = f'<div class="target-question{transicao_classe}"><strong>{texto_pergunta}</strong></div>'
             pb = generate_progress_bar(posicao, total)
-            v_html = render_video_card(video_item, target_mudou)
+            v_html = render_video_card(
+                video_item,
+                target_mudou,
+                tarefa_titulo=tarefa_titulo,
+                rotulador_nome=rotulador_nome,
+            )
             return v_html, pergunta_html, pb, target
 
         def abrir_rotulacao_tarefa(tarefa_id_str: str, sessao: Dict[str, Any]) -> Tuple[Any, Any, Any, Any, Any, str, str, str, str, Dict[str, Any]]:
@@ -1203,6 +1210,7 @@ def construir_interface(
             opcoes = estado_f["opcoes_posicao"]
             pergunta = estado_f["pergunta"]
             prev_target = str(estado_f.get("target_anterior", "") or "")
+            t_titulo = str(estado_f.get("titulo", "") or "")
 
             v_html, p_html, pb, novo_target = renderizar_video_rotulador(
                 video_item=vid,
@@ -1210,16 +1218,19 @@ def construir_interface(
                 total=tot,
                 pergunta_template=pergunta,
                 previous_target=prev_target,
+                tarefa_titulo=t_titulo,
+                rotulador_nome=str(nome_u),
             )
 
             cabecalho_txt = (
                 f"<div class='labeler-info-badge'>"
-                f"<div><span>Tarefa:</span> <strong>{escape(str(estado_f['titulo']))}</strong></div>"
+                f"<div><span>Tarefa:</span> <strong>{escape(t_titulo)}</strong></div>"
                 f"<div><span>Rotulador:</span> <span class='user-pill'>{escape(str(nome_u))}</span></div>"
                 f"</div>"
             )
             sessao_atualizada = dict(sessao)
             sessao_atualizada["tarefa_ativa_id"] = t_id
+            sessao_atualizada["tarefa_titulo"] = t_titulo
             sessao_atualizada["start_time"] = time.time()
             sessao_atualizada["assignment_id"] = vid.get("assignment_id", "") if vid else ""
             sessao_atualizada["pergunta_template"] = pergunta
@@ -1324,6 +1335,8 @@ def construir_interface(
                 total=tot,
                 pergunta_template=sessao.get("pergunta_template", ""),
                 previous_target=sessao.get("previous_target", ""),
+                tarefa_titulo=str(sessao.get("tarefa_titulo", "") or estado_f.get("titulo", "")),
+                rotulador_nome=str(nome_u),
             )
 
             sessao_atualizada = dict(sessao)
@@ -1384,6 +1397,8 @@ def construir_interface(
                 total=tot,
                 pergunta_template=sessao.get("pergunta_template", ""),
                 previous_target=sessao.get("previous_target", ""),
+                tarefa_titulo=str(sessao.get("tarefa_titulo", "") or estado_f.get("titulo", "")),
+                rotulador_nome=str(nome_u),
             )
 
             sessao_atualizada = dict(sessao)

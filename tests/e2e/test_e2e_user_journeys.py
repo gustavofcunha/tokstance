@@ -220,7 +220,8 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     #act logout
     pagina_navegador.get_by_role("button", name="Cancelar").click()
     pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
-    pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-sucesso", timeout=8000)
+    pagina_navegador.wait_for_selector(".auth-card", state="visible", timeout=8000)
 
     #act tentativa de cadastro com senha sem cumprir requisitos de complexidade
     pagina_navegador.get_by_role("tab", name="Criar Conta").click()
