@@ -267,7 +267,7 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     pagina_navegador.get_by_role("button", name="Cadastrar e Acessar").click()
 
     #assert erro de requisitos de senha exibido inline e no toast
-    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    pagina_navegador.locator(".auth-inline-error").filter(has_text=re.compile(r"letra", re.I)).wait_for(timeout=10000)
     texto_erro_cad = pagina_navegador.locator(".auth-inline-error").inner_text()
     assert "letra" in texto_erro_cad.lower() and "número" in texto_erro_cad.lower()
 
@@ -282,8 +282,9 @@ def _fazer_logout_e_aguardar_tela_inicial(pagina: Page) -> None:
     pagina.wait_for_selector(".hub-header-bar", state="hidden", timeout=10000)
     pagina.wait_for_selector(".tokstance-toast.toast-sucesso", timeout=10000)
     pagina.wait_for_selector(".auth-card", state="visible", timeout=10000)
+    pagina.reload()
+    pagina.wait_for_selector(".auth-card", state="visible", timeout=10000)
     pagina.get_by_role("button", name="Entrar no Sistema").wait_for(state="visible", timeout=10000)
-    pagina.wait_for_timeout(400)
 
 
 def _cadastrar_e_entrar_na_tarefa(
@@ -493,7 +494,7 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
     pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
 
     #assert erro de requisitos de letra e numero exibido inline e no toast
-    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    pagina_navegador.locator(".auth-inline-error").filter(has_text=re.compile(r"letra", re.I)).wait_for(timeout=10000)
     texto_inline_sn = pagina_navegador.locator(".auth-inline-error").inner_text()
     assert "letra" in texto_inline_sn.lower() and "número" in texto_inline_sn.lower()
 
@@ -507,7 +508,7 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
     pagina_navegador.get_by_role("button", name="Redefinir Senha").click()
 
     #assert erro de confirmacao diferente exibido inline no card e no toast
-    pagina_navegador.wait_for_selector(".auth-inline-error", timeout=8000)
+    pagina_navegador.locator(".auth-inline-error").filter(has_text=re.compile(r"coincidem|diferente", re.I)).wait_for(timeout=10000)
     texto_inline = pagina_navegador.locator(".auth-inline-error").inner_text()
     assert "não coincidem" in texto_inline.lower() or "diferente" in texto_inline.lower()
 
