@@ -252,13 +252,14 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
 
     #act logout
     pagina_navegador.get_by_role("button", name="Cancelar").click()
-    pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
-    pagina_navegador.wait_for_selector(".tokstance-toast.toast-sucesso", timeout=8000)
-    pagina_navegador.wait_for_selector(".auth-card", state="visible", timeout=8000)
+    pagina_navegador.wait_for_selector(".modal-overlay:not(.hide)", state="hidden", timeout=5000)
+    _fazer_logout_e_aguardar_tela_inicial(pagina_navegador)
 
     #act tentativa de cadastro com senha sem cumprir requisitos de complexidade
     pagina_navegador.get_by_role("tab", name="Criar Conta").click()
-    pagina_navegador.get_by_label("Nome Completo").fill("Usuario Falha Senha")
+    campo_nc = pagina_navegador.get_by_label("Nome Completo")
+    campo_nc.wait_for(state="visible", timeout=8000)
+    campo_nc.fill("Usuario Falha Senha")
     pagina_navegador.get_by_label("Nome de Usuário").nth(1).fill("usuario_falha_senha")
     pagina_navegador.get_by_label("E-mail").fill("falha@exemplo.org")
     pagina_navegador.get_by_label("Senha de Acesso").nth(1).fill("somenteletras")
@@ -273,6 +274,16 @@ def test_e2e_rejeicao_credenciais_invalidas_e_convite_inexistente(
     pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", state="attached", timeout=8000)
     texto_toast_cad = pagina_navegador.locator(".tokstance-toast.toast-erro").last.text_content() or ""
     assert "letra" in texto_toast_cad.lower() and "número" in texto_toast_cad.lower()
+
+
+def _fazer_logout_e_aguardar_tela_inicial(pagina: Page) -> None:
+    #encerrar sessao e aguardar retorno estavel a tela inicial de autenticacao
+    pagina.get_by_role("button", name="Encerrar Sessão").click()
+    pagina.wait_for_selector(".hub-header-bar", state="hidden", timeout=10000)
+    pagina.wait_for_selector(".tokstance-toast.toast-sucesso", timeout=10000)
+    pagina.wait_for_selector(".auth-card", state="visible", timeout=10000)
+    pagina.get_by_role("button", name="Entrar no Sistema").wait_for(state="visible", timeout=10000)
+    pagina.wait_for_timeout(400)
 
 
 def _cadastrar_e_entrar_na_tarefa(
@@ -424,8 +435,7 @@ def test_e2e_redefinicao_senha_exibe_erro_confirmacao_diferente_e_sucesso_quando
     _cadastrar_e_entrar_na_tarefa(pagina_navegador, url_base, usuario_recup, "")
 
     #act logout para ir a tela inicial
-    pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
-    pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
+    _fazer_logout_e_aguardar_tela_inicial(pagina_navegador)
 
     #act solicitar recuperacao de senha
     pagina_navegador.get_by_role("tab", name="Recuperar Senha").click()
@@ -676,8 +686,7 @@ def test_e2e_redefinicao_senha_preserva_tarefas_administradas_atribuidas_e_progr
     btn_continuar.wait_for(state="visible", timeout=8000)
 
     #logout
-    pagina_navegador.get_by_role("button", name="Encerrar Sessão").click()
-    pagina_navegador.wait_for_selector(".auth-card", timeout=8000)
+    _fazer_logout_e_aguardar_tela_inicial(pagina_navegador)
 
     #solicita recuperacao de senha
     pagina_navegador.get_by_role("tab", name="Recuperar Senha").click()
