@@ -1097,8 +1097,12 @@ APP_CSS = """
         gap: 8px !important;
         width: 100% !important;
     }
+    /* Botoes de ferramenta do assistente de criacao (copiar e regenerar codigo) */
     .wizard-tool-btn,
-    button.wizard-tool-btn {
+    button.wizard-tool-btn,
+    .wizard-action-row button.wizard-tool-btn,
+    #btn_copiar_codigo_wizard,
+    #btn_gerar_novo_codigo_wizard {
         width: 42px !important;
         min-width: 42px !important;
         max-width: 42px !important;
@@ -1107,6 +1111,7 @@ APP_CSS = """
         max-height: 42px !important;
         padding: 0 !important;
         background: #ffffff !important;
+        background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
         color: #475569 !important;
@@ -1119,8 +1124,12 @@ APP_CSS = """
         margin-bottom: 2px !important;
     }
     .wizard-tool-btn:hover,
-    button.wizard-tool-btn:hover {
+    button.wizard-tool-btn:hover,
+    .wizard-action-row button.wizard-tool-btn:hover,
+    #btn_copiar_codigo_wizard:hover,
+    #btn_gerar_novo_codigo_wizard:hover {
         background: #fff0f2 !important;
+        background-color: #fff0f2 !important;
         border-color: #9c0014 !important;
         color: #9c0014 !important;
         box-shadow: 0 2px 5px rgba(156, 0, 20, 0.12) !important;
