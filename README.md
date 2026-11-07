@@ -170,7 +170,7 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 
 ## Avaliação
 
-1. Sistema em produção: [https://tokstance.duckdns.org](https://tokstance.duckdns.org) (ou pelo IP da máquina no Google Cloud: [http://34.56.250.144](http://34.56.250.144))
+1. Sistema em produção: [https://tokstance.duckdns.org](https://tokstance.duckdns.org)
 2. Repositório no GitHub: [https://github.com/gustavofcunha/tokstance](https://github.com/gustavofcunha/tokstance)
 3. Última execução no GitHub Actions: [https://github.com/gustavofcunha/tokstance/actions/runs/42413587407](https://github.com/gustavofcunha/tokstance/actions/runs/42413587407)
 4. Relatório no Codecov: [https://codecov.io/gh/gustavofcunha/tokstance](https://codecov.io/gh/gustavofcunha/tokstance)
