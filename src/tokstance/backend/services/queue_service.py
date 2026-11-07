@@ -62,6 +62,13 @@ class ServicoFilaAnotacao:
         if email_u and email_u.lower() not in [c.lower() for c in rotuladores_candidatos]:
             rotuladores_candidatos.append(email_u)
 
+        # Auto-recupera e reconcilia anotações pendentes do diário de persistência
+        if hasattr(self.banco, "diario_anotacoes"):
+            try:
+                self.banco.diario_anotacoes.sincronizar_com_banco(self.banco)
+            except Exception:
+                pass
+
         quadros_fila = []
         for rot_cand in rotuladores_candidatos:
             df_c = self.repo_estudo.carregar_atribuicoes_tarefa_df(int(tarefa_id), rotulador=rot_cand)
@@ -213,6 +220,13 @@ class ServicoFilaAnotacao:
             rotuladores_candidatos.append(vaga_rot)
         if email_u and email_u.lower() not in [c.lower() for c in rotuladores_candidatos]:
             rotuladores_candidatos.append(email_u)
+
+        # Auto-recupera e reconcilia anotações pendentes do diário de persistência
+        if hasattr(self.banco, "diario_anotacoes"):
+            try:
+                self.banco.diario_anotacoes.sincronizar_com_banco(self.banco)
+            except Exception:
+                pass
 
         quadros_fila = []
         for rot_cand in rotuladores_candidatos:

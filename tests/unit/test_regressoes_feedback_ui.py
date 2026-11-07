@@ -446,6 +446,13 @@ def test_destaque_target_transicao_primeiro_video_e_mudanca_alvo() -> None:
     assert "target-transition" in card2
     assert "target-transition" in perg2
 
+    #assert animacao legada de transicao de target configurada no css
+    from tokstance.frontend.theme import APP_CSS
+    assert ".video-meta.target-transition" in APP_CSS
+    assert "animation: target-highlight 12s ease-in-out" in APP_CSS
+    assert "target-badge-pulse" in APP_CSS
+    assert "rgba(211, 71, 88, 0.28)" in APP_CSS
+
 
 #auth inline feedback error and success alerts
 

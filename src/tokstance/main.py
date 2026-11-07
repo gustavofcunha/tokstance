@@ -14,6 +14,11 @@ import gradio as gr
 import uvicorn
 
 from tokstance.backend.api.routes import roteador_api
+from tokstance.backend.security.middleware import (
+    MiddlewareAntiDosLimitePayload,
+    MiddlewareCabecalhosSeguranca,
+    MiddlewareRateLimitIP,
+)
 from tokstance.frontend.gradio_ui import construir_interface
 from tokstance.frontend.theme import (
     APP_CSS,
@@ -29,6 +34,12 @@ def criar_aplicacao() -> FastAPI:
         description="Plataforma Colaborativa de Anotação e Concordância de Vídeos Curtos",
         version="1.0.0",
     )
+
+    # Middlewares de seguranca OWASP, Anti-DoS e Rate Limiting
+    app_fastapi.add_middleware(MiddlewareCabecalhosSeguranca)
+    app_fastapi.add_middleware(MiddlewareAntiDosLimitePayload)
+    app_fastapi.add_middleware(MiddlewareRateLimitIP)
+
     app_fastapi.include_router(roteador_api)
 
     demo = construir_interface()

@@ -492,7 +492,7 @@ def construir_interface(
                 with gr.Row(elem_classes="admin-header"):
                     gr.Markdown("## Criador de Nova Tarefa de Pesquisa")
                     with gr.Row(elem_classes="compact-actions"):
-                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
+                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
 
                 with gr.Column(elem_classes="form-wizard-card"):
                     with gr.Row(elem_classes="wizard-grid"):
@@ -667,7 +667,7 @@ def construir_interface(
                     admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
                         btn_excluir_tarefa_admin = gr.Button("Excluir esta Tarefa", elem_classes=["ufmg-btn", "hub-btn", "btn-icon-trash"], scale=0, min_width=170)
-                        btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
+                        btn_voltar_hub_admin = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
 
                 #primeira visao oficial: visao geral do acervo e distribuicao por target
                 admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")
@@ -1334,12 +1334,13 @@ def construir_interface(
             pos = estado_f["posicao_concluida"]
             tot = estado_f["total_videos"]
             vid = estado_f["video_atual"]
+            prev_t = sessao.get("previous_target", "") or str(estado_f.get("target_anterior", "") or "")
             v_html, p_html, pb, novo_target = renderizar_video_rotulador(
                 video_item=vid,
                 posicao=pos,
                 total=tot,
                 pergunta_template=sessao.get("pergunta_template", ""),
-                previous_target=sessao.get("previous_target", ""),
+                previous_target=prev_t,
                 tarefa_titulo=str(sessao.get("tarefa_titulo", "") or estado_f.get("titulo", "")),
                 rotulador_nome=str(nome_u),
             )
@@ -1396,12 +1397,13 @@ def construir_interface(
             pos = estado_f["posicao_concluida"]
             tot = estado_f["total_videos"]
             vid = estado_f["video_atual"]
+            prev_t = sessao.get("previous_target", "") or str(estado_f.get("target_anterior", "") or "")
             v_html, p_html, pb, novo_target = renderizar_video_rotulador(
                 video_item=vid,
                 posicao=pos,
                 total=tot,
                 pergunta_template=sessao.get("pergunta_template", ""),
-                previous_target=sessao.get("previous_target", ""),
+                previous_target=prev_t,
                 tarefa_titulo=str(sessao.get("tarefa_titulo", "") or estado_f.get("titulo", "")),
                 rotulador_nome=str(nome_u),
             )

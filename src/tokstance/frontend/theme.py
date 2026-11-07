@@ -1283,32 +1283,80 @@ APP_CSS = """
         box-shadow: 0 1px 3px rgba(156, 0, 20, 0.12) !important;
     }
     .target-transition {
-        animation: target-highlight 6s ease-in-out !important;
+        animation: target-highlight 12s ease-in-out !important;
         will-change: background, border-color, box-shadow, transform;
     }
     .target-transition .target-name-badge {
-        animation: target-badge-pulse 6s ease-in-out !important;
+        animation: target-badge-pulse 12s ease-in-out !important;
     }
     @keyframes target-highlight {
         0%, 100% {
-            background: #fff8f8 !important;
-            border-color: #fed7da !important;
+            background: #fffafa !important;
+            border-color: #ffd6dc !important;
             border-left-color: #9c0014 !important;
             box-shadow: none !important;
             transform: translateY(0);
         }
-        10%, 40% {
-            background: #ffe4e8 !important;
-            border-color: #e11d48 !important;
-            border-left-color: #9c0014 !important;
-            box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.35), 0 6px 18px rgba(156, 0, 20, 0.2) !important;
-            transform: scale(1.01);
+        8% {
+            background: #ffd6dc !important;
+            border-color: #d34758 !important;
+            border-left-color: #d34758 !important;
+            box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.28), 0 8px 20px rgba(156, 0, 20, 0.16) !important;
+            transform: translateY(-3px);
         }
-        25%, 65% {
+        28% {
             background: #fff0f2 !important;
-            border-color: #f43f5e !important;
-            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2), 0 3px 10px rgba(156, 0, 20, 0.12) !important;
-            transform: scale(1.0);
+            border-color: #b51f35 !important;
+            border-left-color: #b51f35 !important;
+            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.22), 0 5px 14px rgba(156, 0, 20, 0.12) !important;
+            transform: translateY(0);
+        }
+        55% {
+            background: #ffe1e5 !important;
+            border-color: #c12d42 !important;
+            border-left-color: #c12d42 !important;
+            box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.24), 0 6px 16px rgba(156, 0, 20, 0.14) !important;
+        }
+        78% {
+            background: #fff1f3 !important;
+            border-color: #ae1c32 !important;
+            border-left-color: #ae1c32 !important;
+            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.18), 0 4px 12px rgba(156, 0, 20, 0.1) !important;
+        }
+    }
+    @keyframes pulse-target {
+        0%, 100% {
+            background: #fffafa !important;
+            border-color: #ffd6dc !important;
+            border-left-color: #9c0014 !important;
+            box-shadow: none !important;
+            transform: translateY(0);
+        }
+        8% {
+            background: #ffd6dc !important;
+            border-color: #d34758 !important;
+            border-left-color: #d34758 !important;
+            box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.28), 0 8px 20px rgba(156, 0, 20, 0.16) !important;
+            transform: translateY(-3px);
+        }
+        28% {
+            background: #fff0f2 !important;
+            border-color: #b51f35 !important;
+            border-left-color: #b51f35 !important;
+            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.22), 0 5px 14px rgba(156, 0, 20, 0.12) !important;
+            transform: translateY(0);
+        }
+        55% {
+            background: #ffe1e5 !important;
+            border-color: #c12d42 !important;
+            border-left-color: #c12d42 !important;
+            box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.24), 0 6px 16px rgba(156, 0, 20, 0.14) !important;
+        }
+        78% {
+            background: #fff1f3 !important;
+            border-color: #ae1c32 !important;
+            border-left-color: #ae1c32 !important;
+            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.18), 0 4px 12px rgba(156, 0, 20, 0.1) !important;
         }
     }
     @keyframes target-badge-pulse {
@@ -1318,13 +1366,13 @@ APP_CSS = """
             border-color: #e11d48 !important;
             box-shadow: 0 1px 3px rgba(156, 0, 20, 0.12) !important;
         }
-        12%, 42% {
+        8%, 55% {
             background: #9c0014 !important;
             color: #ffffff !important;
             border-color: #7f000e !important;
             box-shadow: 0 0 0 4px rgba(156, 0, 20, 0.45), 0 3px 10px rgba(156, 0, 20, 0.3) !important;
         }
-        25%, 65% {
+        28%, 78% {
             background: #e11d48 !important;
             color: #ffffff !important;
             border-color: #be123c !important;
@@ -1973,12 +2021,14 @@ APP_CSS = """
         box-sizing: border-box !important;
     }
     .video-meta {
-        background: transparent !important;
-        border: none !important;
-        border-radius: 0 !important;
+        background: #fffafa !important;
+        border: 1px solid #ffd6dc !important;
+        border-left: 4px solid #9c0014 !important;
+        border-radius: 6px !important;
         box-shadow: none !important;
-        padding: 0 !important;
-        font-size: 13.5px !important;
+        padding: 10px 14px !important;
+        margin-bottom: 8px !important;
+        font-size: 14.5px !important;
         color: #1e293b !important;
         flex: 0 0 auto !important;
         display: flex !important;
@@ -1988,7 +2038,11 @@ APP_CSS = """
         box-sizing: border-box !important;
     }
     .video-meta.target-transition {
-        animation: pulse-target 1.8s ease-in-out infinite alternate !important;
+        animation: target-highlight 12s ease-in-out !important;
+        will-change: background, border-color, box-shadow, transform;
+    }
+    .video-meta.target-transition .target-name-badge {
+        animation: target-badge-pulse 12s ease-in-out !important;
     }
     .video-description, .video-transcription {
         background: transparent !important;

@@ -620,28 +620,60 @@ class RepositorioEstudo:
         instante = str(timestamp or formatar_data_hora_brt())
         tempo_seg = round(max(0.0, float(tempo_analise_segundos or 0.0)), 2)
 
-        self.banco.executar(
-            """
-            INSERT OR REPLACE INTO anotacoes (
-                tarefa_id, assignment_id, usuario_id, labeler, video_id,
-                url, target, stance, tempo_analise_segundos, video_duration, timestamp
+        # 1. Grava no diário append-only com garantia física de fsync antes do commit no banco
+        dados_diario = {
+            "tarefa_id": int(tarefa_id),
+            "assignment_id": str(assignment_id).strip(),
+            "usuario_id": usuario_id,
+            "labeler": rotulador_limpo,
+            "video_id": str(video_id).strip(),
+            "url": str(url).strip(),
+            "target": str(target),
+            "stance": posicao_limpa,
+            "tempo_analise_segundos": tempo_seg,
+            "video_duration": str(video_duration or ""),
+            "timestamp": instante,
+        }
+        if hasattr(self.banco, "diario_anotacoes"):
+            try:
+                self.banco.diario_anotacoes.registrar_pendente(dados_diario)
+            except Exception:
+                pass
+
+        # 2. Executa a inserção no banco relacional
+        falha_sqlite = False
+        try:
+            self.banco.executar(
+                """
+                INSERT OR REPLACE INTO anotacoes (
+                    tarefa_id, assignment_id, usuario_id, labeler, video_id,
+                    url, target, stance, tempo_analise_segundos, video_duration, timestamp
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """,
+                (
+                    int(tarefa_id),
+                    str(assignment_id).strip(),
+                    usuario_id,
+                    rotulador_limpo,
+                    str(video_id).strip(),
+                    str(url).strip(),
+                    str(target),
+                    posicao_limpa,
+                    tempo_seg,
+                    str(video_duration or ""),
+                    instante,
+                ),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            """,
-            (
-                int(tarefa_id),
-                str(assignment_id).strip(),
-                usuario_id,
-                rotulador_limpo,
-                str(video_id).strip(),
-                str(url).strip(),
-                str(target),
-                posicao_limpa,
-                tempo_seg,
-                str(video_duration or ""),
-                instante,
-            ),
-        )
+            # 3. Confirma sincronização no diário
+            if hasattr(self.banco, "diario_anotacoes"):
+                try:
+                    self.banco.diario_anotacoes.marcar_sincronizado(int(tarefa_id), str(assignment_id).strip())
+                except Exception:
+                    pass
+        except Exception:
+            falha_sqlite = True
+
         salva = self.banco.consultar_um(
             """
             SELECT * FROM anotacoes
@@ -649,9 +681,15 @@ class RepositorioEstudo:
             """,
             (int(tarefa_id), str(assignment_id).strip()),
         )
-        if salva is None:
+        if salva is not None:
+            d = dict(salva)
+        elif not falha_sqlite:
             raise RuntimeError("Falha ao persistir anotação.")
-        d = dict(salva)
+        else:
+            # Fallback seguro vindo do diário de persistência: o rótulo jamais é perdido
+            d = dict(dados_diario)
+            d["salvo_em_diario_reserva"] = True
+
         d["posicao"] = d.get("stance", "")
         return d
 

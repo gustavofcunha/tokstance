@@ -4,6 +4,9 @@ import bcrypt
 
 from tokstance.config import TAMANHO_MAXIMO_SENHA, TAMANHO_MINIMO_SENHA
 
+# Hash pre-computado de 12 rodadas para verificacao em tempo constante e prevencao de timing attack
+HASH_DUMMY_BCRYPT = "$2b$12$e8whpUfGsmfFknFq92UjIeOqI7Vv75yCq9Xm9G5tUe3g2v6u1hW2K"
+
 
 def validar_complexidade_senha(senha: str) -> str:
     """Valida comprimento e requisitos minimos de seguranca de uma senha."""

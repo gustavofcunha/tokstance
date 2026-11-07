@@ -662,8 +662,8 @@ def test_e2e_redefinicao_senha_preserva_tarefas_administradas_atribuidas_e_progr
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
     pagina_navegador.locator(".wizard-feedback-slot .auth-inline-success").wait_for(state="visible", timeout=8000)
 
-    #volta para o hub e inicia rotulacao
-    pagina_navegador.get_by_role("button", name="← Voltar ao Hub").click()
+    #volta para o painel principal e inicia rotulacao
+    pagina_navegador.get_by_role("button", name=re.compile(r"Voltar ao (Painel Principal|Hub)")).click()
     pagina_navegador.wait_for_selector(".hub-two-col", timeout=8000)
 
     btn_iniciar = pagina_navegador.locator(".hub-table-btn", has_text="Rotulação").first

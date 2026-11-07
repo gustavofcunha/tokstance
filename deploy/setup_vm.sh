@@ -2,8 +2,11 @@
 #configuracao automatizada da vm gcp compute engine para o tokstance
 set -euo pipefail
 
+DOMAIN="${1:-tokstance.duckdns.org}"
+
 echo "=========================================================="
 echo "Iniciando provisionamento da VM GCP para TokStance"
+echo "Dominio configurado: $DOMAIN"
 echo "=========================================================="
 
 #atualizar pacotes do sistema
@@ -15,6 +18,9 @@ sudo apt-get install -y \
     git \
     sqlite3 \
     curl \
+    nginx \
+    certbot \
+    python3-certbot-nginx \
     ca-certificates \
     libnspr4 \
     libnss3 \
@@ -34,7 +40,7 @@ sudo apt-get install -y \
 
 #diretorio da aplicacao
 APP_DIR="/opt/tokstance"
-REPO_URL="https://github.com/gustavofcunha/ufmg-stance-tiktok.git"
+REPO_URL="https://github.com/gustavofcunha/tokstance.git"
 
 if [ ! -d "$APP_DIR" ]; then
     echo "Clonando repositorio em $APP_DIR..."
@@ -45,6 +51,7 @@ else
     cd "$APP_DIR"
     git fetch origin
     git checkout main || true
+    git pull origin main || true
 fi
 
 cd "$APP_DIR"
@@ -78,8 +85,64 @@ sudo systemctl daemon-reload
 sudo systemctl enable tokstance.service
 sudo systemctl restart tokstance.service
 
+#configurar nginx como reverse proxy
+echo "Configurando Nginx como proxy reverso para a porta 7860..."
+cat << 'EOF' | sudo tee /etc/nginx/sites-available/tokstance
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__ _;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:7860;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+    }
+}
+EOF
+
+sudo sed -i "s|__DOMAIN__|$DOMAIN|g" /etc/nginx/sites-available/tokstance
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/tokstance /etc/nginx/sites-enabled/tokstance
+sudo nginx -t
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+
+#obter certificado SSL/HTTPS com Certbot (Let's Encrypt)
+echo "Configurando certificado SSL/HTTPS gratuito com Let's Encrypt (Certbot)..."
+HTTPS_HABILITADO=false
+if sudo certbot --nginx \
+    -d "$DOMAIN" \
+    --non-interactive \
+    --agree-tos \
+    --register-unsafely-without-email \
+    --redirect; then
+    HTTPS_HABILITADO=true
+    echo "Certificado SSL emitido e configurado com sucesso!"
+else
+    echo "Aviso: Nao foi possivel obter o certificado SSL automaticamente."
+    echo "A aplicacao continuara disponivel via HTTP normal na porta 80."
+fi
+
 echo "=========================================================="
 echo "TokStance provisionado com sucesso na VM!"
 echo "Status do servico:"
 sudo systemctl status tokstance.service --no-pager || true
+echo "=========================================================="
+if [ "$HTTPS_HABILITADO" = true ]; then
+    echo "🎉 APLICACAO PUBLICADA COM SUCESSO (HTTPS):"
+    echo "👉 https://$DOMAIN"
+else
+    echo "APLICACAO PUBLICADA (HTTP):"
+    echo "👉 http://$DOMAIN"
+    echo "   (ou http://$(curl -s -m 3 https://api.ipify.org 2>/dev/null || echo '34.56.250.144'))"
+fi
 echo "=========================================================="

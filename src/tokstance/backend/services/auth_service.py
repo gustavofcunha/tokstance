@@ -20,6 +20,7 @@ from tokstance.backend.repositories.database import BancoDadosSQLite
 from tokstance.backend.repositories.study_repo import RepositorioEstudo
 from tokstance.backend.repositories.user_repo import RepositorioUsuarios
 from tokstance.backend.security.password import (
+    HASH_DUMMY_BCRYPT,
     gerar_hash_senha,
     validar_complexidade_senha,
     verificar_senha,
@@ -34,6 +35,8 @@ from tokstance.backend.security.validators import (
     validar_nome_usuario,
 )
 from tokstance.config import (
+    MAX_TENTATIVAS_RECUPERACAO_CODIGO,
+    SEGUNDOS_BLOQUEIO_RECUPERACAO,
     SENHA_ADMIN_PADRAO,
     USUARIO_ADMIN_PADRAO,
     agora_brt,
@@ -61,6 +64,10 @@ class ServicoAutenticacao:
             self.banco, self.repo_usuarios
         )
         self.limitador_tentativas = limitador_tentativas or LimitadorTentativas()
+        self.limitador_recuperacao = LimitadorTentativas(
+            max_tentativas=MAX_TENTATIVAS_RECUPERACAO_CODIGO,
+            segundos_bloqueio=SEGUNDOS_BLOQUEIO_RECUPERACAO,
+        )
         self.gerenciador_sessoes = gerenciador_sessoes or GerenciadorSessoesAtivas()
         self.rodadas_bcrypt = int(rodadas_bcrypt)
 
@@ -212,18 +219,38 @@ class ServicoAutenticacao:
         }
 
     def verificar_codigo_recuperacao(self, identificador: str, codigo: str) -> bool:
-        """Confere o codigo informado sem consumi-lo, liberando a etapa de nova senha."""
+        """Confere o codigo informado sem consumi-lo, liberando a etapa de nova senha com protecao anti-bruteforce."""
         termo = str(identificador or "").strip()
         cod = str(codigo or "").strip()
         if not cod:
             raise ValueError("Informe o código de 6 dígitos recebido por e-mail.")
+
+        if self.limitador_recuperacao.esta_bloqueado(termo):
+            restante = self.limitador_recuperacao.segundos_restantes_bloqueio(termo)
+            raise PermissionError(
+                f"Muitas tentativas incorretas de código. Aguarde {restante:.0f}s antes de tentar novamente."
+            )
+
         usuario = self.repo_usuarios.buscar_por_nome_usuario(termo)
         if usuario is None:
             usuario = self.repo_usuarios.buscar_por_email(termo)
-        if usuario is None or not self.repo_usuarios.validar_codigo_recuperacao(
-            usuario_id=int(usuario["usuario_id"]), codigo_recuperacao=cod
-        ):
+
+        valido = bool(
+            usuario is not None and self.repo_usuarios.validar_codigo_recuperacao(
+                usuario_id=int(usuario["usuario_id"]), codigo_recuperacao=cod
+            )
+        )
+
+        if not valido:
+            bloqueou = self.limitador_recuperacao.registrar_falha(termo)
+            if bloqueou:
+                restante = self.limitador_recuperacao.segundos_restantes_bloqueio(termo)
+                raise PermissionError(
+                    f"Muitas tentativas incorretas de código. Aguarde {restante:.0f}s antes de tentar novamente."
+                )
             raise ValueError("Código de recuperação inválido ou expirado (limite de 15 minutos).")
+
+        self.limitador_recuperacao.registrar_sucesso(termo)
         return True
 
     def redefinir_senha_com_codigo(
@@ -313,6 +340,8 @@ class ServicoAutenticacao:
             conta = self.repo_usuarios.buscar_por_nome_ou_email_case_insensitive(chave_bruta)
 
         if conta is None:
+            # Mitigacao de timing attack: executa verificacao dummy com bcrypt em tempo constante
+            verificar_senha(str(senha or ""), HASH_DUMMY_BCRYPT)
             bloqueou = self.limitador_tentativas.registrar_falha(chave_bruta)
             if bloqueou:
                 restante = self.limitador_tentativas.segundos_restantes_bloqueio(

@@ -9,6 +9,13 @@ from pathlib import Path
 import sys
 from typing import Any
 
+diretorio_raiz = Path(__file__).resolve().parent.parent
+diretorio_src = diretorio_raiz / "src"
+if str(diretorio_src) not in sys.path:
+    sys.path.insert(0, str(diretorio_src))
+if str(diretorio_raiz) not in sys.path:
+    sys.path.insert(0, str(diretorio_raiz))
+
 import pandas as pd
 
 from tokstance.backend.repositories.database import BancoDadosSQLite
@@ -40,25 +47,33 @@ def povoar_banco_demonstrativo(
 
     #garantir usuarios essenciais para avaliacao
     usuarios_seed = [
-        ("coordenador", "senha123", "coordenador@ufmg.br"),
-        ("professor", "senha123", "professor@ufmg.br"),
-        ("rotulador_1", "senha123", "rotulador1@ufmg.br"),
-        ("rotulador_2", "senha123", "rotulador2@ufmg.br"),
-        ("gustavo", "senha123", "gustavocunha912@gmail.com"),
+        ("coordenador", "senha123", "coordenador@ufmg.br", "Coordenador Geral de Rotulagem"),
+        ("professor", "senha123", "professor@ufmg.br", "Prof. Dr. Avaliador UFMG"),
+        ("rotulador_1", "senha123", "rotulador1@ufmg.br", "Rotulador 1 (Bolsista)"),
+        ("rotulador_2", "senha123", "rotulador2@ufmg.br", "Rotulador 2 (Bolsista)"),
+        ("gustavo", "senha123", "gustavocunha182020@gmail.com", "Gustavo Cunha"),
     ]
 
     usuarios_criados: dict[str, int] = {}
-    for nome_u, senha_u, email_u in usuarios_seed:
+    for nome_u, senha_u, email_u, nome_comp_u in usuarios_seed:
         usuario_existente = repo_usuarios.buscar_por_nome_usuario(nome_u)
         if usuario_existente:
-            usuarios_criados[nome_u] = int(usuario_existente["usuario_id"])
+            u_id = int(usuario_existente["usuario_id"])
+            usuarios_criados[nome_u] = u_id
+            banco.executar(
+                "UPDATE usuarios SET nome_completo = ?, email = ? WHERE usuario_id = ?",
+                (nome_comp_u, email_u, u_id),
+            )
         else:
-            res_cad = servico_auth.cadastrar_usuario(nome_u, senha_u, email=email_u)
+            res_cad = servico_auth.cadastrar_usuario(
+                nome_u, senha_u, email=email_u, nome_completo=nome_comp_u
+            )
             usuarios_criados[nome_u] = int(res_cad["usuario_id"])
 
     coord_id = usuarios_criados["coordenador"]
     rot1_id = usuarios_criados["rotulador_1"]
     rot2_id = usuarios_criados["rotulador_2"]
+    prof_id = usuarios_criados["professor"]
 
     #remover tarefa demonstrativa anterior se solicitado
     codigo_convite_demo = "TOK-DEMO2026"
@@ -140,9 +155,18 @@ def povoar_banco_demonstrativo(
     else:
         tarefa_id = int(tarefa_demo["tarefa_id"])
 
-    #inscrever rotulador_1 e rotulador_2
+    agora_iso = agora_brt().isoformat()
+
+    #inscrever rotulador_1, rotulador_2 e professor
     servico_auth.entrar_na_tarefa_por_convite(rot1_id, codigo_convite_demo)
     servico_auth.entrar_na_tarefa_por_convite(rot2_id, codigo_convite_demo)
+    servico_auth.entrar_na_tarefa_por_convite(prof_id, codigo_convite_demo)
+
+    #conceder tambem papel de administrador ao professor para acesso irrestrito ao painel
+    banco.executar(
+        "INSERT OR IGNORE INTO membros_tarefa (tarefa_id, usuario_id, papel, vaga_atribuida, entrou_em) VALUES (?, ?, 'administrador', '', ?)",
+        (tarefa_id, prof_id, agora_iso),
+    )
 
     #simular anotações consistentes entre rotulador_1 e rotulador_2
     df_rot1 = repo_estudo.carregar_atribuicoes_tarefa_df(tarefa_id, rotulador="rotulador_1")
@@ -209,8 +233,18 @@ def povoar_banco_demonstrativo(
         (tarefa_id, rot2_id, "rotulador_2", "login", 0.0, agora_iso),
     )
 
-    #sincronizar exportacoes em data/
-    servico_admin.exportar_arquivos_console(tarefa_id)
+    banco.executar(
+        "INSERT INTO logs_acesso (tarefa_id, usuario_id, usuario, acao, tempo_desde_login_segundos, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+        (tarefa_id, prof_id, "professor", "login", 0.0, agora_iso),
+    )
+
+    #atualizar automaticamente o painel STATUS_BANCO.md
+    try:
+        from scripts.status_banco import atualizar_painel
+        arquivo_md = Path(__file__).resolve().parent.parent / "STATUS_BANCO.md"
+        atualizar_painel(caminho_db_alvo, arquivo_md)
+    except Exception:
+        pass
 
     return {
         "status": "sucesso",
