@@ -168,7 +168,7 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 
 ---
 
-## Links para avaliação
+## Avaliação
 
 1. Sistema em produção: [https://tokstance.duckdns.org](https://tokstance.duckdns.org) (ou pelo IP da máquina no Google Cloud: [http://34.56.250.144](http://34.56.250.144))
 2. Repositório no GitHub: [https://github.com/gustavofcunha/tokstance](https://github.com/gustavofcunha/tokstance)
@@ -187,3 +187,13 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 Código de convite para teste: `TOK-DEMO2026`
 
 O usuário professor já está configurado tanto como administrador quanto como rotulador da tarefa demonstrativa. Recomendo que a avaliação seja feita acessando com essa conta, pois ela permite explorar todas as funcionalidades do sistema (gestão da rodada, gráficos de concordância e o ambiente de rotulação de vídeos), conforme demonstrado no [vídeo de apresentação](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO).
+
+### Roteiro rápido sugerido para avaliação
+
+Para percorrer todas as telas do sistema logado em poucos minutos, sugiro o seguinte fluxo:
+
+1. Acessar o sistema em produção e fazer login com o usuário professor e a senha senha123.
+2. No painel principal (Hub), visualizar a divisão entre as tarefas que você administra e as tarefas atribuídas para rotular, além do código de convite da rodada.
+3. Clicar no botão do Console de Administração da tarefa para abrir o painel gerencial. Nele é possível conferir os indicadores gerais, o cálculo automático do Alfa de Krippendorff ordinal, a distribuição de anotações e a tabela detalhada de concordância por rotulador, com opção de exportar os dados em CSV. Retornar ao painel principal pelo botão de voltar.
+4. Na seção de tarefas para rotular, clicar no botão de rotulação para abrir o ambiente de trabalho do anotador. Confirmar o aviso de conteúdo sensível no modal para carregar o player embutido do TikTok, selecionar uma das opções de posicionamento (Contra, A Favor ou Neutro) e salvar para conferir o feedback visual efêmero e o avanço da barra de progresso. Retornar ao painel principal.
+5. Clicar no botão de criação de nova tarefa para abrir o assistente (wizard), onde é possível navegar pelos parâmetros de configuração de um estudo (pergunta norteadora, opções de resposta, matriz de penalidades, definição de vagas, sobreposição de amostras e upload de arquivos). Retornar ao painel principal.
