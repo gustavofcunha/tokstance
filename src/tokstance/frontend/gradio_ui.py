@@ -492,7 +492,7 @@ def construir_interface(
                 with gr.Row(elem_classes="admin-header"):
                     gr.Markdown("## Criar Nova Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
-                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
+                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
 
                 with gr.Column(elem_classes="form-wizard-card"):
                     gr.HTML("""
@@ -547,7 +547,7 @@ def construir_interface(
                             btn_atualizar_pares = gr.Button("Recalcular combinações", elem_classes=["ufmg-btn", "wizard-inline-btn"], scale=0)
 
                         with gr.Row(elem_classes="wizard-step-footer"):
-                            btn_passo1_voltar_hub = gr.Button("← Voltar ao Hub", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=150)
+                            btn_passo1_voltar_hub = gr.Button("← Voltar ao Painel Principal", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=180)
                             btn_passo1_proximo = gr.Button("Próximo: Equipe e Acesso →", elem_classes=["ufmg-btn", "wizard-next-btn"], scale=0, min_width=240)
 
                     # ETAPA 2: Equipe, Vagas e Codigo de Convite
@@ -682,7 +682,7 @@ def construir_interface(
                     admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
                         btn_excluir_tarefa_admin = gr.Button("Excluir esta Tarefa", elem_classes=["ufmg-btn", "hub-btn", "btn-icon-trash"], scale=0, min_width=170)
-                        btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
+                        btn_voltar_hub_admin = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
 
                 #primeira visao oficial: visao geral do acervo e distribuicao por target
                 admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")
