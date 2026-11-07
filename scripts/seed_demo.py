@@ -48,7 +48,7 @@ def povoar_banco_demonstrativo(
     #garantir usuarios essenciais para avaliacao
     usuarios_seed = [
         ("coordenador", "senha123", "coordenador@ufmg.br", "Coordenador Geral de Rotulagem"),
-        ("professor", "senha123", "professor@ufmg.br", "Prof. Dr. Avaliador UFMG"),
+        ("professor", "senha123", "professor@ufmg.br", "Professor André Hora"),
         ("rotulador_1", "senha123", "rotulador1@ufmg.br", "Rotulador 1 (Bolsista)"),
         ("rotulador_2", "senha123", "rotulador2@ufmg.br", "Rotulador 2 (Bolsista)"),
         ("gustavo", "senha123", "gustavocunha182020@gmail.com", "Gustavo Cunha"),

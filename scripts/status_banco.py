@@ -17,6 +17,10 @@ import sys
 import time
 from typing import Any
 
+diretorio_src = Path(__file__).resolve().parent.parent / "src"
+if str(diretorio_src) not in sys.path:
+    sys.path.insert(0, str(diretorio_src))
+
 FUSO_PADRAO = "BRT (UTC-03:00)"
 
 

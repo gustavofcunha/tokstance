@@ -15,7 +15,7 @@
 2. **Terminal (opcional, para exibir execução rápida dos testes)**:
    - Na raiz do projeto, pronto para executar: `pytest -m "not e2e"`.
 3. **Credenciais para Demonstração**:
-   - Usuário: `professor`
+   - Usuário: `professor` (Professor André Hora)
    - Senha: `senha123`
    - Código de convite da tarefa demo: `TOK-DEMO2026`
 
@@ -51,7 +51,7 @@
 **Na tela:** Fazer login com o usuário `professor` e demonstrar as duas perspectivas (Rotulador e Administrador).
 
 > **Fala sugerida:**  
-> *"Pensando na avaliação do professor, preparamos uma conta de demonstração completa: usuário `professor` e senha `senha123`.  
+> *"Pensando na avaliação do professor, preparamos uma conta de demonstração completa para o Professor André Hora: usuário `professor` e senha `senha123`.  
 > Ao efetuar o login, o professor chega imediatamente ao **Hub Central Multi-Papel**, onde tem uma experiência dupla: ele é simultaneamente rotulador e administrador da tarefa 'Detecção de Posição'.*
 
 #### Parte A: O Espaço de Rotulagem (Rotulador)

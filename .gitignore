@@ -1,0 +1,49 @@
+_legacy_reference/
+spec/*
+!spec/demo.md
+!spec/README.md
+AGENTS.md
+plan.md
+Enunciado TP TS.md
+melhorias.txt
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Testing and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+tests/.test-data/
+.playwright/
+test-results/
+
+# Environment variables and secrets
+# .env mantido rastreado conforme requisicao para deploy
+.env.local
+.env.*
+!.env
+!.env.example
+
+# Local runtime data and databases
+data/*.db
+data/*.sqlite3
+data/*.csv
+!data/videos.csv
+!data/videos_reserva.csv
+data/*.json
+
+# Logs and Gradio temp files
+*.log
+.gradio/
+
+STATUS_BANCO.md

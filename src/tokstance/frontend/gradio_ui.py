@@ -361,8 +361,8 @@ def construir_interface(
                 with gr.Column(elem_classes="auth-card"):
                     gr.HTML("""
                     <div style='text-align: center; margin-bottom: 14px;'>
-                        <h2 style='margin: 0 0 4px 0; color: #0f172a; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;'>Bem-vindo ao TokStance</h2>
-                        <p style='color: #475569; font-size: 14px; margin: 0;'>Entre com suas credenciais ou crie uma conta para participar</p>
+                        <h2 style='margin: 0 0 4px 0; color: #0f172a; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;'>Bem-vindo ao TokStance!</h2>
+                        <p style='color: #475569; font-size: 14px; margin: 0;'>Entre com suas credenciais ou crie uma conta</p>
                     </div>
                     """)
 
