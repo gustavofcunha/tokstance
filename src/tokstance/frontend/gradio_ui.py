@@ -495,15 +495,28 @@ def construir_interface(
                         btn_voltar_hub_wizard = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
 
                 with gr.Column(elem_classes="form-wizard-card"):
+                    gr.HTML("""
+                    <div class="wizard-header-banner">
+                        <div class="admin-config-title">NOVA RODADA DE ROTULAÇÃO</div>
+                        <div class="wizard-header-intro">
+                            <div>
+                                <h3 class="wizard-header-main-title">Configuração dos Parâmetros da Pesquisa</h3>
+                                <p class="wizard-header-desc">Defina o tema, perguntas norteadoras, equipe de anotadores e acervo de vídeos do TikTok.</p>
+                            </div>
+                            <span class="config-val-badge convite">PASSO A PASSO</span>
+                        </div>
+                    </div>
+                    """)
                     with gr.Row(elem_classes="wizard-grid"):
                         with gr.Column(scale=1, min_width=0, elem_classes="wizard-col"):
-                            with gr.Column(elem_classes="wizard-section-card"):
+                            with gr.Column(elem_classes=["wizard-section-card", "card-pergunta"]):
                                 gr.HTML("""
                                 <div class="wizard-section-header">
                                     <span class="wizard-badge">1</span>
                                     <div>
-                                        <h4 class="wizard-section-title">Pergunta e Rótulos</h4>
-                                        <p class="wizard-section-subtitle">O que será perguntado e quais respostas existem</p>
+                                        <div class="admin-config-title" style="font-size: 11px; margin-bottom: 2px;">PARÂMETROS DA ANÁLISE</div>
+                                        <h4 class="wizard-section-title">Pergunta Norteadora e Opções de Resposta</h4>
+                                        <p class="wizard-section-subtitle">Defina o tema e as categorias de posicionamento para os anotadores</p>
                                     </div>
                                 </div>
                                 """)
@@ -523,7 +536,7 @@ def construir_interface(
                                     lines=4,
                                 )
                                 with gr.Accordion("Pesos de discordância entre opções (avançado)", open=False, elem_classes="wizard-accordion"):
-                                    gr.HTML("<p class='wizard-section-subtitle'>Usados no cálculo do Alfa de Krippendorff ordinal. Edite a coluna Penalidade.</p>")
+                                    gr.HTML("<p class='wizard-section-subtitle' style='margin-bottom: 8px;'>Defina penalidades par a par usadas no cálculo do Alfa de Krippendorff ordinal.</p>")
                                     tabela_penalidades_inicial = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
                                     wizard_tabela_penalidades = gr.Dataframe(
                                         value=tabela_penalidades_inicial,
@@ -533,16 +546,17 @@ def construir_interface(
                                         elem_classes="pairwise-penalty-table",
                                         max_height=200,
                                     )
-                                    btn_atualizar_pares = gr.Button("Recalcular combinações", elem_classes=["error-btn", "wizard-inline-btn"], scale=0)
+                                    btn_atualizar_pares = gr.Button("Recalcular combinações", elem_classes=["ufmg-btn", "wizard-inline-btn"], scale=0)
 
                         with gr.Column(scale=1, min_width=0, elem_classes="wizard-col"):
-                            with gr.Column(elem_classes="wizard-section-card"):
+                            with gr.Column(elem_classes=["wizard-section-card", "card-equipe"]):
                                 gr.HTML("""
                                 <div class="wizard-section-header">
-                                    <span class="wizard-badge">2</span>
+                                    <span class="wizard-badge badge-blue">2</span>
                                     <div>
-                                        <h4 class="wizard-section-title">Equipe e Acesso</h4>
-                                        <p class="wizard-section-subtitle">Vagas de rotuladores, sobreposição e convite</p>
+                                        <div class="admin-config-title" style="font-size: 11px; margin-bottom: 2px; color: #0284c7;">COORDENAÇÃO & ACESSO</div>
+                                        <h4 class="wizard-section-title">Equipe, Sobreposição e Código de Convite</h4>
+                                        <p class="wizard-section-subtitle">Vagas de rotuladores, sobreposição estatística e chave de acesso</p>
                                     </div>
                                 </div>
                                 """)
@@ -570,39 +584,38 @@ def construir_interface(
                                     btn_copiar_codigo = gr.Button(
                                         value="",
                                         elem_id="btn_copiar_codigo_wizard",
-                                        elem_classes=["error-btn", "wizard-icon-btn", "btn-icon-copiar"],
+                                        elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-copiar"],
                                         scale=0,
-                                        min_width=44,
+                                        min_width=42,
                                     )
                                     btn_gerar_novo_codigo = gr.Button(
                                         value="",
                                         elem_id="btn_gerar_novo_codigo_wizard",
-                                        elem_classes=["error-btn", "wizard-icon-btn", "btn-icon-refresh"],
+                                        elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-refresh"],
                                         scale=0,
-                                        min_width=44,
+                                        min_width=42,
                                     )
-                                wizard_admin_como_rotulador = gr.Checkbox(
-                                    label="Participar também como rotulador (Vaga 1)",
-                                    value=True,
-                                    elem_classes="wizard-checkbox",
-                                )
+                                with gr.Column(elem_classes="wizard-checkbox-card"):
+                                    wizard_admin_como_rotulador = gr.Checkbox(
+                                        label="Participar também como rotulador (Vaga 1)",
+                                        value=True,
+                                        elem_classes="wizard-checkbox",
+                                    )
 
-                            with gr.Column(elem_classes="wizard-section-card"):
+                            with gr.Column(elem_classes=["wizard-section-card", "card-videos"]):
                                 gr.HTML("""
                                 <div class="wizard-section-header">
-                                    <span class="wizard-badge">3</span>
+                                    <span class="wizard-badge badge-green">3</span>
                                     <div>
-                                        <h4 class="wizard-section-title">Vídeos</h4>
-                                        <p class="wizard-section-subtitle">Sem arquivo, usa a coleção padrão do sistema</p>
+                                        <div class="admin-config-title" style="font-size: 11px; margin-bottom: 2px; color: #059669;">COLEÇÃO DE MÍDIA</div>
+                                        <h4 class="wizard-section-title">Vídeos e Reserva Técnica</h4>
+                                        <p class="wizard-section-subtitle">Dataset customizado ou coleção oficial de vídeos TikTok da UFMG</p>
                                     </div>
                                 </div>
+                                <div class="wizard-info-callout">
+                                    <strong>Coleção Padrão Integrada:</strong> Caso nenhum arquivo CSV seja enviado, o TokStance carrega automaticamente o acervo oficial de 60 vídeos autênticos do TikTok.
+                                </div>
                                 """)
-                                wizard_arquivo_videos = gr.File(
-                                    label="CSV de Vídeos (opcional)",
-                                    file_types=[".csv"],
-                                    height=110,
-                                    elem_classes=["wizard-file-upload"],
-                                )
                                 wizard_qtd_principal = gr.Number(
                                     label="Quantidade de vídeos a distribuir",
                                     info="O restante dos vídeos da coleção será direcionado para a reserva técnica.",
@@ -611,9 +624,17 @@ def construir_interface(
                                     minimum=1,
                                     elem_classes=["wizard-number-input"],
                                 )
+                                wizard_arquivo_videos = gr.File(
+                                    label="CSV de Vídeos (opcional)",
+                                    file_types=[".csv"],
+                                    height=110,
+                                    elem_classes=["wizard-file-upload"],
+                                )
 
-                    with gr.Row(elem_classes="wizard-submit-row"):
-                        btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"], scale=0, min_width=280)
+                    with gr.Column(elem_classes="wizard-footer-card"):
+                        wizard_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot", "wizard-feedback-slot"])
+                        with gr.Row(elem_classes="wizard-submit-row"):
+                            btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"], scale=0, min_width=300)
                     wizard_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot", "wizard-feedback-slot"])
 
             # ==================================================================

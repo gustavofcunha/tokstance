@@ -13,15 +13,14 @@
 
 ## Integrantes
 
-- **Gustavo Freitas Cunha** — `gustavocunha182020@gmail.com`
-  > **Nota de Justificativa Individual:** O trabalho é realizado de forma estritamente individual em conformidade com as diretrizes do docente da disciplina, por se tratar de aluno regular do **Programa de Pós-Graduação em Ciência da Computação (PPGCC/UFMG)** (Mestrado Acadêmico).
+- **Gustavo Freitas Cunha** — `gustavocunha@dcc.ufmg.br`
+  > Trabalho realizado de forma individual em conformidade com as diretrizes para alunos da pós-graduação.
 
 ---
 
-## Sobre o Sistema
+## O que é TokStance?
 
-### Contexto de Pesquisa Científica (Mestrado PPGCC / UFMG)
-O **TokStance!** não é apenas um projeto avaliativo didático, mas o **artefato central de engenharia de software e coleta de dados primários da dissertação de mestrado do autor**. O objetivo da pesquisa é o desenvolvimento de um **classificador multimodal de detecção de posicionamento (*stance detection*) em vídeos curtos do TikTok**, capaz de processar simultaneamente sinais visuais de vídeo, áudio/fala transcrita e texto de legendas/hashtags.
+O **TokStance!** não é apenas um projeto avaliativo didático, mas um artefato importante de engenharia de software e coleta de dados primários da minha dissertação de mestrado, cujo objetivo  é o desenvolvimento de um classificador multimodal de detecção de posicionamento (*stance detection*) em vídeos curtos do TikTok**, capaz de processar simultaneamente sinais visuais de vídeo, áudio/fala transcrita e texto de legendas/hashtags.
 
 Para viabilizar o treinamento e a validação desse modelo de inteligência artificial multimodal, é imperativo dispor de um acervo rotulado com rigor científico, controle de viés, distribuição balanceada de tópicos e auditoria de concordância interanotador. O TokStance! foi concebido e implementado para gerenciar rodadas completas de anotação colaborativa entre múltiplos avaliadores humanos.
 
@@ -34,7 +33,7 @@ Para viabilizar o treinamento e a validação desse modelo de inteligência arti
    - Fluxo de recuperação de senha em duas etapas com geração de código numérico efêmero de 6 dígitos, com envio real por e-mail via **SMTP (Gmail)** e tela interativa de redefinição com redirecionamento automático.
 
 2. **Hub Central Multi-Papel**:
-   - Separação contextual entre tarefas gerenciadas (papel de coordenador/pesquisador) e tarefas atribuídas para rotulação (papel de anotador).
+   - Separação contextual entre tarefas gerenciadas (papel de coordenador/pesquisador) e tarefas atribuídas para rotulação (papel de anotador), permitindo que um mesmo usuário (como o professor) atue simultaneamente como administrador e anotador.
    - Ingresso imediato em tarefas através de tokens de convite exclusivos (`TOK-DEMO2026`).
    - Monitoramento de progresso individual e global por meio de barras de progresso reativas.
 
@@ -202,10 +201,10 @@ Acesse no seu navegador: `http://localhost:7860`
 
 | Papel | Usuário | Senha | Descrição |
 | :--- | :--- | :--- | :--- |
-| **Coordenador / Pesquisador** | `coordenador` | `senha123` | Administrador da tarefa demonstrativa, com acesso ao Console de Administração, gráficos e relatórios estatísticos. |
-| **Professor / Avaliador** | `professor` | `senha123` | Usuário para teste prático de ingresso em tarefas usando o código de convite `TOK-DEMO2026`. |
+| **Professor (Coordenador & Rotulador)** | `professor` | `senha123` | Conta principal de avaliação. Possui perfil duplo: administra a tarefa demonstrativa (Console de Administração, métricas, auditoria e exportação CSV) e também é rotulador da própria tarefa (com vídeos atribuídos para rotulação prática). |
 | **Rotulador Ativo 1** | `rotulador_1` | `senha123` | Possui 10 anotações efetuadas e 1 relato de problema para teste do fluxo de substituição de vídeos. |
 | **Rotulador Ativo 2** | `rotulador_2` | `senha123` | Possui 8 anotações com sobreposição, gerando métricas reais de concordância interanotador. |
+| **Usuário Geral (Vaga Livre)** | `gustavo` | `senha123` | Conta padrão para teste de ingresso em tarefas usando o código de convite `TOK-DEMO2026` e recuperação de senha. |
 
 > **Código de Convite Demonstrativo**: `TOK-DEMO2026`
 
@@ -217,6 +216,6 @@ Conforme solicitado no enunciado da disciplina, seguem os cinco links oficiais d
 
 1. **Sistema em Produção**: [https://tokstance.duckdns.org](https://tokstance.duckdns.org) *(IP direto da VM GCP: [http://34.56.250.144](http://34.56.250.144))*
 2. **Repositório no GitHub**: [https://github.com/gustavofcunha/tokstance](https://github.com/gustavofcunha/tokstance)
-3. **Build no GitHub Actions**: [https://github.com/gustavofcunha/tokstance/actions](https://github.com/gustavofcunha/tokstance/actions)
+3. **Build no GitHub Actions**: [https://https://SUBSTITUIR_LINK_CI](https://github.com/gustavofcunha/tokstance/actions)
 4. **Relatório no Codecov**: [https://codecov.io/gh/gustavofcunha/tokstance](https://codecov.io/gh/gustavofcunha/tokstance)
-5. **Vídeo de Apresentação no YouTube**: [https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO) *(vídeo demonstrativo de até 5 minutos)*
+5. **Vídeo de Apresentação no YouTube**: [https://SUBSTITUIR_LINK_VIDEO](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO) *(vídeo demonstrativo de até 5 minutos)*

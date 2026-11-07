@@ -37,7 +37,7 @@ def test_coletar_dados_e_gerar_markdown_com_banco_povoado(tmp_path: Path, capsys
     # Act 1: coletar metricas
     dados = coletar_dados_banco(db_teste)
     assert dados["status"] == "sucesso"
-    assert len(dados["usuarios"]) >= 5
+    assert len(dados["usuarios"]) >= 4
     assert len(dados["tarefas"]) == 1
 
     tarefa = dados["tarefas"][0]
@@ -57,7 +57,6 @@ def test_coletar_dados_e_gerar_markdown_com_banco_povoado(tmp_path: Path, capsys
     conteudo_md = gerar_markdown(dados)
     assert "# TokStance - Painel de Monitoramento" in conteudo_md
     assert "TOK-DEMO2026" in conteudo_md
-    assert "coordenador" in conteudo_md
     assert "professor" in conteudo_md
 
     # Act 3: atualizar arquivo

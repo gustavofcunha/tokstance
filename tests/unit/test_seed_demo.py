@@ -19,8 +19,8 @@ def test_seed_demo_popula_banco_e_cria_tarefa_demonstrativa(tmp_path: Path) -> N
     #assert
     assert resultado["status"] == "sucesso"
     assert resultado["codigo_convite"] == "TOK-DEMO2026"
-    assert "coordenador" in resultado["usuarios"]
     assert "professor" in resultado["usuarios"]
+    assert "rotulador_1" in resultado["usuarios"]
 
     banco = BancoDadosSQLite(caminho_db)
     repo = RepositorioEstudo(banco)

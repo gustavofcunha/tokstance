@@ -957,12 +957,37 @@ APP_CSS = """
     }
 
     .form-wizard-card {
-        border: 1px solid #e2e8f0;
-        border-top: 5px solid #9c0014;
-        padding: 24px;
-        background: #f8fafc;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e2e8f0 !important;
+        border-top: 4px solid #9c0014 !important;
+        padding: 26px 30px !important;
+        background: #ffffff !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+    }
+    .wizard-header-banner {
+        margin-bottom: 22px !important;
+        padding-bottom: 16px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+    .wizard-header-intro {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-end !important;
+        gap: 16px !important;
+        margin-top: 4px !important;
+        flex-wrap: wrap !important;
+    }
+    .wizard-header-main-title {
+        margin: 0 !important;
+        font-size: 21px !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.01em !important;
+    }
+    .wizard-header-desc {
+        margin: 4px 0 0 0 !important;
+        font-size: 13.5px !important;
+        color: #64748b !important;
     }
     .wizard-grid {
         display: flex !important;
@@ -986,18 +1011,26 @@ APP_CSS = """
     .wizard-section-card {
         background: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
+        border-left: 4px solid #9c0014 !important;
         border-radius: 10px !important;
         padding: 20px 22px !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
         display: flex !important;
         flex-direction: column !important;
-        gap: 14px !important;
+        gap: 16px !important;
         box-sizing: border-box !important;
+        height: auto !important;
+    }
+    .wizard-section-card.card-equipe {
+        border-left-color: #0284c7 !important;
+    }
+    .wizard-section-card.card-videos {
+        border-left-color: #059669 !important;
     }
     .wizard-section-header {
         display: flex !important;
-        align-items: center !important;
-        gap: 10px !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
         padding-bottom: 12px !important;
         border-bottom: 1px solid #f1f5f9 !important;
     }
@@ -1005,38 +1038,49 @@ APP_CSS = """
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        width: 26px !important;
-        height: 26px !important;
+        width: 28px !important;
+        height: 28px !important;
         border-radius: 50% !important;
         background: #fff0f2 !important;
         color: #9c0014 !important;
         font-weight: 800 !important;
         font-size: 13px !important;
-        border: 1px solid #ffd6dc !important;
+        border: 1.5px solid #ffd6dc !important;
         flex-shrink: 0 !important;
+        margin-top: 2px !important;
+    }
+    .wizard-badge.badge-blue {
+        background: #e0f2fe !important;
+        color: #0284c7 !important;
+        border-color: #bae6fd !important;
+    }
+    .wizard-badge.badge-green {
+        background: #ecfdf5 !important;
+        color: #059669 !important;
+        border-color: #a7f3d0 !important;
     }
     .wizard-section-title {
         margin: 0 !important;
-        font-size: 15px !important;
+        font-size: 16px !important;
         font-weight: 800 !important;
         color: #0f172a !important;
         letter-spacing: -0.01em !important;
     }
     .wizard-section-subtitle {
-        margin: 2px 0 0 0 !important;
-        font-size: 12px !important;
+        margin: 3px 0 0 0 !important;
+        font-size: 12.5px !important;
         color: #64748b !important;
         font-weight: 500 !important;
     }
     .wizard-info-callout {
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-left: 4px solid #9c0014 !important;
+        background: #f0fdf4 !important;
+        border: 1px solid #bbf7d0 !important;
+        border-left: 4px solid #059669 !important;
         border-radius: 6px !important;
         padding: 10px 14px !important;
-        font-size: 13px !important;
-        color: #334155 !important;
-        line-height: 1.4 !important;
+        font-size: 12.5px !important;
+        color: #166534 !important;
+        line-height: 1.45 !important;
     }
     .wizard-info-callout code {
         background: #ffffff !important;
@@ -1052,6 +1096,34 @@ APP_CSS = """
         align-items: flex-end !important;
         gap: 8px !important;
         width: 100% !important;
+    }
+    .wizard-tool-btn,
+    button.wizard-tool-btn {
+        width: 42px !important;
+        min-width: 42px !important;
+        max-width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        color: #475569 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        margin-bottom: 2px !important;
+    }
+    .wizard-tool-btn:hover,
+    button.wizard-tool-btn:hover {
+        background: #fff0f2 !important;
+        border-color: #9c0014 !important;
+        color: #9c0014 !important;
+        box-shadow: 0 2px 5px rgba(156, 0, 20, 0.12) !important;
     }
     .wizard-row-btn {
         height: 42px !important;
@@ -1077,10 +1149,51 @@ APP_CSS = """
         gap: 16px !important;
         align-items: flex-start !important;
         width: 100% !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 14px 16px !important;
+        box-sizing: border-box !important;
     }
     .wizard-slider-row > * {
         flex: 1 1 0 !important;
         min-width: 0 !important;
+    }
+    /* Eliminar bordas duplas nos sliders do Gradio */
+    .wizard-slider-row .head,
+    .wizard-slider-row .head .wrap,
+    .wizard-slider-row .wrap.default,
+    .gradio-slider .head .wrap,
+    .gradio-slider .wrap.default {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+    }
+    .wizard-slider-row input[type="number"],
+    .gradio-slider input[type="number"] {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 3px 6px !important;
+        font-weight: 700 !important;
+        font-size: 13.5px !important;
+        color: #0f172a !important;
+        width: 58px !important;
+        height: 32px !important;
+        text-align: center !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .wizard-slider-row input[type="number"]:focus,
+    .gradio-slider input[type="number"]:focus {
+        border-color: #9c0014 !important;
+        outline: none !important;
+        box-shadow: 0 0 0 2px rgba(156, 0, 20, 0.1) !important;
+    }
+    .wizard-slider-row input[type="range"],
+    .gradio-slider input[type="range"] {
+        accent-color: #9c0014 !important;
     }
     .wizard-file-upload {
         margin-bottom: 14px !important;
@@ -1122,16 +1235,39 @@ APP_CSS = """
         margin-top: 10px !important;
         width: 100% !important;
     }
+    .wizard-checkbox-card {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        margin-top: 2px !important;
+    }
+    .wizard-checkbox-card label {
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        cursor: pointer !important;
+    }
     .wizard-checkbox {
-        margin-top: 4px !important;
+        margin-top: 0 !important;
     }
     .wizard-checkbox label {
         font-size: 13px !important;
         font-weight: 600 !important;
         color: #334155 !important;
     }
+    .wizard-footer-card {
+        margin-top: 24px !important;
+        padding-top: 20px !important;
+        border-top: 1px solid #f1f5f9 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
     .wizard-submit-row {
-        margin-top: 20px !important;
+        margin-top: 8px !important;
         display: flex !important;
         justify-content: center !important;
         width: 100% !important;
@@ -1141,7 +1277,7 @@ APP_CSS = """
         height: 48px !important;
         font-size: 15px !important;
         font-weight: 800 !important;
-        letter-spacing: 0.02em !important;
+        letter-spacing: 0.01em !important;
         border-radius: 8px !important;
         box-shadow: 0 4px 14px rgba(156, 0, 20, 0.25) !important;
     }
@@ -1911,8 +2047,8 @@ APP_CSS = """
     .wizard-action-row { align-items: flex-end !important; flex-wrap: nowrap !important; background: transparent !important; border: none !important; padding: 0 !important; }
     .wizard-action-row > button { flex: 0 0 auto !important; }
     .wizard-accordion { border: 1px solid #e2e8f0 !important; border-radius: 8px !important; }
-    .wizard-submit-btn { min-width: 280px !important; height: 44px !important; }
-    .form-wizard-card { padding: 16px !important; }
+    .wizard-submit-btn { min-width: 300px !important; height: 46px !important; }
+    .form-wizard-card { padding: 26px 30px !important; }
 
     /* workspace de rotulacao com rolagem normal da pagina e rodape visivel */
     body:has(.labeler-panel:not(.hide):not(.hidden)),

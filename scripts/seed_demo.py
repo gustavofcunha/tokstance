@@ -47,8 +47,7 @@ def povoar_banco_demonstrativo(
 
     #garantir usuarios essenciais para avaliacao
     usuarios_seed = [
-        ("coordenador", "senha123", "coordenador@ufmg.br", "Coordenador Geral de Rotulagem"),
-        ("professor", "senha123", "professor@ufmg.br", "Professor André Hora"),
+        ("professor", "senha123", "professor@ufmg.br", "Professor André Hora (Coordenador & Avaliador)"),
         ("rotulador_1", "senha123", "rotulador1@ufmg.br", "Rotulador 1 (Bolsista)"),
         ("rotulador_2", "senha123", "rotulador2@ufmg.br", "Rotulador 2 (Bolsista)"),
         ("gustavo", "senha123", "gustavocunha182020@gmail.com", "Gustavo Cunha"),
@@ -70,10 +69,9 @@ def povoar_banco_demonstrativo(
             )
             usuarios_criados[nome_u] = int(res_cad["usuario_id"])
 
-    coord_id = usuarios_criados["coordenador"]
+    prof_id = usuarios_criados["professor"]
     rot1_id = usuarios_criados["rotulador_1"]
     rot2_id = usuarios_criados["rotulador_2"]
-    prof_id = usuarios_criados["professor"]
 
     #remover tarefa demonstrativa anterior se solicitado
     codigo_convite_demo = "TOK-DEMO2026"
@@ -138,7 +136,7 @@ def povoar_banco_demonstrativo(
 
         #criacao da tarefa com 4 vagas e 50% de sobreposicao
         res_tarefa = servico_admin.criar_nova_tarefa(
-            usuario_administrador_id=coord_id,
+            usuario_administrador_id=prof_id,
             pool_videos=df_videos,
             quantidade_videos_principal=30 if len(df_videos) >= 30 else len(df_videos),
             videos_reserva_explicitos=df_reserva,
@@ -149,7 +147,7 @@ def povoar_banco_demonstrativo(
             numero_vagas=4,
             percentual_sobreposicao=50.0,
             codigo_convite=codigo_convite_demo,
-            permitir_admin_como_rotulador=False,
+            permitir_admin_como_rotulador=True,
         )
         tarefa_id = int(res_tarefa["tarefa_id"])
     else:
@@ -157,16 +155,9 @@ def povoar_banco_demonstrativo(
 
     agora_iso = agora_brt().isoformat()
 
-    #inscrever rotulador_1, rotulador_2 e professor
+    #inscrever rotulador_1 e rotulador_2
     servico_auth.entrar_na_tarefa_por_convite(rot1_id, codigo_convite_demo)
     servico_auth.entrar_na_tarefa_por_convite(rot2_id, codigo_convite_demo)
-    servico_auth.entrar_na_tarefa_por_convite(prof_id, codigo_convite_demo)
-
-    #conceder tambem papel de administrador ao professor para acesso irrestrito ao painel
-    banco.executar(
-        "INSERT OR IGNORE INTO membros_tarefa (tarefa_id, usuario_id, papel, vaga_atribuida, entrou_em) VALUES (?, ?, 'administrador', '', ?)",
-        (tarefa_id, prof_id, agora_iso),
-    )
 
     #simular anotações consistentes entre rotulador_1 e rotulador_2
     df_rot1 = repo_estudo.carregar_atribuicoes_tarefa_df(tarefa_id, rotulador="rotulador_1")
@@ -222,7 +213,7 @@ def povoar_banco_demonstrativo(
     agora_iso = agora_brt().isoformat()
     banco.executar(
         "INSERT INTO logs_acesso (tarefa_id, usuario_id, usuario, acao, tempo_desde_login_segundos, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-        (tarefa_id, coord_id, "coordenador", "criacao_tarefa", 0.0, agora_iso),
+        (tarefa_id, prof_id, "professor", "criacao_tarefa", 0.0, agora_iso),
     )
     banco.executar(
         "INSERT INTO logs_acesso (tarefa_id, usuario_id, usuario, acao, tempo_desde_login_segundos, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
@@ -232,7 +223,6 @@ def povoar_banco_demonstrativo(
         "INSERT INTO logs_acesso (tarefa_id, usuario_id, usuario, acao, tempo_desde_login_segundos, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
         (tarefa_id, rot2_id, "rotulador_2", "login", 0.0, agora_iso),
     )
-
     banco.executar(
         "INSERT INTO logs_acesso (tarefa_id, usuario_id, usuario, acao, tempo_desde_login_segundos, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
         (tarefa_id, prof_id, "professor", "login", 0.0, agora_iso),
@@ -273,8 +263,7 @@ def main() -> None:
     print(f"Tarefa ID: {resultado['tarefa_id']}")
     print(f"Código de Convite da Tarefa: {resultado['codigo_convite']}")
     print("\nUsuários para Teste / Avaliação (Senha padrão: senha123):")
-    print(" - Coordenador (Administrador): coordenador")
-    print(" - Professor (Avaliador / Vaga Livre): professor")
+    print(" - Professor (Coordenador & Rotulador): professor")
     print(" - Rotulador 1 (Anotador ativo): rotulador_1")
     print(" - Rotulador 2 (Anotador ativo): rotulador_2")
     print(" - Gustavo: gustavo")
