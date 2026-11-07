@@ -15,7 +15,7 @@ Trabalho prático da disciplina de Teste de Software (DCC/UFMG).
 
 - Gustavo Freitas Cunha (gustavocunha@dcc.ufmg.br)
 
-Realizei este trabalho de forma individual por ser aluno da pós-graduação.
+Trabalho de forma individual (aluno da pós-graduação).
 
 ---
 
@@ -89,12 +89,15 @@ Estruturei o projeto separando domínio, serviços, banco de dados e interface v
 
 - Python 3.10+
 - FastAPI e Uvicorn para rotas REST e servidor ASGI
-- Gradio 4+ para a interface web reativa, com CSS customizado 
+- Gradio 4+ para a interface web reativa, com CSS customizado
 - SQLite 3 com modo WAL ativado e verificação de chaves estrangeiras
 - bcrypt para hash de senhas
 - pandas para manipulação de tabelas e cálculo das matrizes
-- Nginx na nuvem atuando como proxy reverso nas portas 80 e 443, com suporte a WebSockets
+- Google Cloud Platform (Compute Engine) para hospedagem da máquina virtual e deploy em nuvem, com endereço IP externo estático para garantir persistência
+- DuckDNS para personalização gratuita do domínio apontando para a máquina virtual
+- Nginx atuando como proxy reverso nas portas 80 e 443, com suporte a WebSockets
 - Certbot para emissão e renovação automática do certificado SSL gratuito (Let's Encrypt)
+- systemd para gerenciamento do serviço com inicialização automática e recuperação de falhas
 - pytest, Coverage.py e Playwright para a suite de testes unitários, de integração e ponta a ponta
 - GitHub Actions rodando os testes automaticamente a cada commit no Linux, macOS e Windows
 - Codecov para publicação dos relatórios de cobertura
@@ -176,6 +179,5 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 | professor | senha123 | Conta principal para avaliação. O professor é o criador da tarefa de teste, tendo acesso ao Console de Administração para ver métricas e exportar dados, e também está cadastrado como rotulador da tarefa para testar o fluxo de anotação. |
 | rotulador_1 | senha123 | Anotador com 10 vídeos rotulados e 1 relato de problema para testar a substituição de vídeo com falha. |
 | rotulador_2 | senha123 | Anotador com 8 vídeos rotulados com sobreposição para gerar métricas de concordância no painel. |
-| gustavo | senha123 | Conta avulsa para testar o ingresso na tarefa usando o código de convite TOK-DEMO2026 ou o fluxo de esqueci minha senha. |
 
 Código de convite para teste: `TOK-DEMO2026`
