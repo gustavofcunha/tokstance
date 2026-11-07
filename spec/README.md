@@ -149,3 +149,4 @@ O serviço `/etc/systemd/system/tokstance.service` está configurado com:
 * **Cache do Navegador:** Caso você acesse e ainda veja o ícone anterior em cache, utilize o atalho de recarregamento forçado no navegador:
   * **Windows / Linux:** `Ctrl + F5` ou `Ctrl + Shift + R`
   * **macOS:** `Cmd + Shift + R`
+
