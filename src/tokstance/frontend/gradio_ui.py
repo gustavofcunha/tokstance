@@ -452,7 +452,7 @@ def construir_interface(
                                 <p>Rodadas de anotação criadas e coordenadas por você</p>
                             </div>
                             """)
-                            btn_ir_criar_tarefa = gr.Button("+", elem_id="btn_ir_criar_tarefa", elem_classes=["ufmg-btn", "hub-plus-btn", "hub-plus-admin"], scale=0, min_width=44)
+                            btn_ir_criar_tarefa = gr.Button("+", elem_id="btn_ir_criar_tarefa", elem_classes=["ufmg-btn", "hub-plus-btn", "hub-plus-admin"], scale=0, min_width=38)
                         hub_admin_cards_html = gr.HTML()
 
                     with gr.Column(scale=1, min_width=0, elem_classes="hub-section-box"):
@@ -463,7 +463,7 @@ def construir_interface(
                                 <p>Fila individual de vídeos atribuídos para sua análise</p>
                             </div>
                             """)
-                            btn_abrir_convite = gr.Button("+", elem_id="btn_abrir_modal_convite", elem_classes=["ufmg-btn", "hub-plus-btn", "hub-plus-rotulador"], scale=0, min_width=44)
+                            btn_abrir_convite = gr.Button("+", elem_id="btn_abrir_modal_convite", elem_classes=["ufmg-btn", "hub-plus-btn", "hub-plus-rotulador"], scale=0, min_width=38)
                         hub_rotulador_cards_html = gr.HTML()
 
                 #invite code modal

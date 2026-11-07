@@ -746,7 +746,7 @@ APP_CSS = """
     .hub-two-col {
         display: flex !important;
         flex-direction: row !important;
-        gap: 24px !important;
+        gap: 20px !important;
         width: 100% !important;
         align-items: stretch !important;
         margin-bottom: 20px !important;
@@ -759,28 +759,32 @@ APP_CSS = """
     .hub-section-box {
         flex: 1 1 0 !important;
         min-width: 0 !important;
+        height: 100% !important;
         background: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
         border-radius: 12px !important;
-        padding: 20px 22px !important;
+        padding: 18px 20px !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
         display: flex !important;
         flex-direction: column !important;
-        justify-content: space-between !important;
+        justify-content: flex-start !important;
+        box-sizing: border-box !important;
     }
     .hub-box-header {
-        margin-bottom: 12px !important;
+        margin: 0 !important;
     }
     .hub-box-header h3 {
         margin: 0 !important;
-        font-size: 19px !important;
+        font-size: 18px !important;
         font-weight: 800 !important;
         color: #0f172a !important;
+        line-height: 1.25 !important;
     }
     .hub-box-header p {
-        margin: 4px 0 0 !important;
-        font-size: 14px !important;
+        margin: 3px 0 0 !important;
+        font-size: 13px !important;
         color: #475569 !important;
+        line-height: 1.3 !important;
     }
     .hub-action-row {
         display: flex !important;
@@ -1596,14 +1600,21 @@ APP_CSS = """
         border: 1px solid #c8e6c9 !important;
     }
     .hub-table-empty {
-        padding: 24px 18px !important;
+        flex: 1 1 auto !important;
+        min-height: 88px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 18px 20px !important;
         text-align: center !important;
         color: #64748b !important;
-        font-size: 14px !important;
+        font-size: 13.5px !important;
         background: #f8fafc !important;
         border: 1px dashed #cbd5e1 !important;
         border-radius: 8px !important;
-        margin: 6px 0 12px 0 !important;
+        margin: 4px 0 0 0 !important;
+        box-sizing: border-box !important;
+        line-height: 1.45 !important;
     }
     .hidden-action-trigger {
         display: none !important;
@@ -1750,12 +1761,20 @@ APP_CSS = """
         height: 40px !important; min-height: 40px !important; max-height: 40px !important; padding: 0 18px !important;
         font-size: 14px !important; font-weight: 700 !important; white-space: nowrap !important; width: auto !important;
     }
-    button.hub-plus-btn {
-        width: 40px !important; min-width: 40px !important; height: 40px !important; min-height: 40px !important;
-        max-height: 40px !important; padding: 0 !important; font-size: 0 !important; line-height: 1 !important;
+    button.hub-plus-btn,
+    .hub-plus-btn,
+    #btn_ir_criar_tarefa,
+    #btn_abrir_modal_convite {
+        width: 38px !important; min-width: 38px !important; max-width: 38px !important;
+        height: 38px !important; min-height: 38px !important; max-height: 38px !important;
+        padding: 0 !important; font-size: 0 !important; line-height: 1 !important;
         border-radius: 10px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        flex: 0 0 38px !important; box-sizing: border-box !important; margin: 0 !important;
     }
-    button.hub-plus-btn::before {
+    button.hub-plus-btn::before,
+    .hub-plus-btn::before,
+    #btn_ir_criar_tarefa::before,
+    #btn_abrir_modal_convite::before {
         content: "" !important;
         display: inline-block !important;
         width: 18px !important;
@@ -1770,14 +1789,22 @@ APP_CSS = """
     /* Hub */
     .hub-header-bar { margin-bottom: 14px !important; padding-bottom: 12px !important; align-items: center !important; flex-wrap: nowrap !important; }
     .hub-header-bar > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
-    .hub-two-col { align-items: flex-start !important; gap: 18px !important; }
-    .hub-section-box { justify-content: flex-start !important; padding: 16px 18px !important; gap: 8px !important; min-width: 0 !important; }
+    .hub-two-col { align-items: stretch !important; gap: 20px !important; }
+    .hub-section-box { justify-content: flex-start !important; padding: 18px 20px !important; gap: 8px !important; min-width: 0 !important; height: 100% !important; }
     .hub-box-header h3 { font-size: 18px !important; }
     .hub-box-header p { font-size: 13px !important; }
-    .hub-box-header-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: flex-start !important; justify-content: space-between !important; gap: 10px !important; background: transparent !important; border: none !important; padding: 0 !important; }
+    .hub-box-header-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; gap: 12px !important; background: transparent !important; border: none !important; padding: 0 !important; min-height: 48px !important; margin-bottom: 6px !important; }
     .hub-box-header-row > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
-    .hub-box-header-row > button { flex: 0 0 auto !important; }
+    .hub-box-header-row > button { flex: 0 0 38px !important; width: 38px !important; height: 38px !important; }
     .hub-section-box .block, .hub-section-box .prose { padding: 0 !important; border: none !important; }
+    .hub-section-box > div:not(.hub-box-header-row),
+    .hub-section-box .prose,
+    .hub-section-box .html-container {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+    }
     .hub-table-wrapper { overflow-x: visible !important; margin: 4px 0 0 0 !important; }
     .hub-table { table-layout: auto !important; }
     .hub-table th { padding: 9px 10px !important; font-size: 11px !important; white-space: nowrap !important; }
