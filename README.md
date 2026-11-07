@@ -21,11 +21,11 @@ Realizei este trabalho de forma individual por ser aluno da pós-graduação.
 
 ## Sobre o sistema
 
-O TokStance é uma aplicação real que desenvolvi para ser utilizada na prática durante a minha pesquisa de mestrado no Programa de Pós-Graduação em Ciência da Computação da UFMG (PPGCC/UFMG), e não um projeto simulado apenas para cumprir a disciplina.
+O TokStance é uma aplicação real que desenvolvi para ser utilizada na prática durante a minha pesquisa de mestrado, e não um projeto simulado apenas para cumprir a disciplina, apesar de ter sido adaptado para as demonstrações e avaliações da disciplina.
 
 Na minha dissertação, estou construindo um classificador multimodal de aprendizado profundo para detecção de posicionamento (stance detection) em vídeos curtos do TikTok. O modelo precisa analisar conjuntamente os quadros de vídeo, o áudio com fala transcrita e o texto de legendas e hashtags para identificar se o autor do vídeo se posiciona a favor, contra ou neutro em relação a temas de debate público.
 
-Para que um classificador desses funcione, o ponto crítico é a qualidade dos dados de treinamento. Eu preciso de um acervo rotulado por múltiplos anotadores humanos, com rigor metodológico, controle de sobreposição de amostras entre pessoas e cálculo de confiabilidade estatística. O TokStance foi construído exatamente para coordenar essa campanha de anotação com os avaliadores voluntários e bolsistas da pesquisa.
+Como se trata de aprendizado supervisionado, eu preciso de um acervo rotulado por múltiplos anotadores humanos, com rigor metodológico, controle de sobreposição de amostras entre pessoas e cálculo de confiabilidade estatística. O TokStance foi construído exatamente para coordenar essa campanha de anotação com os voluntários que irão participar.
 
 ### Por que desenvolvi uma ferramenta própria?
 
@@ -49,22 +49,22 @@ Ferramentas prontas de rotulação de mercado (como Label Studio ou Prodigy) sã
    - Proteção contra força bruta com bloqueio temporário após tentativas incorretas
    - Recuperação de senha com envio de código numérico de 6 dígitos via SMTP pelo Gmail
 
-2. Painel central (Hub):
+2. Painel central:
    - Separação entre tarefas que eu administro e tarefas atribuídas para eu rotular
-   - Entrada em tarefas por código de convite (como o código TOK-DEMO2026)
+   - Entrada em tarefas por código de convite 
    - Acompanhamento do progresso de anotações em tempo real
 
 3. Criação de tarefas e distribuição:
    - Definição da pergunta e das opções de resposta
-   - Matriz de penalidades para cálculo ordinal de divergências
-   - Separação automática entre acervo principal e vídeos de reserva
+   - Matriz personalizável de penalidades para cálculo ordinal de divergências
+   - Separação entre acervo principal e vídeos de reserva
    - Distribuição intercalada de vídeos entre anotadores com percentual de sobreposição configurável
 
 4. Tela de rotulação:
    - Player embutido do TikTok em formato widescreen
    - Aviso de conteúdo sensível com opção de saída
    - Destaque do tema em análise direto no enunciado
-   - Cronometragem do tempo gasto por vídeo e confirmação visual ao salvar
+   - Salvamento incremental que permite ao rotulador sair da plataforma e retomar a tarefa posteriormente de onde ele parou
 
 5. Substituição de vídeos com falha:
    - Opção para reportar vídeos fora do ar ou com link quebrado
@@ -89,7 +89,7 @@ Estruturei o projeto separando domínio, serviços, banco de dados e interface v
 
 - Python 3.10+
 - FastAPI e Uvicorn para rotas REST e servidor ASGI
-- Gradio 4+ para a interface web reativa, com CSS customizado no padrão visual da UFMG
+- Gradio 4+ para a interface web reativa, com CSS customizado 
 - SQLite 3 com modo WAL ativado e verificação de chaves estrangeiras
 - bcrypt para hash de senhas
 - pandas para manipulação de tabelas e cálculo das matrizes
@@ -104,23 +104,9 @@ Estruturei o projeto separando domínio, serviços, banco de dados e interface v
 
 ## Uso de inteligência artificial
 
-Durante o desenvolvimento, utilizei ferramentas de inteligência artificial (Google Antigravity, Claude e ChatGPT) como assistentes de programação nas seguintes etapas:
+Utilizei a IDE Antigravity com agente integrado, utilizando principalmente o modelo Gemini 3.8 Pro. O agente de IA foi empregado como ferramental de apoio para modelagem, implementação do código de produção e escrita dos testes automatizados.
 
-1. Modelagem e arquitetura:
-   - Discussão da estrutura de camadas para manter regras de negócio separadas da interface do Gradio
-   - Modelagem das tabelas relacionais do SQLite e integridade referencial
-
-2. Criação dos testes:
-   - Geração de casos de teste unitários com padrão Arrange-Act-Assert
-   - Mapeamento de cenários de borda para validação de formulários, controle de concorrência e injeção de dados inválidos
-   - Apoio na escrita dos fluxos de teste ponta a ponta com Playwright
-
-3. Estatística e algoritmos:
-   - Revisão da fórmula matemática do Alfa de Krippendorff ordinal aplicada à matriz de distâncias
-
-4. Infraestrutura e deploy:
-   - Configuração do pipeline multiplataforma no GitHub Actions
-   - Escrita dos scripts de configuração da máquina virtual no Google Cloud, Nginx e systemd
+O trabalho ocorreu de forma incremental, o que me permitiu revisar, testar e refatorar tudo o que foi gerado pelo agente antes de integrar ao repositório. Todas as decisões de projeto, regras de negócio e arquitetura de software foram tomadas exclusivamente por mim.
 
 ---
 
@@ -175,18 +161,15 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 
 ---
 
-## Como rodar localmente
+## Links para avaliação
 
-```bash
-# Popular o banco com dados demonstrativos
-PYTHONPATH=src:. python3 scripts/seed_demo.py
+1. Sistema em produção: [https://tokstance.duckdns.org](https://tokstance.duckdns.org) (ou pelo IP da máquina no Google Cloud: [http://34.56.250.144](http://34.56.250.144))
+2. Repositório no GitHub: [https://github.com/gustavofcunha/tokstance](https://github.com/gustavofcunha/tokstance)
+3. Execução no GitHub Actions: [https://github.com/gustavofcunha/tokstance/actions](https://github.com/gustavofcunha/tokstance/actions)
+4. Relatório no Codecov: [https://codecov.io/gh/gustavofcunha/tokstance](https://codecov.io/gh/gustavofcunha/tokstance)
+5. Vídeo de apresentação no YouTube: [https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO)
 
-# Iniciar o servidor
-PYTHONPATH=src:. python3 -m tokstance.main
-```
-Acesse no navegador: `http://localhost:7860`
-
-### Usuários de teste cadastrados pelo seed:
+### Credenciais para acesso em produção:
 
 | Usuário | Senha | Perfil no sistema |
 | :--- | :--- | :--- |
@@ -196,13 +179,3 @@ Acesse no navegador: `http://localhost:7860`
 | gustavo | senha123 | Conta avulsa para testar o ingresso na tarefa usando o código de convite TOK-DEMO2026 ou o fluxo de esqueci minha senha. |
 
 Código de convite para teste: `TOK-DEMO2026`
-
----
-
-## Links para avaliação
-
-1. Sistema em produção: [https://tokstance.duckdns.org](https://tokstance.duckdns.org) (ou pelo IP da máquina no Google Cloud: [http://34.56.250.144](http://34.56.250.144))
-2. Repositório no GitHub: [https://github.com/gustavofcunha/tokstance](https://github.com/gustavofcunha/tokstance)
-3. Execução no GitHub Actions: [https://github.com/gustavofcunha/tokstance/actions](https://github.com/gustavofcunha/tokstance/actions)
-4. Relatório no Codecov: [https://codecov.io/gh/gustavofcunha/tokstance](https://codecov.io/gh/gustavofcunha/tokstance)
-5. Vídeo de apresentação no YouTube: [https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO)
