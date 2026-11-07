@@ -1172,63 +1172,315 @@ APP_CSS = """
         color: #0f172a !important;
     }
     /* Cards de parametros do assistente (Etapa 2 e Etapa 3) */
-    /* Linha inferior de configuracoes da etapa 2: convite e checkbox */
-    .wizard-second-row {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 16px !important;
-        align-items: flex-end !important;
-        width: 100% !important;
+    .wizard-passo-2 .form {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+    .wizard-step2-bottom-row {
+        align-items: stretch !important;
         margin-top: 14px !important;
     }
-    .wizard-second-row > * {
-        flex: 1 1 0 !important;
-        min-width: 0 !important;
+    .wizard-slider-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 14px 18px !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+        box-sizing: border-box !important;
     }
-
-    .wizard-action-row {
+    .wizard-slider-card .wrap {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        width: 100% !important;
+        margin: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    .wizard-slider-card .head {
         display: flex !important;
         flex-direction: row !important;
-        align-items: flex-end !important;
-        gap: 8px !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
         width: 100% !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
-    /* Botoes de ferramenta do assistente de criacao (copiar e regenerar codigo) */
-    .wizard-tool-btn,
-    button.wizard-tool-btn,
-    .wizard-action-row button.wizard-tool-btn,
-    #btn_copiar_codigo_wizard,
-    #btn_gerar_novo_codigo_wizard {
-        width: 42px !important;
-        min-width: 42px !important;
-        max-width: 42px !important;
+    .wizard-slider-card .head label {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+        margin: 0 !important;
+        flex: 1 1 auto !important;
+    }
+    .wizard-slider-card .head label span[data-testid="block-info"] {
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        line-height: 1.3 !important;
+        margin: 0 !important;
+    }
+    .wizard-slider-card .head label span.info,
+    .wizard-slider-card .info {
+        font-size: 12px !important;
+        font-weight: 400 !important;
+        color: #64748b !important;
+        line-height: 1.35 !important;
+        margin: 0 !important;
+    }
+    .wizard-slider-card .tab-like-container {
+        display: flex !important;
+        align-items: center !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        height: auto !important;
+        overflow: visible !important;
+        flex-shrink: 0 !important;
+        padding: 0 !important;
+    }
+    .wizard-slider-card .reset-button,
+    .wizard-slider-card button.reset,
+    .wizard-slider-card .head button,
+    .gradio-slider .reset-button,
+    .gradio-slider button.reset {
+        display: none !important;
+    }
+    .wizard-slider-card input[type="number"],
+    .gradio-slider input[type="number"] {
+        background: #f8fafc !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 7px !important;
+        padding: 2px 6px !important;
+        font-weight: 800 !important;
+        font-size: 14px !important;
+        color: #9c0014 !important;
+        width: 62px !important;
+        height: 34px !important;
+        text-align: center !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+    }
+    .wizard-slider-card input[type="number"]:focus,
+    .gradio-slider input[type="number"]:focus {
+        border-color: #9c0014 !important;
+        background: #ffffff !important;
+        outline: none !important;
+        box-shadow: 0 0 0 2px rgba(156, 0, 20, 0.12) !important;
+    }
+    .wizard-slider-card .slider_input_container {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 14px !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 2px 2px !important;
+    }
+    .wizard-slider-card .min_value,
+    .wizard-slider-card .max_value {
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+        min-width: 24px !important;
+        user-select: none !important;
+        flex: 0 0 auto !important;
+        line-height: 1 !important;
+    }
+    .wizard-slider-card .min_value {
+        text-align: right !important;
+    }
+    .wizard-slider-card .max_value {
+        text-align: left !important;
+    }
+    .wizard-slider-card input[type="range"],
+    .gradio-slider input[type="range"] {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        accent-color: #9c0014 !important;
+        cursor: pointer !important;
+        height: 6px !important;
+    }
+
+    /* Cards inferiores da Etapa 2 (Convite e Participacao) */
+    .wizard-custom-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 14px 18px !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+        box-sizing: border-box !important;
+    }
+    .wizard-custom-card > .block,
+    .wizard-custom-card .html-container {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+    .wizard-custom-card-header {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+        margin: 0 !important;
+    }
+    .wizard-custom-card-title {
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        line-height: 1.3 !important;
+    }
+    .wizard-custom-card-subtitle {
+        font-size: 12px !important;
+        font-weight: 400 !important;
+        color: #64748b !important;
+        line-height: 1.35 !important;
+    }
+    .wizard-convite-inline-row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 10px !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    .wizard-convite-inline-row > .form,
+    .wizard-convite-inline-row > .wizard-convite-input {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .wizard-convite-input {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    .wizard-convite-input label,
+    .wizard-convite-input .wrap {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+    }
+    .wizard-convite-input input,
+    .wizard-convite-input textarea {
         height: 42px !important;
         min-height: 42px !important;
         max-height: 42px !important;
-        padding: 0 !important;
+        padding: 10px 14px !important;
+        line-height: 20px !important;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+        font-size: 14.5px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.04em !important;
+        color: #0f172a !important;
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        box-sizing: border-box !important;
+        resize: none !important;
+        overflow: hidden !important;
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    }
+    .wizard-convite-input input:focus,
+    .wizard-convite-input textarea:focus {
+        border-color: #9c0014 !important;
+        background: #ffffff !important;
+        outline: none !important;
+        box-shadow: 0 0 0 2px rgba(156, 0, 20, 0.12) !important;
+    }
+    .wizard-copy-code-btn,
+    button.wizard-copy-code-btn,
+    #btn_copiar_codigo_wizard {
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+        width: auto !important;
+        min-width: 112px !important;
+        max-width: none !important;
+        padding: 0 16px !important;
         background: #ffffff !important;
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
-        color: #475569 !important;
+        color: #334155 !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        gap: 7px !important;
         cursor: pointer !important;
         transition: all 0.15s ease !important;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-        margin-bottom: 2px !important;
+        flex: 0 0 auto !important;
+        margin: 0 !important;
     }
-    .wizard-tool-btn:hover,
-    button.wizard-tool-btn:hover,
-    .wizard-action-row button.wizard-tool-btn:hover,
-    #btn_copiar_codigo_wizard:hover,
-    #btn_gerar_novo_codigo_wizard:hover {
+    .wizard-copy-code-btn:hover,
+    button.wizard-copy-code-btn:hover,
+    #btn_copiar_codigo_wizard:hover {
         background: #fff0f2 !important;
         background-color: #fff0f2 !important;
         border-color: #9c0014 !important;
         color: #9c0014 !important;
         box-shadow: 0 2px 5px rgba(156, 0, 20, 0.12) !important;
+    }
+    .wizard-checkbox-clean {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        overflow: visible !important;
+    }
+    .wizard-checkbox-clean label {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 0 14px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+        box-sizing: border-box !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    .wizard-checkbox-clean input[type="checkbox"] {
+        width: 18px !important;
+        height: 18px !important;
+        accent-color: #9c0014 !important;
+        cursor: pointer !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
     }
     .wizard-row-btn {
         height: 42px !important;
@@ -1247,91 +1499,6 @@ APP_CSS = """
         font-size: 13px !important;
         font-weight: 700 !important;
         width: 100% !important;
-    }
-    .wizard-slider-row {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 16px !important;
-        align-items: flex-start !important;
-        width: 100% !important;
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        padding: 14px 16px !important;
-        box-sizing: border-box !important;
-    }
-    .wizard-slider-row > * {
-        flex: 1 1 0 !important;
-        min-width: 0 !important;
-    }
-    /* Eliminar bordas duplas e botao sobreposto nos sliders do Gradio */
-    .wizard-slider-row .head,
-    .wizard-slider-row .head .wrap,
-    .wizard-slider-row .wrap.default,
-    .gradio-slider .head .wrap,
-    .gradio-slider .wrap.default {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
-    }
-    .wizard-slider-row .head button,
-    .wizard-slider-row button.reset,
-    .gradio-slider .head button,
-    .gradio-slider button.reset {
-        display: none !important;
-    }
-    .wizard-slider-row input[type="number"],
-    .gradio-slider input[type="number"] {
-        background: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 6px !important;
-        padding: 3px 6px !important;
-        font-weight: 700 !important;
-        font-size: 13.5px !important;
-        color: #0f172a !important;
-        width: 58px !important;
-        height: 32px !important;
-        text-align: center !important;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-    }
-    .wizard-slider-row input[type="number"]:focus,
-    .gradio-slider input[type="number"]:focus {
-        border-color: #9c0014 !important;
-        outline: none !important;
-        box-shadow: 0 0 0 2px rgba(156, 0, 20, 0.1) !important;
-    }
-    .wizard-slider-row .wrap {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin-top: 8px !important;
-    }
-    .wizard-slider-row .wrap > span {
-        font-size: 13px !important;
-        font-weight: 700 !important;
-        color: #64748b !important;
-        min-width: 24px !important;
-        user-select: none !important;
-        flex: 0 0 auto !important;
-    }
-    .wizard-slider-row .wrap > span:first-child {
-        margin-right: 14px !important;
-        text-align: right !important;
-    }
-    .wizard-slider-row .wrap > span:last-child {
-        margin-left: 14px !important;
-        text-align: left !important;
-    }
-    .wizard-slider-row input[type="range"],
-    .gradio-slider input[type="range"] {
-        flex: 1 1 auto !important;
-        margin: 0 !important;
-        accent-color: #9c0014 !important;
-        cursor: pointer !important;
-        height: 6px !important;
     }
     .wizard-file-upload {
         margin-bottom: 14px !important;
@@ -1382,46 +1549,6 @@ APP_CSS = """
     .wizard-feedback-slot {
         margin-top: 10px !important;
         width: 100% !important;
-    }
-    .wizard-checkbox-card {
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        padding: 0 14px !important;
-        height: 42px !important;
-        min-height: 42px !important;
-        max-height: 42px !important;
-        box-sizing: border-box !important;
-        display: flex !important;
-        align-items: center !important;
-        margin: 0 0 2px 0 !important;
-        width: 100% !important;
-    }
-    .wizard-checkbox-card label {
-        font-size: 13.5px !important;
-        font-weight: 600 !important;
-        color: #1e293b !important;
-        cursor: pointer !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    .wizard-checkbox-card input[type="checkbox"] {
-        width: 18px !important;
-        height: 18px !important;
-        accent-color: #9c0014 !important;
-        cursor: pointer !important;
-        margin: 0 !important;
-    }
-    .wizard-checkbox {
-        margin-top: 0 !important;
-    }
-    .wizard-checkbox label {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #334155 !important;
     }
     .wizard-footer-card {
         margin-top: 24px !important;

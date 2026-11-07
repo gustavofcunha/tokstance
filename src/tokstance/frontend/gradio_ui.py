@@ -550,43 +550,66 @@ def construir_interface(
 
                     # ETAPA 2: Equipe, Vagas e Codigo de Convite
                     with gr.Column(visible=False, elem_classes=["wizard-step-container", "wizard-passo-2"]) as wizard_passo_2:
-                        with gr.Row(elem_classes="wizard-slider-row"):
-                            wizard_vagas = gr.Slider(
-                                label="Vagas de Rotuladores",
-                                minimum=1,
-                                maximum=20,
-                                value=3,
-                                step=1,
-                                scale=1,
-                            )
-                            wizard_overlap = gr.Slider(
-                                label="Sobreposição (%)",
-                                minimum=0.0,
-                                maximum=100.0,
-                                value=20.0,
-                                step=5.0,
-                                scale=1,
-                            )
+                        with gr.Row(elem_classes="wizard-step-row"):
+                            with gr.Column(scale=1, min_width=0):
+                                wizard_vagas = gr.Slider(
+                                    label="Vagas de Rotuladores",
+                                    info="Quantidade total de avaliadores na equipe desta tarefa.",
+                                    minimum=1,
+                                    maximum=20,
+                                    value=3,
+                                    step=1,
+                                    buttons=[],
+                                    elem_classes=["wizard-slider-card"],
+                                )
+                            with gr.Column(scale=1, min_width=0):
+                                wizard_overlap = gr.Slider(
+                                    label="Sobreposição entre Avaliadores (%)",
+                                    info="Percentual de vídeos em comum para cálculo de concordância.",
+                                    minimum=0.0,
+                                    maximum=100.0,
+                                    value=20.0,
+                                    step=5.0,
+                                    buttons=[],
+                                    elem_classes=["wizard-slider-card"],
+                                )
 
-                        with gr.Row(elem_classes="wizard-second-row"):
-                            with gr.Row(elem_classes="wizard-action-row", scale=1):
-                                wizard_convite = gr.Textbox(
-                                    label="Código de Convite",
-                                    value=gerar_codigo_convite(),
-                                    scale=1,
-                                )
-                                btn_copiar_codigo = gr.Button(
-                                    value="",
-                                    elem_id="btn_copiar_codigo_wizard",
-                                    elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-copiar"],
-                                    scale=0,
-                                    min_width=42,
-                                )
-                            with gr.Column(elem_classes="wizard-checkbox-card", scale=1):
+                        with gr.Row(elem_classes=["wizard-step-row", "wizard-step2-bottom-row"]):
+                            with gr.Column(scale=1, min_width=0, elem_classes="wizard-custom-card"):
+                                gr.HTML("""
+                                <div class="wizard-custom-card-header">
+                                    <span class="wizard-custom-card-title">Código de Convite</span>
+                                    <span class="wizard-custom-card-subtitle">Compartilhe este código com os avaliadores para ingressarem na tarefa.</span>
+                                </div>
+                                """)
+                                with gr.Row(elem_classes="wizard-convite-inline-row"):
+                                    wizard_convite = gr.Textbox(
+                                        label="Código de Convite",
+                                        show_label=False,
+                                        container=False,
+                                        value=gerar_codigo_convite(),
+                                        scale=1,
+                                        elem_classes=["wizard-convite-input"],
+                                    )
+                                    btn_copiar_codigo = gr.Button(
+                                        value="Copiar",
+                                        elem_id="btn_copiar_codigo_wizard",
+                                        elem_classes=["wizard-copy-code-btn", "btn-icon-copiar"],
+                                        scale=0,
+                                        min_width=110,
+                                    )
+                            with gr.Column(scale=1, min_width=0, elem_classes="wizard-custom-card"):
+                                gr.HTML("""
+                                <div class="wizard-custom-card-header">
+                                    <span class="wizard-custom-card-title">Participação na Rotulação</span>
+                                    <span class="wizard-custom-card-subtitle">Defina se você também receberá uma fila individual de vídeos para rotular.</span>
+                                </div>
+                                """)
                                 wizard_admin_como_rotulador = gr.Checkbox(
                                     label="Participar também como rotulador (Vaga 1)",
                                     value=True,
-                                    elem_classes="wizard-checkbox",
+                                    container=False,
+                                    elem_classes=["wizard-checkbox-clean"],
                                 )
 
                         with gr.Row(elem_classes="wizard-step-footer"):
