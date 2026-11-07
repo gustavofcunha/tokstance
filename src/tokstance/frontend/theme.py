@@ -1165,6 +1165,192 @@ APP_CSS = """
         font-weight: 700 !important;
         color: #0f172a !important;
     }
+    /* Cards de parametros do assistente (Etapa 2 e Etapa 3) */
+    .wizard-param-box {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 16px 20px !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+    }
+    .wizard-param-box .block,
+    .wizard-param-box .gradio-slider,
+    .wizard-param-box .gradio-textbox,
+    .wizard-param-box .gradio-checkbox {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .wizard-box-title {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        margin-bottom: 2px !important;
+    }
+    .wizard-box-sub {
+        font-size: 12.5px !important;
+        color: #64748b !important;
+        margin-bottom: 12px !important;
+        line-height: 1.35 !important;
+    }
+
+    /* Sliders customizados e espacados da etapa 2 */
+    .wizard-slider-custom {
+        width: 100% !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    .wizard-slider-custom .head,
+    .gradio-slider .head {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        margin-bottom: 8px !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    .wizard-slider-custom .head label,
+    .gradio-slider .head label {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+    .wizard-slider-custom .head input[type="number"],
+    .gradio-slider .head input[type="number"] {
+        background: #f8fafc !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 4px 8px !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        color: #9c0014 !important;
+        width: 64px !important;
+        height: 36px !important;
+        text-align: center !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        box-sizing: border-box !important;
+    }
+    .wizard-slider-custom .head input[type="number"]:focus,
+    .gradio-slider .head input[type="number"]:focus {
+        border-color: #9c0014 !important;
+        outline: none !important;
+        background: #ffffff !important;
+    }
+    .wizard-slider-custom .wrap,
+    .gradio-slider .wrap {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 16px !important;
+        margin-top: 6px !important;
+        padding: 8px 0 !important;
+        width: 100% !important;
+    }
+    .wizard-slider-custom .wrap > span,
+    .gradio-slider .wrap > span,
+    .wizard-slider-row .wrap > span {
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        min-width: 28px !important;
+        text-align: center !important;
+        user-select: none !important;
+        flex: 0 0 auto !important;
+    }
+    .wizard-slider-custom input[type="range"],
+    .gradio-slider input[type="range"] {
+        flex: 1 1 auto !important;
+        margin: 0 !important;
+        accent-color: #9c0014 !important;
+        cursor: pointer !important;
+        height: 6px !important;
+    }
+
+    /* Linha compacta e alinhada do codigo de convite */
+    .wizard-convite-input-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+    .wizard-convite-field {
+        flex: 1 1 auto !important;
+        margin: 0 !important;
+    }
+    .wizard-convite-field input {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        letter-spacing: 0.08em !important;
+        color: #0f172a !important;
+        background: #f8fafc !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 8px 14px !important;
+        height: 42px !important;
+        box-sizing: border-box !important;
+    }
+    .wizard-convite-field input:focus {
+        border-color: #9c0014 !important;
+        background: #ffffff !important;
+    }
+    .wizard-btn-copiar,
+    button.wizard-btn-copiar {
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+        padding: 0 18px !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(156, 0, 20, 0.2) !important;
+        margin: 0 !important;
+    }
+
+    /* Checkbox de papel do administrador */
+    .wizard-checkbox-standalone {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 42px !important;
+        box-sizing: border-box !important;
+    }
+    .wizard-checkbox-standalone label {
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    .wizard-checkbox-standalone input[type="checkbox"] {
+        width: 18px !important;
+        height: 18px !important;
+        accent-color: #9c0014 !important;
+        cursor: pointer !important;
+    }
+
     .wizard-action-row {
         display: flex !important;
         flex-direction: row !important;

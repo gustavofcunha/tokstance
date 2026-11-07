@@ -177,8 +177,9 @@ def test_handlers_gradio_wizard_e_convites(ambiente_completo) -> None:
     res_fechar_conv = h["fechar_modal_convite"]()
     assert len(res_abrir_conv) > 0 and len(res_fechar_conv) > 0
 
-    #gerar novo codigo
-    novo_cod = h["gerar_novo_codigo_convite_handler"]()
+    #validar gerador de codigo de convite
+    from tokstance.backend.security.validators import gerar_codigo_convite
+    novo_cod = gerar_codigo_convite()
     assert str(novo_cod).startswith("TOK-")
 
     #atualizar matriz de pares

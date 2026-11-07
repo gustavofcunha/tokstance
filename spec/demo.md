@@ -9,7 +9,7 @@
 
 1. **Abas abertas no navegador**:
    - **Aba 1 (Aplicação em Produção):** Tela inicial de Login do TokStance!.
-   - **Aba 2 (GitHub Actions):** Página da [Execução #10 do GitHub Actions](https://github.com/gustavofcunha/tokstance/actions) com os 4 jobs verdes (Ubuntu, macOS, Windows e Playwright E2E).
+   - **Aba 2 (GitHub Actions):** Página da [Execução no GitHub Actions](https://github.com/gustavofcunha/tokstance/actions/runs/42399472577) com os 4 jobs verdes (Ubuntu, macOS, Windows e Playwright E2E).
    - **Aba 3 (Codecov):** Página do Codecov mostrando a cobertura de testes (acima de 88%).
    - **Aba 4 (Repositório GitHub):** Página inicial com o `README.md` estruturado.
 2. **Terminal (opcional, para exibir execução rápida dos testes)**:

@@ -316,7 +316,7 @@ def construir_interface(
         gr.HTML(elem_classes="toast-slot", value=f"""
         <style>{APP_CSS}</style>
         <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>Código '+t+' copiado</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}}; window.tokstanceForcarMaiusculo=function(){{document.addEventListener('input',function(e){{if(e.target&&(e.target.matches('.campo-nome-maiusculo input')||e.target.closest('.campo-nome-maiusculo'))){{var inp=e.target.tagName==='INPUT'?e.target:e.target.querySelector('input');if(inp){{var s=inp.selectionStart,end=inp.selectionEnd;inp.value=inp.value.toUpperCase();if(s!==null&&end!==null){{inp.setSelectionRange(s,end);}}}}}}}},true);}}; window.tokstanceForcarMaiusculo(); window.tokstanceAcessibilidadeBotoes=function(){{var bCop=document.querySelector('#btn_copiar_codigo_wizard, .btn-icon-copiar'); if(bCop){{bCop.setAttribute('title','Copiar código de convite');bCop.setAttribute('aria-label','Copiar código de convite');}} var bRef=document.querySelector('#btn_gerar_novo_codigo_wizard, .btn-icon-refresh'); if(bRef){{bRef.setAttribute('title','Gerar novo código de convite');bRef.setAttribute('aria-label','Gerar novo código de convite');}}}}; setInterval(window.tokstanceAcessibilidadeBotoes,1500); window.tokstanceAcessibilidadeBotoes();"
+             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>Código '+t+' copiado</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}}; window.tokstanceForcarMaiusculo=function(){{document.addEventListener('input',function(e){{if(e.target&&(e.target.matches('.campo-nome-maiusculo input')||e.target.closest('.campo-nome-maiusculo'))){{var inp=e.target.tagName==='INPUT'?e.target:e.target.querySelector('input');if(inp){{var s=inp.selectionStart,end=inp.selectionEnd;inp.value=inp.value.toUpperCase();if(s!==null&&end!==null){{inp.setSelectionRange(s,end);}}}}}}}},true);}}; window.tokstanceForcarMaiusculo(); window.tokstanceAcessibilidadeBotoes=function(){{var bCop=document.querySelector('#btn_copiar_codigo_wizard, .btn-icon-copiar'); if(bCop){{bCop.setAttribute('title','Copiar código de convite');bCop.setAttribute('aria-label','Copiar código de convite');}}}}; setInterval(window.tokstanceAcessibilidadeBotoes,1500); window.tokstanceAcessibilidadeBotoes();"
              style="display:none;" />
         """)
 
@@ -550,49 +550,58 @@ def construir_interface(
 
                     # ETAPA 2: Equipe, Vagas e Codigo de Convite
                     with gr.Column(visible=False, elem_classes=["wizard-step-container", "wizard-passo-2"]) as wizard_passo_2:
-                        with gr.Row(elem_classes="wizard-slider-row"):
-                            wizard_vagas = gr.Slider(
-                                label="Vagas de Rotuladores",
-                                minimum=1,
-                                maximum=20,
-                                value=3,
-                                step=1,
-                                scale=1,
-                            )
-                            wizard_overlap = gr.Slider(
-                                label="Sobreposição (%)",
-                                minimum=0.0,
-                                maximum=100.0,
-                                value=20.0,
-                                step=5.0,
-                                scale=1,
-                            )
-                        with gr.Row(elem_classes="wizard-action-row"):
-                            wizard_convite = gr.Textbox(
-                                label="Código de Convite",
-                                value=gerar_codigo_convite(),
-                                scale=1,
-                            )
-                            btn_copiar_codigo = gr.Button(
-                                value="",
-                                elem_id="btn_copiar_codigo_wizard",
-                                elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-copiar"],
-                                scale=0,
-                                min_width=42,
-                            )
-                            btn_gerar_novo_codigo = gr.Button(
-                                value="",
-                                elem_id="btn_gerar_novo_codigo_wizard",
-                                elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-refresh"],
-                                scale=0,
-                                min_width=42,
-                            )
-                        with gr.Column(elem_classes="wizard-checkbox-card"):
-                            wizard_admin_como_rotulador = gr.Checkbox(
-                                label="Participar também como rotulador (Vaga 1)",
-                                value=True,
-                                elem_classes="wizard-checkbox",
-                            )
+                        with gr.Row(elem_classes="wizard-step-row"):
+                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
+                                wizard_vagas = gr.Slider(
+                                    label="Vagas de Rotuladores",
+                                    info="Quantidade de avaliadores na equipe",
+                                    minimum=1,
+                                    maximum=20,
+                                    value=3,
+                                    step=1,
+                                    elem_classes=["wizard-slider-custom"],
+                                )
+                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
+                                wizard_overlap = gr.Slider(
+                                    label="Sobreposição entre Avaliadores (%)",
+                                    info="Percentual de vídeos comuns para cálculo de concordância",
+                                    minimum=0.0,
+                                    maximum=100.0,
+                                    value=20.0,
+                                    step=5.0,
+                                    elem_classes=["wizard-slider-custom"],
+                                )
+
+                        with gr.Row(elem_classes="wizard-step-row"):
+                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
+                                gr.HTML("""
+                                <div class="wizard-box-title">Código de Convite da Tarefa</div>
+                                <div class="wizard-box-sub">Compartilhe este código com os avaliadores para ingressarem na rodada</div>
+                                """)
+                                with gr.Row(elem_classes="wizard-convite-input-row"):
+                                    wizard_convite = gr.Textbox(
+                                        show_label=False,
+                                        value=gerar_codigo_convite(),
+                                        elem_classes=["wizard-convite-field"],
+                                        scale=1,
+                                    )
+                                    btn_copiar_codigo = gr.Button(
+                                        "Copiar Código",
+                                        elem_id="btn_copiar_codigo_wizard",
+                                        elem_classes=["ufmg-btn", "btn-icon-copiar", "wizard-btn-copiar"],
+                                        scale=0,
+                                        min_width=140,
+                                    )
+                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
+                                gr.HTML("""
+                                <div class="wizard-box-title">Papel do Administrador na Tarefa</div>
+                                <div class="wizard-box-sub">Defina se você também receberá uma fila individual de vídeos para rotular</div>
+                                """)
+                                wizard_admin_como_rotulador = gr.Checkbox(
+                                    label="Participar também como rotulador (Vaga 1)",
+                                    value=True,
+                                    elem_classes=["wizard-checkbox-standalone"],
+                                )
 
                         with gr.Row(elem_classes="wizard-step-footer"):
                             btn_passo2_voltar = gr.Button("← Voltar ao Passo 1", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=160)
@@ -1882,12 +1891,6 @@ def construir_interface(
             inputs=[wizard_convite],
             outputs=[],
             js="(codigo) => { if (codigo) { window.tokstanceCopiar(codigo); } }",
-        )
-
-        btn_gerar_novo_codigo.click(
-            gerar_novo_codigo_convite_handler,
-            inputs=[],
-            outputs=[wizard_convite],
         )
 
         btn_submeter_tarefa.click(
