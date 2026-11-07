@@ -1,4 +1,4 @@
-"""Interface Gradio completa: Login, Cadastro, Hub Inicial, Criador, Rotulacao e Console Admin (versao inicial do frontend)."""
+"""Interface Gradio completa: Login, Cadastro, Painel Principal, Criador, Rotulacao e Console Admin (versao inicial do frontend)."""
 
 from html import escape
 import functools
@@ -75,7 +75,7 @@ def renderizar_aviso_inline(mensagem: str, tipo: str = "erro") -> str:
 
 
 def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rotulador: List[Dict[str, Any]]) -> Tuple[str, str]:
-    """Renderiza tabelas modernas e responsivas para o Hub Inicial com botoes diretos de acao."""
+    """Renderiza tabelas modernas e responsivas para o Painel Principal com botoes diretos de acao."""
     # Tabela de Administracao
     if not tarefas_admin:
         html_admin = (
@@ -302,7 +302,7 @@ def construir_interface(
     servico_fila: Optional[ServicoFilaAnotacao] = None,
     servico_admin: Optional[ServicoAdministracao] = None,
 ) -> gr.Blocks:
-    """Constroi a aplicacao visual Blocks com suporte a autenticacao, hub, criador e workspace."""
+    """Constroi a aplicacao visual Blocks com suporte a autenticacao, painel principal, criador e workspace."""
     banco = BancoDadosSQLite()
     repo_u = RepositorioUsuarios(banco)
     repo_e = RepositorioEstudo(banco, repo_u)
@@ -436,7 +436,7 @@ def construir_interface(
                                 recuperar_aviso_senha = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                                 btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
 
-            #task hub panel
+            #painel principal
             with gr.Column(visible=False) as painel_hub:
                 with gr.Row(elem_classes="hub-header-bar"):
                     hub_saudacao = gr.HTML()

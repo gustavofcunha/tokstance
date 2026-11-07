@@ -224,7 +224,7 @@ def test_admin_insights_html_and_agreement_summary() -> None:
 
 
 def test_construir_interface_and_hub_cards() -> None:
-    """Verifica geracao de cartoes do hub e instanciacao do app Gradio Blocks."""
+    """Verifica geracao de cartoes do painel principal e instanciacao do app Gradio Blocks."""
     from tokstance.frontend.gradio_ui import (
         construir_interface,
         converter_df_para_distancias,

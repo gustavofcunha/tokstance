@@ -608,7 +608,7 @@ APP_CSS = """
     }
 
     /* =========================================================================
-       5. HUB INICIAL DE TAREFAS
+       5. PAINEL PRINCIPAL DE TAREFAS
        ========================================================================= */
     .hub-header-bar {
         display: flex !important;
@@ -742,7 +742,7 @@ APP_CSS = """
         font-size: 24px !important;
         font-weight: 800 !important;
     }
-    /* Hub em duas colunas com tarefas lado a lado e botoes perfeitamente alinhados */
+    /* Painel Principal em duas colunas com tarefas lado a lado e botoes perfeitamente alinhados */
     .hub-two-col {
         display: flex !important;
         flex-direction: row !important;
@@ -1711,7 +1711,7 @@ APP_CSS = """
     }
     .sensitive-warning-actions > * { margin: 0 !important; flex: 1 1 0 !important; min-width: 0 !important; }
 
-    /* Tabelas Modernas do Hub (Sem Menus Suspensos) */
+    /* Tabelas Modernas do Painel Principal (Sem Menus Suspensos) */
     .hub-table-wrapper {
         width: 100% !important;
         overflow-x: auto !important;
@@ -1945,7 +1945,7 @@ APP_CSS = """
     }
 
     /* =========================================================================
-       7. AJUSTES FINAIS: AVISOS EFEMEROS, BOTOES COMPACTOS, HUB, POPUP, CONSOLE E WORKSPACE
+       7. AJUSTES FINAIS: AVISOS EFEMEROS, BOTOES COMPACTOS, PAINEL PRINCIPAL, POPUP, CONSOLE E WORKSPACE
        ========================================================================= */
     html, body, .gradio-container { overflow-x: hidden !important; }
     .shell { overflow-x: hidden !important; }
@@ -2022,7 +2022,7 @@ APP_CSS = """
     .auth-card .compact-actions { justify-content: flex-start !important; width: 100% !important; }
     .auth-card .compact-actions > * { flex: 1 1 0 !important; }
 
-    /* Hub */
+    /* Painel Principal */
     .hub-header-bar { margin-bottom: 14px !important; padding-bottom: 12px !important; align-items: center !important; flex-wrap: nowrap !important; }
     .hub-header-bar > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
     .hub-two-col { align-items: stretch !important; gap: 20px !important; }

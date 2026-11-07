@@ -599,7 +599,7 @@ def renderizar_toast_html(
     """Renderiza um aviso efemero no canto da tela que some sozinho por animacao CSS.
 
     O tipo e inferido pelo prefixo da mensagem quando nao informado. Quando ha acao, o botao
-    dispara o mesmo canal usado pelas tabelas do hub.
+    dispara o mesmo canal usado pelas tabelas do painel principal.
     """
     texto = str(mensagem or "").strip()
     if not texto:

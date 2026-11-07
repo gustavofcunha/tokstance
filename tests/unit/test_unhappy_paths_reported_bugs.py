@@ -474,7 +474,7 @@ def test_regressao_tema_css_alinhamento_hub_e_overlay_sensivel():
     # Verificacao do layout em duas colunas lado a lado
     assert ".hub-two-col" in APP_CSS
     assert "display: flex !important;" in APP_CSS
-    # Verificacao de alinhamento inferior dos botoes e inputs no hub
+    # Verificacao de alinhamento inferior dos botoes e inputs no painel principal
     assert ".hub-action-row" in APP_CSS
     assert "align-items: flex-end !important;" in APP_CSS
     assert ".hub-btn" in APP_CSS
@@ -575,7 +575,7 @@ def test_recuperacao_senha_fluxo_completo_e_caminhos_infelizes(servicos_teste: D
 
 
 # ==============================================================================
-# 10. TABELAS MODERNAS DO HUB E BOTOES DINAMICOS DE ROTULACAO
+# 10. TABELAS MODERNAS DO PAINEL PRINCIPAL E BOTOES DINAMICOS DE ROTULACAO
 # ==============================================================================
 
 @pytest.mark.unit

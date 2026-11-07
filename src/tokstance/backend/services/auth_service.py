@@ -1,4 +1,4 @@
-"""Servico de autenticacao, cadastro de usuarios, sessao unica e Hub Inicial de tarefas."""
+"""Servico de autenticacao, cadastro de usuarios, sessao unica e Painel Principal de tarefas."""
 
 import logging
 import os
@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 
 class ServicoAutenticacao:
-    """Orquestra cadastro, login com bloqueio de forca bruta, sessao unica e Hub Inicial."""
+    """Orquestra cadastro, login com bloqueio de forca bruta, sessao unica e Painel Principal."""
 
     def __init__(
         self,
@@ -391,13 +391,13 @@ class ServicoAutenticacao:
             usuario_id=int(conta["usuario_id"]),
             tempo_desde_login_segundos=0.0,
         )
-        hub = self.obter_painel_usuario(int(conta["usuario_id"]))
+        painel_principal = self.obter_painel_usuario(int(conta["usuario_id"]))
         return {
             "usuario_id": int(conta["usuario_id"]),
             "nome_usuario": str(conta["nome_usuario"]),
             "nome_completo": str(conta.get("nome_completo", "") or ""),
-            "tarefas_administrador": hub["tarefas_administrador"],
-            "tarefas_rotulador": hub["tarefas_rotulador"],
+            "tarefas_administrador": painel_principal["tarefas_administrador"],
+            "tarefas_rotulador": painel_principal["tarefas_rotulador"],
         }
 
     def encerrar_sessao(

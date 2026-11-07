@@ -52,7 +52,7 @@
 
 > **Fala sugerida:**  
 > *"Pensando na avaliação do professor, preparamos uma conta de demonstração completa para o Professor André Hora: usuário `professor` e senha `senha123`.  
-> Ao efetuar o login, o professor chega imediatamente ao **Hub Central Multi-Papel**, onde tem uma experiência dupla: ele é simultaneamente rotulador e administrador da tarefa 'Detecção de Posição'.*
+> Ao efetuar o login, o professor chega imediatamente ao **Painel Principal Multi-Papel**, onde tem uma experiência dupla: ele é simultaneamente rotulador e administrador da tarefa 'Detecção de Posição'.*
 
 #### Parte A: O Espaço de Rotulagem (Rotulador)
 **Ação na tela:** Clicar em *"Abrir Espaço de Rotulagem"*.
