@@ -1159,7 +1159,7 @@ APP_CSS = """
         flex: 1 1 0 !important;
         min-width: 0 !important;
     }
-    /* Eliminar bordas duplas nos sliders do Gradio */
+    /* Eliminar bordas duplas e botao sobreposto nos sliders do Gradio */
     .wizard-slider-row .head,
     .wizard-slider-row .head .wrap,
     .wizard-slider-row .wrap.default,
@@ -1170,6 +1170,12 @@ APP_CSS = """
         box-shadow: none !important;
         padding: 0 !important;
         border-radius: 0 !important;
+    }
+    .wizard-slider-row .head button,
+    .wizard-slider-row button.reset,
+    .gradio-slider .head button,
+    .gradio-slider button.reset {
+        display: none !important;
     }
     .wizard-slider-row input[type="number"],
     .gradio-slider input[type="number"] {
@@ -1229,7 +1235,17 @@ APP_CSS = """
     }
     .wizard-number-input {
         margin-top: 4px !important;
+        margin-bottom: 12px !important;
         width: 100% !important;
+    }
+    .wizard-number-input input[type="number"] {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        color: #0f172a !important;
     }
     .wizard-feedback-slot {
         margin-top: 10px !important;
