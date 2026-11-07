@@ -7,10 +7,10 @@
         font-size: 38px;
         font-weight: 900;
         fill: #9c0014;
-        letter-spacing: -0.04em;
+        letter-spacing: -0.05em;
       }
     </style>
   </defs>
   <rect class="bg" x="2" y="2" width="60" height="60" rx="14" />
-  <text class="brand-text" x="50%" y="54%" dominant-baseline="middle" text-anchor="middle">t!</text>
+  <text class="brand-text" x="50%" y="54%" dominant-baseline="middle" text-anchor="middle">T!</text>
 </svg>

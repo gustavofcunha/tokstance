@@ -27,3 +27,4 @@ echo "=========================================================="
 echo "TokStance atualizado com sucesso no servidor!"
 echo "Verifique o status com: sudo systemctl status tokstance.service"
 echo "=========================================================="
+

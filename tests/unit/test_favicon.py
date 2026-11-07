@@ -1,4 +1,4 @@
-"""Testes unitarios para o favicon customizado ("t!") e rotas estaticas."""
+"""Testes unitarios para o favicon customizado ("T!") e rotas estaticas."""
 
 from fastapi.testclient import TestClient
 
@@ -21,10 +21,10 @@ def test_rota_favicon_ico():
 
 
 def test_rota_favicon_svg():
-    """Testa se a rota /favicon.svg responde com 200 e contem o texto de marca 't!'."""
+    """Testa se a rota /favicon.svg responde com 200 e contem o texto de marca 'T!'."""
     cliente = TestClient(app)
     resposta = cliente.get("/favicon.svg")
     assert resposta.status_code == 200
     assert "image/svg+xml" in resposta.headers.get("content-type", "")
-    assert "t!" in resposta.text
+    assert "T!" in resposta.text
     assert "#9c0014" in resposta.text

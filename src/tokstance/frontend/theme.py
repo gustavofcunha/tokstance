@@ -26,7 +26,7 @@ JS_FORCAR_MODO_CLARO = """
             document.head.appendChild(link);
         }
         link.type = 'image/svg+xml';
-        link.href = '/favicon.svg?v=1';
+        link.href = '/favicon.svg?v=2';
     }
     atualizarFavicon();
     setTimeout(atualizarFavicon, 300);

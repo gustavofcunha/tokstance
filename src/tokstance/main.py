@@ -45,7 +45,7 @@ def criar_aplicacao() -> FastAPI:
     app_fastapi.add_middleware(MiddlewareAntiDosLimitePayload)
     app_fastapi.add_middleware(MiddlewareRateLimitIP)
 
-    # Rotas estaticas para favicon customizado ("t!")
+    # Rotas estaticas para favicon customizado ("T!")
     @app_fastapi.get("/favicon.ico", include_in_schema=False)
     async def obter_favicon_ico() -> Response:
         if _FAVICON_ICO.exists():
@@ -61,8 +61,8 @@ def criar_aplicacao() -> FastAPI:
     app_fastapi.include_router(roteador_api)
 
     tags_head = (
-        '<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1">'
-        '<link rel="alternate icon" type="image/x-icon" href="/favicon.ico?v=1">'
+        '<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">'
+        '<link rel="alternate icon" type="image/x-icon" href="/favicon.ico?v=2">'
     )
 
     demo = construir_interface()
