@@ -115,7 +115,11 @@ O trabalho ocorreu de forma incremental, o que me permitiu revisar, testar e ref
 
 ## Execução dos testes
 
-Implementei 230 testes automatizados cobrindo testes unitários, testes de integração e testes de ponta a ponta com o navegador, mantendo a cobertura acima de 88%.
+Implementei 241 testes automatizados mantendo a cobertura de código acima de 88%. A suite é distribuída em:
+
+- 213 testes de unidade, validando regras de domínio, criptografia de senhas, matrizes ordinais e validação de formulários
+- 17 testes de integração, validando transações no SQLite, tolerância a falhas e consistência do diário de persistência
+- 11 testes de sistema, executando jornadas completas de usuário no navegador Chromium via Playwright
 
 ### Preparar o ambiente local
 
@@ -181,3 +185,5 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 | rotulador_2 | senha123 | Anotador com 8 vídeos rotulados com sobreposição para gerar métricas de concordância no painel. |
 
 Código de convite para teste: `TOK-DEMO2026`
+
+O usuário professor já está configurado tanto como administrador quanto como rotulador da tarefa demonstrativa. Recomendo que a avaliação seja feita acessando com essa conta, pois ela permite explorar todas as funcionalidades do sistema (gestão da rodada, gráficos de concordância e o ambiente de rotulação de vídeos), conforme demonstrado no [vídeo de apresentação](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO).
