@@ -59,6 +59,7 @@ for u in usuarios:
 
 echo "3. Reiniciando servico da aplicacao para carregar os novos dados..."
 if command -v systemctl >/dev/null 2>&1 && [ -f /etc/systemd/system/tokstance.service ]; then
+    sudo systemctl kill --signal=SIGKILL tokstance.service 2>/dev/null || true
     sudo systemctl restart tokstance.service
     echo "Servico tokstance.service reiniciado com sucesso."
 fi
