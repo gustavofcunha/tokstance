@@ -73,21 +73,45 @@ def povoar_banco_demonstrativo(
     rot1_id = usuarios_criados["rotulador_1"]
     rot2_id = usuarios_criados["rotulador_2"]
 
-    #remover tarefa demonstrativa anterior se solicitado
+    #apagar todos os usuarios exceto os essenciais da demonstracao e o gustavo
+    usuarios_permitidos = {"professor", "rotulador_1", "rotulador_2", "gustavo"}
+    todos_usuarios = banco.consultar_todos("SELECT usuario_id, nome_usuario FROM usuarios")
+    for u in todos_usuarios:
+        u_nome = u["nome_usuario"]
+        u_id = int(u["usuario_id"])
+        if u_nome not in usuarios_permitidos:
+            tarefas_do_usuario = banco.consultar_todos("SELECT tarefa_id FROM tarefas WHERE criado_por_usuario_id = ?", (u_id,))
+            for t in tarefas_do_usuario:
+                tid = int(t["tarefa_id"])
+                banco.executar("DELETE FROM anotacoes WHERE tarefa_id = ?", (tid,))
+                banco.executar("DELETE FROM erros_videos WHERE tarefa_id = ?", (tid,))
+                banco.executar("DELETE FROM atribuicoes WHERE tarefa_id = ?", (tid,))
+                banco.executar("DELETE FROM videos_tarefa WHERE tarefa_id = ?", (tid,))
+                banco.executar("DELETE FROM membros_tarefa WHERE tarefa_id = ?", (tid,))
+                banco.executar("DELETE FROM tarefas WHERE tarefa_id = ?", (tid,))
+            banco.executar("DELETE FROM recuperacao_senha WHERE usuario_id = ?", (u_id,))
+            banco.executar("DELETE FROM membros_tarefa WHERE usuario_id = ?", (u_id,))
+            banco.executar("DELETE FROM logs_acesso WHERE usuario_id = ?", (u_id,))
+            banco.executar("UPDATE atribuicoes SET usuario_id = NULL WHERE usuario_id = ?", (u_id,))
+            banco.executar("UPDATE anotacoes SET usuario_id = NULL WHERE usuario_id = ?", (u_id,))
+            banco.executar("UPDATE erros_videos SET usuario_id = NULL WHERE usuario_id = ?", (u_id,))
+            banco.executar("DELETE FROM usuarios WHERE usuario_id = ?", (u_id,))
+
+    #remover tarefas anteriores se solicitado para garantir estado limpo
     codigo_convite_demo = "TOK-DEMO2026"
     tarefas_existentes = repo_estudo.listar_tarefas()
-    tarefa_demo = next((t for t in tarefas_existentes if t.get("codigo_convite") == codigo_convite_demo or t.get("titulo") == "Detecção de Posição"), None)
-
-    if tarefa_demo and reiniciar_tarefa_demo:
-        #limpeza relacional em cascata
-        t_id = int(tarefa_demo["tarefa_id"])
-        banco.executar("DELETE FROM anotacoes WHERE tarefa_id = ?", (t_id,))
-        banco.executar("DELETE FROM erros_videos WHERE tarefa_id = ?", (t_id,))
-        banco.executar("DELETE FROM atribuicoes WHERE tarefa_id = ?", (t_id,))
-        banco.executar("DELETE FROM videos_tarefa WHERE tarefa_id = ?", (t_id,))
-        banco.executar("DELETE FROM membros_tarefa WHERE tarefa_id = ?", (t_id,))
-        banco.executar("DELETE FROM tarefas WHERE tarefa_id = ?", (t_id,))
+    if reiniciar_tarefa_demo and tarefas_existentes:
+        for t in tarefas_existentes:
+            tid = int(t["tarefa_id"])
+            banco.executar("DELETE FROM anotacoes WHERE tarefa_id = ?", (tid,))
+            banco.executar("DELETE FROM erros_videos WHERE tarefa_id = ?", (tid,))
+            banco.executar("DELETE FROM atribuicoes WHERE tarefa_id = ?", (tid,))
+            banco.executar("DELETE FROM videos_tarefa WHERE tarefa_id = ?", (tid,))
+            banco.executar("DELETE FROM membros_tarefa WHERE tarefa_id = ?", (tid,))
+            banco.executar("DELETE FROM tarefas WHERE tarefa_id = ?", (tid,))
         tarefa_demo = None
+    else:
+        tarefa_demo = next((t for t in tarefas_existentes if t.get("codigo_convite") == codigo_convite_demo or t.get("titulo") == "Detecção de Posição"), None)
 
     if not tarefa_demo:
         #carregar dataset autentico de videos de campanha

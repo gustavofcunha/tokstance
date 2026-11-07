@@ -37,3 +37,30 @@ def test_seed_demo_popula_banco_e_cria_tarefa_demonstrativa(tmp_path: Path) -> N
 
     total_logs = banco.consultar_um("SELECT count(*) as total FROM logs_acesso")
     assert total_logs is not None and total_logs["total"] > 0
+
+
+def test_seed_demo_remove_usuarios_extras_e_preserva_apenas_demo_e_gustavo(tmp_path: Path) -> None:
+    caminho_db = tmp_path / "seed_limpeza.db"
+    banco = BancoDadosSQLite(caminho_db)
+    banco.inicializar_esquema()
+
+    # Cria usuario extra qualquer (ex: intruso ou avaliador que se cadastrou)
+    banco.executar(
+        "INSERT INTO usuarios (nome_usuario, senha_hash, email, nome_completo, criado_em) VALUES (?, ?, ?, ?, ?)",
+        ("usuario_intruso", "hash_fake", "intruso@teste.com", "Usuario Intruso", "2026-01-01 00:00:00"),
+    )
+    banco.executar(
+        "INSERT INTO usuarios (nome_usuario, senha_hash, email, nome_completo, criado_em) VALUES (?, ?, ?, ?, ?)",
+        ("outro_avaliador", "hash_fake", "outro@teste.com", "Outro Avaliador", "2026-01-01 00:00:00"),
+    )
+
+    # Executa o povoamento demonstrativo
+    resultado = povoar_banco_demonstrativo(caminho_banco=caminho_db, reiniciar_tarefa_demo=True)
+    assert resultado["status"] == "sucesso"
+
+    # Verifica que apenas os 4 usuarios permitidos existem
+    usuarios = banco.consultar_todos("SELECT nome_usuario FROM usuarios ORDER BY nome_usuario")
+    nomes = [u["nome_usuario"] for u in usuarios]
+    assert nomes == ["gustavo", "professor", "rotulador_1", "rotulador_2"]
+    assert "usuario_intruso" not in nomes
+    assert "outro_avaliador" not in nomes

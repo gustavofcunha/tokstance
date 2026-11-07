@@ -115,9 +115,9 @@ O trabalho ocorreu de forma incremental, o que me permitiu revisar, testar e ref
 
 ## Execução dos testes
 
-Implementei 241 testes automatizados mantendo a cobertura de código acima de 88%. A suite é distribuída em:
+Implementei 242 testes automatizados mantendo a cobertura de código acima de 88%. A suite é distribuída em:
 
-- 213 testes de unidade, validando regras de domínio, criptografia de senhas, matrizes ordinais e validação de formulários
+- 214 testes de unidade, validando regras de domínio, criptografia de senhas, matrizes ordinais e validação de formulários
 - 17 testes de integração, validando transações no SQLite, tolerância a falhas e consistência do diário de persistência
 - 11 testes de sistema, executando jornadas completas de usuário no navegador Chromium via Playwright
 

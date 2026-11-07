@@ -311,8 +311,6 @@ def construir_interface(
     fila = servico_fila or ServicoFilaAnotacao(banco, repo_u, repo_e)
     admin = servico_admin or ServicoAdministracao(banco, repo_u, repo_e)
 
-    auth.garantir_conta_admin_padrao()
-
     with gr.Blocks(title="TokStance!") as app:
         #estilos css globais injetados para compatibilidade com gradio 5 e 6
         gr.HTML(elem_classes="toast-slot", value=f"""

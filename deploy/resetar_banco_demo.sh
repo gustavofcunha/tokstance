@@ -39,12 +39,25 @@ echo "=========================================================="
 echo "Reiniciando banco de dados com especificacoes de demo"
 echo "Diretorio de producao: $PROD_DIR"
 echo "Interpretador Python:  $PYTHON_EXEC"
+echo "Usuarios preservados:  professor, rotulador_1, rotulador_2, gustavo"
 echo "=========================================================="
 
-echo "1. Executando seed de demonstracao..."
+echo "1. Limpando usuarios extras e restaurando dados da demonstracao..."
 PYTHONPATH="$PROD_DIR/src:$PROD_DIR" "$PYTHON_EXEC" "$PROD_DIR/scripts/seed_demo.py" "$@"
 
-echo "2. Reiniciando servico da aplicacao para carregar os novos dados..."
+echo "2. Verificando usuarios ativos no banco..."
+PYTHONPATH="$PROD_DIR/src:$PROD_DIR" "$PYTHON_EXEC" -c "
+from tokstance.backend.repositories.database import BancoDadosSQLite
+from tokstance.config import resolver_caminhos_dados
+c = resolver_caminhos_dados()
+b = BancoDadosSQLite(c.arquivo_banco_dados)
+usuarios = b.consultar_todos('SELECT usuario_id, nome_usuario, email, nome_completo FROM usuarios ORDER BY usuario_id')
+print(f'Total de usuarios restantes: {len(usuarios)}')
+for u in usuarios:
+    print(f\"  • [{u['usuario_id']}] {u['nome_usuario']} ({u['nome_completo'] or 'Sem nome'}) <{u['email']}>\")
+"
+
+echo "3. Reiniciando servico da aplicacao para carregar os novos dados..."
 if command -v systemctl >/dev/null 2>&1 && [ -f /etc/systemd/system/tokstance.service ]; then
     sudo systemctl restart tokstance.service
     echo "Servico tokstance.service reiniciado com sucesso."
