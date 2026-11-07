@@ -183,9 +183,12 @@ class BancoDadosSQLite:
             self.inicializar_esquema()
 
     def _aplicar_pragmas(self, conexao: sqlite3.Connection) -> None:
-        """Aplica diretrizes de durabilidade WAL, integridade referencial e timeout de concorrência."""
+        """Aplica configurações essenciais por conexão: integridade referencial e timeout."""
         conexao.execute("PRAGMA foreign_keys = ON;")
         conexao.execute("PRAGMA busy_timeout = 30000;")
+
+    def _configurar_durabilidade_banco(self, conexao: sqlite3.Connection) -> None:
+        """Configura WAL mode e sincronismo na criação/inicialização do banco de dados."""
         if str(self.caminho_banco) != ":memory:":
             try:
                 conexao.execute("PRAGMA journal_mode = WAL;")
@@ -196,7 +199,7 @@ class BancoDadosSQLite:
 
     @contextmanager
     def conectar(self) -> Iterator[sqlite3.Connection]:
-        """Abre uma conexão transacional SQLite com integridade referencial e modo WAL."""
+        """Abre uma conexão transacional SQLite com integridade referencial habilitada."""
         conexao = sqlite3.connect(str(self.caminho_banco), timeout=30.0)
         conexao.row_factory = sqlite3.Row
         try:
@@ -234,6 +237,7 @@ class BancoDadosSQLite:
     def inicializar_esquema(self) -> None:
         """Cria todas as tabelas e índices relacionais caso ainda não existam e reconcilia pendências."""
         with self.conectar() as conexao:
+            self._configurar_durabilidade_banco(conexao)
             for comando_ddl in DDL_ESQUEMA_RELACIONAL:
                 conexao.execute(comando_ddl)
             # migração incremental para colunas email e nome_completo em usuarios se ainda não existirem

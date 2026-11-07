@@ -17,7 +17,7 @@ class DiarioAnotacoesPersistencia:
     def __init__(self, caminho_journal: Path | str) -> None:
         self.caminho_journal = Path(caminho_journal).resolve()
         self.caminho_journal.parent.mkdir(parents=True, exist_ok=True)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def _calcular_checksum(self, tarefa_id: int, assignment_id: str, stance: str, timestamp: str) -> str:
         """Gera checksum SHA-256 para verificação criptográfica de integridade do registro."""
@@ -152,33 +152,36 @@ class DiarioAnotacoesPersistencia:
         """Restaura todas as anotações do diário para o SQLite (ex: em caso de banco restaurado ou recriado)."""
         consolidado = self.ler_registros_consolidados()
         reconstruidos = 0
-        for reg in consolidado.values():
-            t_id = int(reg["tarefa_id"])
-            if tarefa_id is not None and t_id != int(tarefa_id):
-                continue
-            banco.executar(
-                """
-                INSERT OR REPLACE INTO anotacoes (
-                    tarefa_id, assignment_id, usuario_id, labeler, video_id,
-                    url, target, stance, tempo_analise_segundos, video_duration, timestamp
+        with banco.conectar() as conexao:
+            conexao.execute("PRAGMA foreign_keys = OFF;")
+            for reg in consolidado.values():
+                t_id = int(reg["tarefa_id"])
+                if tarefa_id is not None and t_id != int(tarefa_id):
+                    continue
+                conexao.execute(
+                    """
+                    INSERT OR REPLACE INTO anotacoes (
+                        tarefa_id, assignment_id, usuario_id, labeler, video_id,
+                        url, target, stance, tempo_analise_segundos, video_duration, timestamp
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """,
+                    (
+                        t_id,
+                        str(reg["assignment_id"]).strip(),
+                        reg.get("usuario_id"),
+                        str(reg.get("labeler", "")),
+                        str(reg.get("video_id", "")),
+                        str(reg.get("url", "")),
+                        str(reg.get("target", "")),
+                        str(reg.get("stance", "")),
+                        float(reg.get("tempo_analise_segundos", 0.0) or 0.0),
+                        str(reg.get("video_duration", "") or ""),
+                        str(reg.get("timestamp", "")),
+                    ),
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """,
-                (
-                    t_id,
-                    str(reg["assignment_id"]).strip(),
-                    reg.get("usuario_id"),
-                    str(reg.get("labeler", "")),
-                    str(reg.get("video_id", "")),
-                    str(reg.get("url", "")),
-                    str(reg.get("target", "")),
-                    str(reg.get("stance", "")),
-                    float(reg.get("tempo_analise_segundos", 0.0) or 0.0),
-                    str(reg.get("video_duration", "") or ""),
-                    str(reg.get("timestamp", "")),
-                ),
-            )
-            reconstruidos += 1
+                reconstruidos += 1
+            conexao.execute("PRAGMA foreign_keys = ON;")
         return reconstruidos
 
     def compactar(self) -> None:

@@ -54,6 +54,11 @@ CODIGO_CONVITE_PADRAO = os.getenv("TOKSTANCE_INVITE_TOKEN", "TOKSTANCE-2026")
 USUARIO_ADMIN_PADRAO = os.getenv("TOKSTANCE_ADMIN_USER", "admin")
 SENHA_ADMIN_PADRAO = os.getenv("TOKSTANCE_ADMIN_PASSWORD", "TokStance@Admin2026")
 
+SMTP_HOST_PADRAO = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT_PADRAO = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER_PADRAO = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD_PADRAO = os.getenv("SMTP_PASSWORD", "")
+
 
 @dataclass(frozen=True)
 class CaminhosDados:

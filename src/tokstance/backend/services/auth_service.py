@@ -38,6 +38,10 @@ from tokstance.config import (
     MAX_TENTATIVAS_RECUPERACAO_CODIGO,
     SEGUNDOS_BLOQUEIO_RECUPERACAO,
     SENHA_ADMIN_PADRAO,
+    SMTP_HOST_PADRAO,
+    SMTP_PASSWORD_PADRAO,
+    SMTP_PORT_PADRAO,
+    SMTP_USER_PADRAO,
     USUARIO_ADMIN_PADRAO,
     agora_brt,
     formatar_data_hora_brt,
@@ -169,20 +173,20 @@ class ServicoAutenticacao:
 
         email_destino = str(usuario.get("email", "") or "").strip()
         disparado_smtp = False
-        smtp_host = os.environ.get("SMTP_HOST")
-        smtp_configurado = bool(smtp_host and email_destino)
+        smtp_host = os.environ.get("SMTP_HOST") or SMTP_HOST_PADRAO
+        smtp_port = int(os.environ.get("SMTP_PORT") or SMTP_PORT_PADRAO)
+        smtp_user = (os.environ.get("SMTP_USER") or SMTP_USER_PADRAO).strip()
+        smtp_pass_raw = (os.environ.get("SMTP_PASSWORD") or SMTP_PASSWORD_PADRAO).strip()
+        smtp_pass = smtp_pass_raw.replace(" ", "") if "gmail" in (smtp_host or "").lower() else smtp_pass_raw
+        smtp_configurado = bool(smtp_host and email_destino and smtp_user and smtp_pass)
         mock_smtp = os.environ.get("TOKSTANCE_MOCK_SMTP") == "1"
 
         if mock_smtp and email_destino:
             #modo mock para testes automatizados sem conexao externa
             disparado_smtp = (smtp_host != "servidor.invalido.local")
             logger.info("Mock SMTP ativo: simulando envio para %s (disparado=%s)", email_destino, disparado_smtp)
-        elif smtp_host and email_destino:
+        elif smtp_configurado:
             try:
-                smtp_port = int(os.environ.get("SMTP_PORT", 587))
-                smtp_user = os.environ.get("SMTP_USER", "").strip()
-                smtp_pass_raw = os.environ.get("SMTP_PASSWORD", "").strip()
-                smtp_pass = smtp_pass_raw.replace(" ", "") if "gmail" in (smtp_host or "").lower() else smtp_pass_raw
                 msg = MIMEText(
                     f"Olá, {usuario['nome_usuario']}!\n\n"
                     f"Seu código de recuperação de senha no TokStance é: {codigo}\n"

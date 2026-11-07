@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; stroke: #ffd6dc; stroke-width: 2.5; }
+      .brand-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 38px;
+        font-weight: 900;
+        fill: #9c0014;
+        letter-spacing: -0.04em;
+      }
+    </style>
+  </defs>
+  <rect class="bg" x="2" y="2" width="60" height="60" rx="14" />
+  <text class="brand-text" x="50%" y="54%" dominant-baseline="middle" text-anchor="middle">t!</text>
+</svg>

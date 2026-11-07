@@ -6,6 +6,8 @@ After=network.target
 Type=simple
 User=gustavocunha
 WorkingDirectory=/opt/tokstance
+EnvironmentFile=-/opt/tokstance/.env
+EnvironmentFile=-/home/gustavocunha/label-framework/tokstance/.env
 Environment="PATH=/opt/tokstance/.venv/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="PYTHONPATH=/opt/tokstance/src:/opt/tokstance"
 Environment="PORT=7860"

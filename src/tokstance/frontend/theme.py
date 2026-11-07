@@ -18,6 +18,20 @@ COR_BORDA_INPUT = "#cbd5e1"
 
 JS_FORCAR_MODO_CLARO = """
 () => {
+    function atualizarFavicon() {
+        let link = document.querySelector("link[rel*='icon']");
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+        }
+        link.type = 'image/svg+xml';
+        link.href = '/favicon.svg?v=1';
+    }
+    atualizarFavicon();
+    setTimeout(atualizarFavicon, 300);
+    setTimeout(atualizarFavicon, 1000);
+
     function travarModoClaro() {
         document.documentElement.classList.remove('dark');
         document.body.classList.remove('dark');
@@ -1259,28 +1273,33 @@ APP_CSS = """
     .video-card { width: 100%; min-width: 0; color: #0f172a; overflow: visible; }
     .video-card iframe { display: block; width: 100% !important; max-width: 330px !important; height: 500px !important; overflow: hidden !important; border-radius: 8px !important; border: 1px solid #e2e8f0 !important; }
     .video-meta {
-        padding: 8px 14px;
+        padding: 10px 14px;
         margin-bottom: 10px;
         border-left: 4px solid #9c0014;
         background: #fffafa;
         font-size: 15px;
-        border-radius: 0 8px 8px 0;
+        border-radius: 6px;
         border: 1px solid #ffd6dc;
         border-left-width: 4px;
         display: flex;
         align-items: center;
         gap: 6px;
     }
+    .video-meta strong {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+    }
     .target-name-badge {
         color: #9c0014 !important;
         font-weight: 800 !important;
-        background: #ffe4e8 !important;
-        border: 1.5px solid #e11d48 !important;
-        border-radius: 6px !important;
-        padding: 2px 8px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
         display: inline-block !important;
         letter-spacing: 0.2px !important;
-        box-shadow: 0 1px 3px rgba(156, 0, 20, 0.12) !important;
+        box-shadow: none !important;
     }
     .target-transition {
         animation: target-highlight 12s ease-in-out !important;
@@ -1361,22 +1380,25 @@ APP_CSS = """
     }
     @keyframes target-badge-pulse {
         0%, 100% {
-            background: #ffe4e8 !important;
             color: #9c0014 !important;
-            border-color: #e11d48 !important;
-            box-shadow: 0 1px 3px rgba(156, 0, 20, 0.12) !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            transform: scale(1);
         }
         8%, 55% {
-            background: #9c0014 !important;
-            color: #ffffff !important;
-            border-color: #7f000e !important;
-            box-shadow: 0 0 0 4px rgba(156, 0, 20, 0.45), 0 3px 10px rgba(156, 0, 20, 0.3) !important;
+            color: #b91c1c !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            transform: scale(1.03);
         }
         28%, 78% {
-            background: #e11d48 !important;
-            color: #ffffff !important;
-            border-color: #be123c !important;
-            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.25) !important;
+            color: #7f000e !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            transform: scale(1.01);
         }
     }
     .video-content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
@@ -2029,13 +2051,28 @@ APP_CSS = """
         padding: 10px 14px !important;
         margin-bottom: 8px !important;
         font-size: 14.5px !important;
-        color: #1e293b !important;
+        color: #0f172a !important;
         flex: 0 0 auto !important;
         display: flex !important;
         align-items: center !important;
-        gap: 8px !important;
+        gap: 6px !important;
         min-height: auto !important;
         box-sizing: border-box !important;
+    }
+    .video-meta strong {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+    }
+    .video-meta .target-name-badge {
+        color: #9c0014 !important;
+        font-weight: 800 !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: inline-block !important;
     }
     .video-meta.target-transition {
         animation: target-highlight 12s ease-in-out !important;
