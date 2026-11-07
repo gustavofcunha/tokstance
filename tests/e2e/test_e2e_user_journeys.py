@@ -688,7 +688,7 @@ def test_e2e_redefinicao_senha_preserva_tarefas_administradas_atribuidas_e_progr
     pagina_navegador.locator(".labeler-controls-column").get_by_text(re.compile(r"1 de ")).wait_for(timeout=10000)
 
     #sai para o hub e verifica progresso salvo
-    pagina_navegador.get_by_role("button", name="← Sair do Workspace").click()
+    pagina_navegador.get_by_role("button", name=re.compile(r"← Sair( do Workspace)?")).click()
     pagina_navegador.wait_for_selector(".hub-two-col", timeout=8000)
     btn_continuar = pagina_navegador.locator(".hub-table-btn.in-progress", has_text="Continuar Rotulação")
     btn_continuar.wait_for(state="visible", timeout=8000)
