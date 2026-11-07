@@ -1,7 +1,7 @@
 _legacy_reference/
 spec/*
 !spec/demo.md
-!spec/README.md
+!spec/comandos.md
 AGENTS.md
 plan.md
 Enunciado TP TS.md

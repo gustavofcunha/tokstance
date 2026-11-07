@@ -1,9 +1,11 @@
 # TokStance!
 
-Plataforma aberta, auditável e colaborativa para anotação e detecção de posicionamento (*stance detection*) em vídeos curtos do TikTok, desenvolvida no âmbito da disciplina de Teste de Software da Universidade Federal de Minas Gerais (UFMG).
+> **Plataforma de Curadoria, Anotação e Concordância Estatística em Vídeos Curtos do TikTok para Treinamento de Classificador Multimodal**  
+> *Trabalho Prático da disciplina de Teste de Software — Departamento de Ciência da Computação (DCC / UFMG)*
 
-[![CI/CD Multi-OS](https://github.com/gustavofcunha/ufmg-stance-tiktok/actions/workflows/ci.yml/badge.svg)](https://github.com/gustavofcunha/ufmg-stance-tiktok/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/gustavofcunha/ufmg-stance-tiktok/branch/main/graph/badge.svg)](https://codecov.io/gh/gustavofcunha/ufmg-stance-tiktok)
+[![CI/CD Multi-OS](https://github.com/gustavofcunha/tokstance/actions/workflows/ci.yml/badge.svg)](https://github.com/gustavofcunha/tokstance/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/gustavofcunha/tokstance/branch/main/graph/badge.svg)](https://codecov.io/gh/gustavofcunha/tokstance)
+[![Ambiente em Produção](https://img.shields.io/badge/Produção-https%3A%2F%2Ftokstance.duckdns.org-brightgreen)](https://tokstance.duckdns.org)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -11,252 +13,210 @@ Plataforma aberta, auditável e colaborativa para anotação e detecção de pos
 
 ## Integrantes
 
-- **Gustavo Cunha** (gustavocunha182020@gmail.com)
+- **Gustavo Freitas Cunha** — `gustavocunha182020@gmail.com`
+  > **Nota de Justificativa Individual:** O trabalho é realizado de forma estritamente individual em conformidade com as diretrizes do docente da disciplina, por se tratar de aluno regular do **Programa de Pós-Graduação em Ciência da Computação (PPGCC/UFMG)** (Mestrado Acadêmico).
 
 ---
 
 ## Sobre o Sistema
 
-O **TokStance!** é uma aplicação web completa voltada para pesquisa científica, análise de opinião e rotulação de conteúdo em mídias sociais. O sistema permite criar e gerenciar rodadas de rotulação de posicionamento em relação a temas de debate público (*targets* como vacinação, aborto, escalas de trabalho, entre outros), coordenando múltiplos anotadores concorrentes e mensurando o rigor estatístico das marcações.
+### Contexto de Pesquisa Científica (Mestrado PPGCC / UFMG)
+O **TokStance!** não é apenas um projeto avaliativo didático, mas o **artefato central de engenharia de software e coleta de dados primários da dissertação de mestrado do autor**. O objetivo da pesquisa é o desenvolvimento de um **classificador multimodal de detecção de posicionamento (*stance detection*) em vídeos curtos do TikTok**, capaz de processar simultaneamente sinais visuais de vídeo, áudio/fala transcrita e texto de legendas/hashtags.
 
-### Principais Funcionalidades
+Para viabilizar o treinamento e a validação desse modelo de inteligência artificial multimodal, é imperativo dispor de um acervo rotulado com rigor científico, controle de viés, distribuição balanceada de tópicos e auditoria de concordância interanotador. O TokStance! foi concebido e implementado para gerenciar rodadas completas de anotação colaborativa entre múltiplos avaliadores humanos.
 
-1. **Autenticação Segura e Gestão de Contas**:
-   - Cadastro com validação de formato e obrigatoriedade de e-mail.
-   - Armazenamento de senhas com criptografia irreversível via `bcrypt` (12 rodadas).
-   - Proteção ativa contra força bruta com bloqueio temporal por tentativas consecutivas incorretas.
-   - Fluxo de recuperação de senha com verificação em duas etapas por código numérico de 6 dígitos temporário (validade de 15 minutos).
-   - Transição automática pós-redefinição com redirecionamento para o login, pré-preenchimento de usuário e alertas contextuais inline.
+### Principais Módulos e Funcionalidades
+
+1. **Autenticação Segura, Gestão de Contas e Auditoria**:
+   - Cadastro com validação de formato e obrigatoriedade de e-mail institucional/pessoal.
+   - Hashing seguro de senhas via `bcrypt` com salt adaptativo.
+   - Proteção ativa contra força bruta com bloqueio temporal de conta após tentativas consecutivas incorretas.
+   - Fluxo de recuperação de senha em duas etapas com geração de código numérico efêmero de 6 dígitos, com envio real por e-mail via **SMTP (Gmail)** e tela interativa de redefinição com redirecionamento automático.
 
 2. **Hub Central Multi-Papel**:
-   - Visão dinâmica dividida entre tarefas sob a administração do usuário e tarefas atribuídas para rotulação.
-   - Ingresso imediato em novas tarefas por código de convite único alfanumérico.
-   - Acompanhamento em tempo real do progresso individual e coletivo por barras de avanço.
+   - Separação contextual entre tarefas gerenciadas (papel de coordenador/pesquisador) e tarefas atribuídas para rotulação (papel de anotador).
+   - Ingresso imediato em tarefas através de tokens de convite exclusivos (`TOK-DEMO2026`).
+   - Monitoramento de progresso individual e global por meio de barras de progresso reativas.
 
-3. **Assistente de Criação de Tarefas**:
-   - Definição customizada de título, pergunta norteadora com template de substituição do target e opções de resposta.
-   - Matriz par a par de penalidades editável para ponderar divergências de rotulação de acordo com o grau de polaridade.
-   - Particionamento automático do acervo entre conjunto principal e fila de reserva.
-   - Algoritmo de distribuição intercalada por target e balanceamento de sobreposição (*overlap*) entre anotadores.
+3. **Assistente de Criação de Tarefas e Particionamento**:
+   - Definição customizada da pergunta norteadora com template dinâmico `{target}` e opções de resposta.
+   - Matriz par a par de penalidades para ponderação ordinal de discordâncias.
+   - Algoritmo de particionamento determinístico entre conjunto principal e fila de reserva.
+   - Motor de distribuição intercalada por alvo temático e balanceamento de sobreposição (*overlap*) entre anotadores.
 
-4. **Ambiente de Rotulação Widescreen**:
-   - Player nativo do TikTok integrado em layout widescreen sem barras de rolagem desnecessárias.
+4. **Ambiente de Rotulação Widescreen e Player Integrado**:
+   - Player nativo do TikTok embutido em layout widescreen responsivo e otimizado para evitar rolagens desnecessárias.
    - Modal de proteção com aviso de conteúdo sensível e opção de saída segura.
-   - Destaque visual contrastante na transição de targets, com o target destacado embutido diretamente no enunciado da pergunta.
-   - Registro de tempo de visualização por vídeo e salvamento com confirmação visual efêmera (*toast*).
+   - Destaque contrastante do alvo temático (*target*) embutido diretamente no cabeçalho e na pergunta.
+   - Cronometragem automática de tempo de análise por vídeo e salvamento com feedback visual efêmero (*toast* de confirmação).
 
 5. **Substituição Automática de Vídeos com Falha**:
-   - Botão para reportar problemas de reprodução ou links corrompidos.
-   - Exigência de tempo mínimo de tentativa para evitar fraudes ou pulos acidentais.
-   - Substituição determinística do vídeo com falha por um item equivalente do acervo de reserva, mantendo o balanceamento da rodada.
+   - Mecanismo para reportar links corrompidos ou vídeos indisponíveis no TikTok.
+   - Validação de tempo mínimo de tentativa para impedir fraudes ou avanço indevido.
+   - Substituição transparente do vídeo defeituoso por um item equivalente do mesmo target a partir da fila de reserva.
 
 6. **Console de Administração e Auditoria Estatística**:
-   - Cálculo automatizado da concordância interanotador pelo **Alfa de Krippendorff ordinal** ponderado pela matriz de distâncias.
-   - Painel com KPIs operacionais, total de anotações, distribuição diária e estatísticas de acesso.
-   - Tabela detalhada de atribuições e progresso por avaliador.
-   - Exportação sob demanda em formato tabular dos resultados consolidados, trilha de auditoria e relatórios de concordância.
+   - Mensuração automatizada da concordância interanotador por meio do **Alfa de Krippendorff ordinal** ponderado por matriz de distâncias.
+   - Painel com KPIs operacionais, volume total de anotações, distribuição temporal de atividade e taxa de retenção.
+   - Exportação sob demanda dos dados primários em formato tabular estruturado (CSV) para alimentação direta nos pipelines de treinamento multimodal.
+
+7. **Camada de Resiliência e Vault de Persistência**:
+   - Sistema de persistência com **diário transacional imutável (*append-only journal*)** com validação criptográfica via checksum SHA-256 (`persistence_vault.py`).
+   - Reconciliação e recuperação automática de registros entre o log de auditoria e a base SQLite em caso de reinicialização.
+   - Middlewares de proteção: limites contra DoS em payloads volumosos, rate limiting por endereço IP e cabeçalhos de segurança OWASP (HSTS, CSP, X-Frame-Options, X-Content-Type-Options).
 
 ---
 
 ## Tecnologias Utilizadas
 
-O projeto adota uma arquitetura em camadas limpas, desacoplando o domínio de negócio, as regras de segurança, a persistência relacional e as interfaces de visualização:
+A aplicação adota uma arquitetura em camadas limpas (Clean Architecture / Domain-Driven Design), desacoplando o domínio de negócio, serviços, repositórios de dados e interfaces de apresentação:
 
-- **Linguagem**: Python 3.10+ (compatível com tipagem estática e anotações PEP 484).
-- **Backend e API**:
-  - `FastAPI`: Criação de rotas REST, endpoints de verificação de integridade (*health check*) e documentação OpenAPI.
-  - `Uvicorn`: Servidor ASGI de alta performance para execução concorrente.
-- **Frontend e Apresentação Visual**:
-  - `Gradio`: Interface web reativa baseada em componentes visuais, gerenciamento de estados de sessão e disparo assíncrono de eventos.
-  - `CSS Customizado` e `HTML5`: Tema institucional da UFMG com suporte a layout widescreen, alertas inline acessíveis e sistema de notificações flutuantes (*toasts*).
-- **Persistência de Dados**:
-  - `SQLite 3`: Banco relacional embarcado com integridade referencial ativa (`PRAGMA foreign_keys = ON`), transações atômicas e consultas estritamente parametrizadas.
-- **Segurança e Criptografia**:
-  - `bcrypt`: Algoritmo de derivação de chave e hashing adaptativo para proteção de credenciais de acesso.
-- **Manipulação de Dados e Estatística**:
-  - `pandas`: Processamento eficiente de tabelas, exportações CSV e estruturas matriciais de atribuição.
-  - Implementação pura do `Alfa de Krippendorff` ordinal para avaliação estatística da confiabilidade dos dados anotados.
-- **Testes e Qualidade de Código**:
-  - `pytest`: Framework de testes para execução de suites unitárias, integradas e ponta a ponta.
+- **Linguagem Principal**: Python 3.10+ com tipagem estática rigorosa (PEP 484).
+- **Backend & Servidor Web**:
+  - `FastAPI`: Roteamento assíncrono de APIs REST, endpoints de verificação de integridade e middlewares de segurança.
+  - `Uvicorn`: Servidor ASGI de alto desempenho para concorrência de requisições.
+  - `Nginx`: Servidor web e *reverse proxy* de produção na porta padrão 80 (HTTP) e 443 (HTTPS) com suporte a WebSockets e cabeçalhos de proteção.
+- **Frontend & Interface Visual Reativa**:
+  - `Gradio 4+`: Renderização de componentes reativos, gerenciamento de estado de sessão e disparo assíncrono de eventos.
+  - `CSS Customizado` e `HTML5`: Tema claro institucional de alto contraste baseado nas cores da UFMG, suporte a layout widescreen, alertas inline acessíveis e notificações flutuantes.
+  - `Favicon Customizado`: Ícone de marca vetorial em SVG e ICO (`t!`) integrado diretamente no cabeçalho HTML e nas rotas estáticas do servidor.
+- **Persistência de Dados & Confiabilidade**:
+  - `SQLite 3`: Banco relacional local com integridade referencial ativa (`PRAGMA foreign_keys = ON`), timeout de concorrência (`busy_timeout = 30000`) e modo de gravação atômica WAL (`PRAGMA journal_mode = WAL`).
+  - `Vault Transacional`: Diário transacional em formato JSONL com verificação de integridade SHA-256 para tolerância a falhas.
+- **Segurança & Criptografia**:
+  - `bcrypt`: Criptografia unidirecional com salt dinâmico para armazenamento de credenciais.
+  - Middlewares customizados: Mitigação de ataques DoS por limitação de payload, rate limiting por IP e higienização contra SQL Injection.
+  - `Certbot / Let's Encrypt`: Emissão automatizada de certificado digital SSL/TLS com renovação contínua.
+- **Tratamento de Dados & Estatística**:
+  - `pandas`: Processamento de tabelas, estruturas matriciais de contingência e exportação de datasets.
+  - Implementação nativa do cálculo do **Alfa de Krippendorff** para escalas ordinais.
+- **Testes & Qualidade de Software**:
+  - `pytest`: Framework central de testes.
   - `pytest-cov` / `Coverage.py`: Mensuração e auditoria de cobertura de código.
-  - `Playwright` (`pytest-playwright`): Automação de navegadores Chromium headless para testes de jornadas reais do usuário (E2E).
-  - `unittest.mock`: Isolamento de serviços externos de rede (como envio de e-mails via SMTP).
+  - `Playwright` (`pytest-playwright`): Automação de navegadores Chromium headless para testes ponta a ponta (E2E).
 - **Integração e Entrega Contínuas (CI/CD)**:
-  - `GitHub Actions`: Execução automática dos testes e cobertura a cada commit em três sistemas operacionais (Ubuntu Linux, macOS e Windows).
-  - `Codecov`: Plataforma online para publicação e rastreamento contínuo dos relatórios de cobertura.
+  - `GitHub Actions`: Matriz de execução contínua em três sistemas operacionais distintos (Ubuntu Linux, macOS e Windows).
+  - `Codecov`: Upload automatizado de relatórios e validação do threshold mínimo de cobertura.
 - **Fuso Horário Oficial**:
-  - Todas as operações com registro temporal operam no **Horário de Brasília (UTC-03:00)** (`BRT_TZ = timezone(timedelta(hours=-3))`).
+  - Todas as transações com registro de data e hora operam padronizadas no **Horário de Brasília (UTC-03:00)** (`BRT_TZ`).
 
 ---
 
 ## Uso de Inteligência Artificial
 
-No desenvolvimento do TokStance!, ferramentas modernas de inteligência artificial generativa e agentes autônomos de engenharia de software (incluindo modelos de linguagem avançados como Google DeepMind / Antigravity, Claude e ChatGPT) foram empregadas de forma estruturada e transparente durante todo o ciclo de vida do projeto:
+No desenvolvimento do TokStance!, ferramentas modernas de inteligência artificial e agentes autônomos de engenharia de software (em especial os modelos avançados **Google DeepMind / Antigravity**, Claude e ChatGPT) foram empregados de forma ética, controlada e transparente em todas as fases do ciclo de desenvolvimento:
 
-1. **Arquitetura Limpa e Modelagem Conceitual**:
-   - Apoio na definição da separação estrita em camadas (domínio puro, repositórios com transações atômicas, serviços orquestradores e interface desacoplada).
-   - Estruturação do modelo relacional no SQLite com 9 tabelas interligadas por integridade referencial.
+1. **Design Arquitetural e Modelagem de Domínio**:
+   - Apoio na estruturação da arquitetura em camadas e no desacoplamento entre regras de negócio puras (`domain/`), orquestradores de regras de negócio (`services/`), persistência relacional (`repositories/`) e apresentação reativa (`frontend/`).
+   - Desenho do esquema relacional de 9 tabelas no SQLite com integridade referencial e chaves estrangeiras ativas.
 
-2. **Engenharia de Testes e Práticas de Confiabilidade**:
-   - Aplicação rigorosa das diretrizes de testes modernos: estrutura Arrange-Act-Assert (AAA), código DAMP (foco em legibilidade e clareza contextual sem duplicação arriscada), testes através de APIs públicas e isolamento com fixtures em diretórios temporários.
-   - Criação de mecanismos de teste determinísticos, incluindo relógios simulados com injeção de dependência e mocks de transporte SMTP para validação de fluxos de recuperação de senha sem acoplamento a provedores externos de e-mail.
+2. **Engenharia e Automação de Testes**:
+   - Geração e refinamento de baterias de testes unitários seguindo a metodologia **Arrange-Act-Assert (AAA)** e princípios **DAMP** (*Descriptive And Meaningful Phrases*).
+   - Formulação de testes de robustez contra casos de borda (injeção maliciosa, payloads truncados, estouro de tentativas de login, concorrência e transição de estados).
+   - Estruturação dos cenários E2E com Playwright para simular o comportamento de avaliadores reais no navegador.
 
-3. **Algoritmos Matemáticos e Estatística Aplicada**:
-   - Validação da formulação matemática do Alfa de Krippendorff ponderado por distâncias ordinais e matriz de penalidades dinâmica, garantindo precisão nos cálculos de concordância interanotador.
+3. **Validação Matemática e Estatística**:
+   - Verificação formal da formulação matricial do Alfa de Krippendorff ordinal ponderado por penalidades dinâmicas, garantindo confiabilidade nas métricas estatísticas geradas para a dissertação.
 
-4. **Acessibilidade e Experiência do Usuário (UX/UI)**:
-   - Prototipação e refinamento dos estilos CSS para suporte a telas widescreen, destaque visual contrastante para alternância de alvos temáticos e alertas inline de validação com papéis de acessibilidade ARIA.
+4. **Hardening de Segurança e Resiliência**:
+   - Criação da camada de middlewares defensivos de segurança: cabeçalhos recomendados pela OWASP, proteção anti-DoS para endpoints de arquivos e rate limiting de requisições.
+   - Concepção do vault de persistência transacional com diário append-only e hashes SHA-256 para recuperação de desastres.
 
-5. **Automação de CI/CD e Governança de Versionamento**:
-   - Elaboração do pipeline multiplataforma no GitHub Actions com matriz para Linux, macOS e Windows.
-   - Planejamento de histórico de commits atômicos, descritivos e com mensagens padronizadas no formato Conventional Commits.
+5. **Infraestrutura em Nuvem e CI/CD**:
+   - Automação de scripts de provisionamento para Google Cloud Compute Engine (`setup_vm.sh`), configuração de reverse proxy Nginx com WebSockets e integração do pipeline multiplataforma no GitHub Actions.
 
 ---
 
 ## Execução dos Testes
 
-O repositório conta com uma ampla suite de testes automatizados com cobertura superior a 80%, cobrindo testes unitários, testes de integração e testes de ponta a ponta (*end-to-end*) no navegador.
+O projeto conta com **229 testes automatizados** e cobertura de código **superior a 88%**, distribuídos entre testes de unidade, testes de integração e testes ponta a ponta (*end-to-end*).
 
 ### Pré-requisitos para Execução Local
 
 - Python 3.10 ou superior instalado.
-- Ambiente virtual configurado e ativado.
-- Dependências do projeto instaladas.
+- Ambiente virtual Python ativado.
 
 ```bash
-# 1. Clonar o repositorio e navegar ate a raiz
-git clone https://github.com/gustavofcunha/ufmg-stance-tiktok.git
-cd ufmg-stance-tiktok
+# 1. Clonar o repositório oficial
+git clone https://github.com/gustavofcunha/tokstance.git
+cd tokstance
 
 # 2. Criar e ativar o ambiente virtual
 python3 -m venv .venv
 source .venv/bin/activate  # No Windows: .venv\Scripts\activate
 
-# 3. Instalar dependencias e navegadores do Playwright
-pip install --upgrade pip
+# 3. Instalar dependências e navegadores do Playwright
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 playwright install --with-deps chromium
 ```
 
-### 1. Testes Unitários
+### 1. Executar Todos os Testes
+```bash
+PYTHONPATH=src pytest
+```
 
-Executa mais de 80 testes de unidade que validam a lógica pura de domínio (modelos de dados, validação de CSV, motor de atribuições, intercalação de alvos, cálculo ordinal do Alfa de Krippendorff, criptografia e proteção contra força bruta):
-
+### 2. Executar Apenas Testes Unitários
+Valida lógica pura de domínio, hashing de senhas, validação de targets, motor de penalidades, recuperação de senha, sanitização de inputs e cálculo de concordância:
 ```bash
 PYTHONPATH=src pytest tests/unit/
 ```
 
-### 2. Testes de Integração
-
-Executa os testes que validam a interação entre repositórios SQLite, transações, banco de dados isolado e os serviços de administração e fila de anotação:
-
+### 3. Executar Apenas Testes de Integração
+Valida a comunicação entre repositórios SQLite, transações, concorrência, consistência do diário de persistência e chamadas de serviços:
 ```bash
 PYTHONPATH=src pytest tests/integration/
 ```
 
-### 3. Testes End-to-End (E2E com Playwright)
-
-Executa 7 testes completos de jornadas reais do usuário no navegador Chromium headless, simulando interação visual, digitação, cliques, alternância de abas, exibição de modais e navegação:
-
+### 4. Executar Testes End-to-End (E2E com Playwright)
+Executa jornadas reais automatizadas no navegador Chromium (modo headless), validando o fluxo completo do usuário (login, cadastro, ingresso em tarefa via convite, visualização de vídeos, modal de conteúdo sensível, rotulação, envio de respostas e recuperação de senha):
 ```bash
 PYTHONPATH=src pytest tests/e2e/test_e2e_user_journeys.py
 ```
 
-As 7 jornadas testadas no E2E cobrem:
-1. Cadastro de nova conta, login no Hub e ingresso em tarefa por código de convite.
-2. Rejeição de login com credenciais incorretas e bloqueio de convite inexistente com avisos inline.
-3. Abertura do workspace de rotulação, exibição do modal de conteúdo sensível com desfoque e saída segura.
-4. Confirmação do aviso sensivel revelando o player do TikTok e os controles de resposta.
-5. Seleção de opção de posicionamento, salvamento com feedback visual e avanço da barra de progresso.
-6. Criação de nova tarefa pelo assistente e auditoria de métricas no Console de Administração.
-7. Redefinição de senha com validação de senhas divergentes, código temporário e redirecionamento automático para a tela de login com usuário pré-preenchido.
-
-### 4. Execução Completa com Relatório de Cobertura
-
-Gera o relatório detalhado de cobertura de linhas e branches com o `Coverage.py`:
-
+### 5. Mensuração de Cobertura com Coverage.py
+Gera o relatório de cobertura de código no terminal com detalhamento de linhas não cobertas:
 ```bash
 PYTHONPATH=src pytest --cov=src/tokstance --cov-report=term-missing
 ```
 
-Para gerar o relatório em formato XML para envio ao Codecov:
-
+Para gerar o arquivo XML de cobertura consumido pelo Codecov e GitHub Actions:
 ```bash
 PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 ```
 
 ---
 
-## Submissão do Trabalho Prático
-
-Links oficiais para avaliação do projeto conforme especificado no enunciado do TP:
-
-- **Sistema em Produção**: [http://34.133.155.105:7860](http://34.133.155.105:7860) *(substituir pelo endereço público da aplicação implantada em nuvem)*
-- **Repositório no GitHub**: [https://github.com/gustavofcunha/ufmg-stance-tiktok](https://github.com/gustavofcunha/ufmg-stance-tiktok)
-- **Build no GitHub Actions**: [https://github.com/gustavofcunha/ufmg-stance-tiktok/actions](https://github.com/gustavofcunha/ufmg-stance-tiktok/actions)
-- **Relatório no Codecov**: [https://codecov.io/gh/gustavofcunha/ufmg-stance-tiktok](https://codecov.io/gh/gustavofcunha/ufmg-stance-tiktok)
-- **Vídeo de Apresentação no YouTube**: [https://www.youtube.com/watch?v=EXEMPLO](https://www.youtube.com/watch?v=EXEMPLO) *(vídeo demonstrativo de até 5 minutos)*
-
----
-
-## Execução da Aplicação em Modo Local
-
-### Inicialização Rápida com Dados de Teste
-
-Para rodar a aplicação localmente com uma base populada com dados demonstrativos (usuários, rodadas ativas, vídeos autênticos de debate público e métricas de exemplo):
+## Execução da Aplicação Localmente
 
 ```bash
-# Popular o banco relacional de demonstracao
+# 1. Popular o banco relacional local com dados demonstrativos
 PYTHONPATH=src:. python3 scripts/seed_demo.py
 
-# Iniciar o servidor
+# 2. Iniciar o servidor local
 PYTHONPATH=src:. python3 -m tokstance.main
 ```
+Acesse no seu navegador: `http://localhost:7860`
 
-Acesse a interface pelo navegador no endereço: `http://localhost:7860`
+### Credenciais Padrão para Demonstração:
 
-### Credenciais Padrão de Avaliação
-
-O script `scripts/seed_demo.py` gera as seguintes contas para testes práticos:
-
-| Papel | Usuário | Senha Padrão | Descrição do Perfil |
+| Papel | Usuário | Senha | Descrição |
 | :--- | :--- | :--- | :--- |
-| **Coordenador (Admin)** | `coordenador` | `senha123` | Administrador da tarefa demonstrativa, com acesso ao Console de Administração, gráficos e exportações. |
-| **Professor (Avaliador)** | `professor` | `senha123` | Usuário livre para testar a entrada em tarefas via código de convite `TOK-DEMO2026`. |
-| **Rotulador Ativo 1** | `rotulador_1` | `senha123` | Possui 10 vídeos anotados e 1 relato de problema para demonstrar o fluxo de substituição. |
-| **Rotulador Ativo 2** | `rotulador_2` | `senha123` | Possui 8 vídeos anotados com sobreposição, gerando métricas de concordância no painel. |
-| **Usuário Geral** | `gustavo` | `senha123` | Conta padrão para verificação de fluxos gerais e recuperação de senha. |
+| **Coordenador / Pesquisador** | `coordenador` | `senha123` | Administrador da tarefa demonstrativa, com acesso ao Console de Administração, gráficos e relatórios estatísticos. |
+| **Professor / Avaliador** | `professor` | `senha123` | Usuário para teste prático de ingresso em tarefas usando o código de convite `TOK-DEMO2026`. |
+| **Rotulador Ativo 1** | `rotulador_1` | `senha123` | Possui 10 anotações efetuadas e 1 relato de problema para teste do fluxo de substituição de vídeos. |
+| **Rotulador Ativo 2** | `rotulador_2` | `senha123` | Possui 8 anotações com sobreposição, gerando métricas reais de concordância interanotador. |
 
-> **Código de Convite Demonstrativo**: `TOK-DEMO2026` (vincula novos anotadores diretamente às vagas da tarefa demonstrativa).
-
----
-
-## Esquema Relacional de Dados (`data/tokstance.db`)
-
-O banco SQLite é estruturado com chaves estrangeiras ativas, índices operacionais e consultas estritamente parametrizadas:
-
-| Tabela | Finalidade Principal |
-| :--- | :--- |
-| `usuarios` | Cadastro de usuários, e-mail, hash seguro de senha (`bcrypt`) e data de registro. |
-| `tarefas` | Metadados do estudo, título, pergunta com template de target, opções de rótulo, matriz de penalidades, vagas, sobreposição e código de convite único. |
-| `membros_tarefa` | Associação entre usuários e tarefas com definição de papel (`administrador` ou `rotulador`). |
-| `videos_tarefa` | Catálogo de vídeos vinculados a cada tarefa, distribuídos entre o conjunto `principal` e a fila de `reserva`. |
-| `atribuicoes` | Fila individualizada de vídeos atribuídos a cada rotulador, registrando posição ordinal e versão de particionamento. |
-| `anotacoes` | Respostas registradas por vídeo, incluindo a opção selecionada, tempo de análise em segundos e timestamp no Horário de Brasília. |
-| `erros_videos` | Registro de vídeos com link quebrado ou falha de reprodução, com validação de tempo mínimo de tentativa. |
-| `logs_acesso` | Trilha de auditoria das ações do sistema (login, logout, criação de tarefas e redefinição de senha). |
-| `recuperacao_senha` | Armazenamento de códigos numéricos de recuperação de 6 dígitos com controle de validade temporal e uso único. |
+> **Código de Convite Demonstrativo**: `TOK-DEMO2026`
 
 ---
 
-## Implantação em Produção
+## Submissão do Trabalho Prático
 
-A pasta `deploy/` inclui os scripts para provisionamento automático em máquinas virtuais na nuvem (Google Cloud Platform Compute Engine, AWS EC2 ou similares):
+Conforme solicitado no enunciado da disciplina, seguem os cinco links oficiais de entrega do projeto:
 
-- `deploy/tokstance.service`: Unidade `systemd` para inicialização automática no boot do sistema, reinício automático em caso de falha e gestão de logs via `journalctl`.
-- `deploy/setup_vm.sh`: Script em shell que automatiza a instalação de dependências do sistema operacional, criação do ambiente virtual Python, carga do seed demonstrativo e inicialização do serviço.
-
-Comando de provisionamento na VM:
-```bash
-sudo bash deploy/setup_vm.sh
-```
+1. **Sistema em Produção**: [https://tokstance.duckdns.org](https://tokstance.duckdns.org) *(IP direto da VM GCP: [http://34.56.250.144](http://34.56.250.144))*
+2. **Repositório no GitHub**: [https://github.com/gustavofcunha/tokstance](https://github.com/gustavofcunha/tokstance)
+3. **Build no GitHub Actions**: [https://github.com/gustavofcunha/tokstance/actions](https://github.com/gustavofcunha/tokstance/actions)
+4. **Relatório no Codecov**: [https://codecov.io/gh/gustavofcunha/tokstance](https://codecov.io/gh/gustavofcunha/tokstance)
+5. **Vídeo de Apresentação no YouTube**: [https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO) *(vídeo demonstrativo de até 5 minutos)*

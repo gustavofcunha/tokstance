@@ -80,7 +80,7 @@ def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rot
     if not tarefas_admin:
         html_admin = (
             "<div class='hub-table-empty'>"
-            "Você ainda não criou nenhuma tarefa. Clique no botão '+ Criar Nova Tarefa' acima para iniciar."
+            "Você ainda não criou nenhuma tarefa. Clique no botão '+' acima para iniciar."
             "</div>"
         )
     else:
@@ -138,7 +138,7 @@ def renderizar_hub_tabelas_html(tarefas_admin: List[Dict[str, Any]], tarefas_rot
     if not tarefas_rotulador:
         html_rotulador = (
             "<div class='hub-table-empty'>"
-            "Você ainda não está inscrito em nenhuma tarefa para rotular. Use o campo de código de convite abaixo para entrar."
+            "Você ainda não está inscrito em nenhuma tarefa para rotular. Use o botão '+' acima para entrar com código de convite."
             "</div>"
         )
     else:
