@@ -1108,6 +1108,29 @@ def test_workspace_metadados_titulos_destacados_vermelho_e_fonte_maior() -> None
     assert "Transcrição do áudio" in card_html
 
 
+@pytest.mark.unit
+def test_botao_voltar_ao_painel_principal_largura_e_padding() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+    from tokstance.frontend.gradio_ui import construir_interface
+
+    #assert CSS styling de espacamento e largura flexivel
+    assert ".wizard-step-footer button" in APP_CSS
+    assert "min-width: fit-content !important;" in APP_CSS
+    assert "padding: 0 20px !important;" in APP_CSS
+
+    #assert componentes do gradio com largura minima confortavel para o texto
+    app = construir_interface()
+    botoes_voltar = [
+        comp for comp in app.blocks.values()
+        if isinstance(comp, gr.Button) and comp.value == "← Voltar ao Painel Principal"
+    ]
+    assert len(botoes_voltar) >= 3
+    for b in botoes_voltar:
+        assert b.min_width is not None and b.min_width >= 240
+
+
+
 
 
 

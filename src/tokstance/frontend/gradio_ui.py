@@ -490,7 +490,7 @@ def construir_interface(
                 with gr.Row(elem_classes="admin-header"):
                     gr.Markdown("## Criar Nova Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
-                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
+                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=250)
 
                 with gr.Column(elem_classes="form-wizard-card"):
                     gr.HTML("""
@@ -545,66 +545,52 @@ def construir_interface(
                             btn_atualizar_pares = gr.Button("Recalcular combinações", elem_classes=["ufmg-btn", "wizard-inline-btn"], scale=0)
 
                         with gr.Row(elem_classes="wizard-step-footer"):
-                            btn_passo1_voltar_hub = gr.Button("← Voltar ao Painel Principal", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=180)
+                            btn_passo1_voltar_hub = gr.Button("← Voltar ao Painel Principal", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=250)
                             btn_passo1_proximo = gr.Button("Próximo: Equipe e Acesso →", elem_classes=["ufmg-btn", "wizard-next-btn"], scale=0, min_width=240)
 
                     # ETAPA 2: Equipe, Vagas e Codigo de Convite
                     with gr.Column(visible=False, elem_classes=["wizard-step-container", "wizard-passo-2"]) as wizard_passo_2:
-                        with gr.Row(elem_classes="wizard-step-row"):
-                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
-                                wizard_vagas = gr.Slider(
-                                    label="Vagas de Rotuladores",
-                                    info="Quantidade de avaliadores na equipe",
-                                    minimum=1,
-                                    maximum=20,
-                                    value=3,
-                                    step=1,
-                                    elem_classes=["wizard-slider-custom"],
-                                )
-                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
-                                wizard_overlap = gr.Slider(
-                                    label="Sobreposição entre Avaliadores (%)",
-                                    info="Percentual de vídeos comuns para cálculo de concordância",
-                                    minimum=0.0,
-                                    maximum=100.0,
-                                    value=20.0,
-                                    step=5.0,
-                                    elem_classes=["wizard-slider-custom"],
-                                )
+                        with gr.Row(elem_classes="wizard-slider-row"):
+                            wizard_vagas = gr.Slider(
+                                label="Vagas de Rotuladores",
+                                minimum=1,
+                                maximum=20,
+                                value=3,
+                                step=1,
+                                scale=1,
+                            )
+                            wizard_overlap = gr.Slider(
+                                label="Sobreposição (%)",
+                                minimum=0.0,
+                                maximum=100.0,
+                                value=20.0,
+                                step=5.0,
+                                scale=1,
+                            )
 
-                        with gr.Row(elem_classes="wizard-step-row"):
-                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
-                                gr.HTML("""
-                                <div class="wizard-box-title">Código de Convite da Tarefa</div>
-                                <div class="wizard-box-sub">Compartilhe este código com os avaliadores para ingressarem na rodada</div>
-                                """)
-                                with gr.Row(elem_classes="wizard-convite-input-row"):
-                                    wizard_convite = gr.Textbox(
-                                        show_label=False,
-                                        value=gerar_codigo_convite(),
-                                        elem_classes=["wizard-convite-field"],
-                                        scale=1,
-                                    )
-                                    btn_copiar_codigo = gr.Button(
-                                        "Copiar Código",
-                                        elem_id="btn_copiar_codigo_wizard",
-                                        elem_classes=["ufmg-btn", "btn-icon-copiar", "wizard-btn-copiar"],
-                                        scale=0,
-                                        min_width=140,
-                                    )
-                            with gr.Column(scale=1, min_width=280, elem_classes="wizard-param-box"):
-                                gr.HTML("""
-                                <div class="wizard-box-title">Papel do Administrador na Tarefa</div>
-                                <div class="wizard-box-sub">Defina se você também receberá uma fila individual de vídeos para rotular</div>
-                                """)
+                        with gr.Row(elem_classes="wizard-second-row"):
+                            with gr.Row(elem_classes="wizard-action-row", scale=1):
+                                wizard_convite = gr.Textbox(
+                                    label="Código de Convite",
+                                    value=gerar_codigo_convite(),
+                                    scale=1,
+                                )
+                                btn_copiar_codigo = gr.Button(
+                                    value="",
+                                    elem_id="btn_copiar_codigo_wizard",
+                                    elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-copiar"],
+                                    scale=0,
+                                    min_width=42,
+                                )
+                            with gr.Column(elem_classes="wizard-checkbox-card", scale=1):
                                 wizard_admin_como_rotulador = gr.Checkbox(
                                     label="Participar também como rotulador (Vaga 1)",
                                     value=True,
-                                    elem_classes=["wizard-checkbox-standalone"],
+                                    elem_classes="wizard-checkbox",
                                 )
 
                         with gr.Row(elem_classes="wizard-step-footer"):
-                            btn_passo2_voltar = gr.Button("← Voltar ao Passo 1", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=160)
+                            btn_passo2_voltar = gr.Button("← Voltar ao Passo 1", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=200)
                             btn_passo2_proximo = gr.Button("Próximo: Vídeos e Reserva →", elem_classes=["ufmg-btn", "wizard-next-btn"], scale=0, min_width=240)
 
                     # ETAPA 3: Videos e Reserva Tecnica
@@ -689,7 +675,7 @@ def construir_interface(
                     admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
                         btn_excluir_tarefa_admin = gr.Button("Excluir esta Tarefa", elem_classes=["ufmg-btn", "hub-btn", "btn-icon-trash"], scale=0, min_width=170)
-                        btn_voltar_hub_admin = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
+                        btn_voltar_hub_admin = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=250)
 
                 #primeira visao oficial: visao geral do acervo e distribuicao por target
                 admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")

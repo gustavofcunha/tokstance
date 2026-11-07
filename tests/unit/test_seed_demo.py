@@ -64,3 +64,41 @@ def test_seed_demo_remove_usuarios_extras_e_preserva_apenas_demo_e_gustavo(tmp_p
     assert nomes == ["gustavo", "professor", "rotulador_1", "rotulador_2"]
     assert "usuario_intruso" not in nomes
     assert "outro_avaliador" not in nomes
+
+    # Verifica que a lista de usuarios limpos foi registrada no resultado
+    limpos = [u["nome_usuario"] for u in resultado["usuarios_limpos"]]
+    assert "usuario_intruso" in limpos
+    assert "outro_avaliador" in limpos
+
+
+def test_seed_demo_remove_tarefas_extras_e_imprime_no_terminal(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    from scripts.seed_demo import main
+    import sys
+
+    caminho_db = tmp_path / "seed_cli.db"
+    banco = BancoDadosSQLite(caminho_db)
+    banco.inicializar_esquema()
+
+    # Cria usuario extra e tarefa extra
+    banco.executar(
+        "INSERT INTO usuarios (nome_usuario, senha_hash, email, nome_completo, criado_em) VALUES (?, ?, ?, ?, ?)",
+        ("usuario_antigo", "hash", "antigo@exemplo.com", "Usuario Antigo", "2026-01-01 00:00:00"),
+    )
+    u_extra = banco.consultar_um("SELECT usuario_id FROM usuarios WHERE nome_usuario = 'usuario_antigo'")
+    assert u_extra is not None
+    uid = u_extra["usuario_id"]
+
+    banco.executar(
+        "INSERT INTO tarefas (slug_tarefa, titulo, pergunta, opcoes_json, distancias_rotulos_json, codigo_convite, criado_por_usuario_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        ("tarefa-legada", "Tarefa Legada do Usuário", "Pergunta?", "[]", "{}", "TOK-OLD1", uid, "2026-01-01 00:00:00"),
+    )
+
+    # Executa a funcao main via CLI simulado
+    monkeypatch.setattr(sys, "argv", ["seed_demo.py", "--db-path", str(caminho_db)])
+    main()
+
+    saida = capsys.readouterr().out
+    assert "Usuários limpos/removidos (1):" in saida
+    assert "usuario_antigo" in saida
+    assert "Tarefas limpas/removidas" in saida
+    assert "Tarefa Legada do Usuário" in saida

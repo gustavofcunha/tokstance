@@ -75,14 +75,29 @@ def povoar_banco_demonstrativo(
 
     #apagar todos os usuarios exceto os essenciais da demonstracao e o gustavo
     usuarios_permitidos = {"professor", "rotulador_1", "rotulador_2", "gustavo"}
-    todos_usuarios = banco.consultar_todos("SELECT usuario_id, nome_usuario FROM usuarios")
+    todos_usuarios = banco.consultar_todos("SELECT usuario_id, nome_usuario, email, nome_completo FROM usuarios")
+    usuarios_limpos: list[dict[str, Any]] = []
+    tarefas_limpas: list[dict[str, Any]] = []
+
     for u in todos_usuarios:
         u_nome = u["nome_usuario"]
         u_id = int(u["usuario_id"])
         if u_nome not in usuarios_permitidos:
-            tarefas_do_usuario = banco.consultar_todos("SELECT tarefa_id FROM tarefas WHERE criado_por_usuario_id = ?", (u_id,))
+            usuarios_limpos.append({
+                "usuario_id": u_id,
+                "nome_usuario": u_nome,
+                "email": u.get("email") or "",
+                "nome_completo": u.get("nome_completo") or "",
+            })
+            tarefas_do_usuario = banco.consultar_todos("SELECT tarefa_id, titulo, codigo_convite FROM tarefas WHERE criado_por_usuario_id = ?", (u_id,))
             for t in tarefas_do_usuario:
                 tid = int(t["tarefa_id"])
+                tarefas_limpas.append({
+                    "tarefa_id": tid,
+                    "titulo": t.get("titulo") or f"Tarefa #{tid}",
+                    "codigo_convite": t.get("codigo_convite") or "",
+                    "origem": f"criada por {u_nome}",
+                })
                 banco.executar("DELETE FROM anotacoes WHERE tarefa_id = ?", (tid,))
                 banco.executar("DELETE FROM erros_videos WHERE tarefa_id = ?", (tid,))
                 banco.executar("DELETE FROM atribuicoes WHERE tarefa_id = ?", (tid,))
@@ -103,6 +118,13 @@ def povoar_banco_demonstrativo(
     if reiniciar_tarefa_demo and tarefas_existentes:
         for t in tarefas_existentes:
             tid = int(t["tarefa_id"])
+            if not any(item["tarefa_id"] == tid for item in tarefas_limpas):
+                tarefas_limpas.append({
+                    "tarefa_id": tid,
+                    "titulo": t.get("titulo") or f"Tarefa #{tid}",
+                    "codigo_convite": t.get("codigo_convite") or "",
+                    "origem": "tarefa anterior da demonstração",
+                })
             banco.executar("DELETE FROM anotacoes WHERE tarefa_id = ?", (tid,))
             banco.executar("DELETE FROM erros_videos WHERE tarefa_id = ?", (tid,))
             banco.executar("DELETE FROM atribuicoes WHERE tarefa_id = ?", (tid,))
@@ -266,6 +288,8 @@ def povoar_banco_demonstrativo(
         "tarefa_id": tarefa_id,
         "codigo_convite": codigo_convite_demo,
         "usuarios": usuarios_criados,
+        "usuarios_limpos": usuarios_limpos,
+        "tarefas_limpas": tarefas_limpas,
     }
 
 
@@ -286,6 +310,28 @@ def main() -> None:
     print(f"Banco SQLite: {resultado['banco_path']}")
     print(f"Tarefa ID: {resultado['tarefa_id']}")
     print(f"Código de Convite da Tarefa: {resultado['codigo_convite']}")
+
+    usuarios_limpos = resultado.get("usuarios_limpos", [])
+    print("\n" + "-" * 60)
+    print(f"Usuários limpos/removidos ({len(usuarios_limpos)}):")
+    if usuarios_limpos:
+        for u in usuarios_limpos:
+            detalhe = f"{u['nome_completo']} <{u['email']}>" if u.get("email") else (u.get("nome_completo") or "Sem nome")
+            print(f"  • [{u['usuario_id']}] {u['nome_usuario']} ({detalhe})")
+    else:
+        print("  (nenhum usuário extra precisou ser limpo)")
+
+    tarefas_limpas = resultado.get("tarefas_limpas", [])
+    print(f"\nTarefas limpas/removidas ({len(tarefas_limpas)}):")
+    if tarefas_limpas:
+        for t in tarefas_limpas:
+            convite = f" [Convite: {t['codigo_convite']}]" if t.get("codigo_convite") else ""
+            criador = f" ({t['origem']})" if t.get("origem") else ""
+            print(f"  • [{t['tarefa_id']}] {t['titulo']}{convite}{criador}")
+    else:
+        print("  (nenhuma tarefa anterior precisou ser limpa)")
+    print("-" * 60)
+
     print("\nUsuários para Teste / Avaliação (Senha padrão: senha123):")
     print(" - Professor (Coordenador & Rotulador): professor")
     print(" - Rotulador 1 (Anotador ativo): rotulador_1")
