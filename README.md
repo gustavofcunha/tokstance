@@ -172,9 +172,9 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 
 1. Sistema em produção: [https://tokstance.duckdns.org](https://tokstance.duckdns.org) (ou pelo IP da máquina no Google Cloud: [http://34.56.250.144](http://34.56.250.144))
 2. Repositório no GitHub: [https://github.com/gustavofcunha/tokstance](https://github.com/gustavofcunha/tokstance)
-3. Execução no GitHub Actions: [https://github.com/gustavofcunha/tokstance/actions](https://github.com/gustavofcunha/tokstance/actions)
+3. Última execução no GitHub Actions: [https://github.com/gustavofcunha/tokstance/actions/runs/42399472577](https://github.com/gustavofcunha/tokstance/actions/runs/42399472577)
 4. Relatório no Codecov: [https://codecov.io/gh/gustavofcunha/tokstance](https://codecov.io/gh/gustavofcunha/tokstance)
-5. Vídeo de apresentação no YouTube: [https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO)
+5. Vídeo de apresentação no YouTube: [https://youtu.be/z9VkcT7AKpI](https://youtu.be/z9VkcT7AKpI)
 
 ### Credenciais para acesso em produção:
 
@@ -186,7 +186,7 @@ PYTHONPATH=src pytest --cov=src/tokstance --cov-report=xml
 
 Código de convite para teste: `TOK-DEMO2026`
 
-O usuário professor já está configurado tanto como administrador quanto como rotulador da tarefa demonstrativa. Recomendo que a avaliação seja feita acessando com essa conta, pois ela permite explorar todas as funcionalidades do sistema (gestão da rodada, gráficos de concordância e o ambiente de rotulação de vídeos), conforme demonstrado no [vídeo de apresentação](https://www.youtube.com/watch?v=SUBSTITUIR_LINK_VIDEO).
+O usuário `professor` já está configurado tanto como administrador quanto como rotulador da tarefa demonstrativa. Recomendo que a avaliação seja feita acessando com essa conta, pois ela permite explorar de imediato todas as funcionalidades do sistema (gestão da rodada, gráficos de concordância e o ambiente de rotulação de vídeos), conforme demonstrado no [vídeo de apresentação](https://youtu.be/z9VkcT7AKpI). Caso prefira não utilizar os dados previamente preparados para demonstração, você também tem total liberdade para cadastrar uma nova conta e criar uma nova tarefa do zero diretamente pela interface.
 
 ### Roteiro rápido sugerido para avaliação
 
