@@ -15,15 +15,31 @@ Trabalho prático da disciplina de Teste de Software (DCC/UFMG).
 
 - Gustavo Freitas Cunha (gustavocunha@dcc.ufmg.br)
 
-Realizei este trabalho de forma individual por ser aluno regular da pós-graduação (mestrado acadêmico no PPGCC/UFMG), com autorização do professor da disciplina.
+Realizei este trabalho de forma individual por ser aluno da pós-graduação.
 
 ---
 
 ## Sobre o sistema
 
-Desenvolvi o TokStance como parte da minha pesquisa de mestrado no DCC/UFMG. Na minha dissertação, estou construindo um classificador multimodal para detecção de posicionamento (stance detection) em vídeos curtos do TikTok, analisando imagem, áudio transcrito e texto das legendas.
+O TokStance é uma aplicação real que desenvolvi para ser utilizada na prática durante a minha pesquisa de mestrado no Programa de Pós-Graduação em Ciência da Computação da UFMG (PPGCC/UFMG), e não um projeto simulado apenas para cumprir a disciplina.
 
-Para treinar e validar esse modelo, preciso de uma base de vídeos anotada por múltiplos avaliadores humanos com controle de qualidade e medição de concordância. Criei o TokStance para gerenciar esse processo de ponta a ponta.
+Na minha dissertação, estou construindo um classificador multimodal de aprendizado profundo para detecção de posicionamento (stance detection) em vídeos curtos do TikTok. O modelo precisa analisar conjuntamente os quadros de vídeo, o áudio com fala transcrita e o texto de legendas e hashtags para identificar se o autor do vídeo se posiciona a favor, contra ou neutro em relação a temas de debate público.
+
+Para que um classificador desses funcione, o ponto crítico é a qualidade dos dados de treinamento. Eu preciso de um acervo rotulado por múltiplos anotadores humanos, com rigor metodológico, controle de sobreposição de amostras entre pessoas e cálculo de confiabilidade estatística. O TokStance foi construído exatamente para coordenar essa campanha de anotação com os avaliadores voluntários e bolsistas da pesquisa.
+
+### Por que desenvolvi uma ferramenta própria?
+
+Ferramentas prontas de rotulação de mercado (como Label Studio ou Prodigy) são genéricas e não atendiam ao que a minha pesquisa precisa:
+
+1. Suporte nativo a vídeos verticais do TikTok: A maioria das ferramentas foi feita para texto ou imagens estáticas. O TokStance embute o player oficial do TikTok em layout widescreen, preservando a experiência real da plataforma sem exigir que os anotadores baixem gigabytes de arquivos para o próprio computador.
+
+2. Gestão de vídeos que saem do ar: No TikTok, é muito comum que autores apaguem vídeos ou mudem a privacidade durante o estudo. Criei um fluxo onde o anotador pode reportar falha de reprodução e o sistema substitui automaticamente aquele item por outro vídeo equivalente do mesmo tema, vindo de uma fila de reserva, sem quebrar a distribuição estatística.
+
+3. Controle fino de sobreposição e alocação: Implementei um algoritmo próprio que distribui os vídeos garantindo que parte deles seja avaliada por mais de um rotulador para medir a concordância, enquanto o restante é distribuído de forma exclusiva para cobrir mais conteúdo.
+
+4. Métricas estatísticas integradas: Em vez de exportar dados brutos para calcular concordância em planilhas externas, implementei diretamente no sistema o cálculo do Alfa de Krippendorff ordinal, já ponderado pela matriz de distâncias da pesquisa.
+
+5. Soberania dos dados e custo zero: Não fico preso a planos pagos por usuário nem a limites de armazenamento de plataformas comerciais. Todo o banco de dados e os registros de auditoria ficam na minha própria infraestrutura.
 
 ### Funcionalidades implementadas
 
