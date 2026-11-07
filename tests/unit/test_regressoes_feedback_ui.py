@@ -1063,6 +1063,52 @@ def test_workspace_inclui_brand_header_visivel_e_controles_expandidos() -> None:
     assert "flex: 1 1 auto !important;" in APP_CSS
 
 
+@pytest.mark.unit
+def test_modal_sensivel_botoes_sair_cinza_e_continuar_ordem() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+    from tokstance.frontend.gradio_ui import construir_interface
+
+    #assert CSS styling do botao sair em cinza neutro
+    assert ".sensitive-btn-stop" in APP_CSS
+    assert "background: #f1f5f9 !important;" in APP_CSS
+    assert "color: #475569 !important;" in APP_CSS
+
+    #assert presenca dos botoes na arvore do gradio
+    app = construir_interface()
+    botoes_modal = [
+        comp for comp in app.blocks.values()
+        if isinstance(comp, gr.Button) and comp.value in ("Sair", "Continuar")
+    ]
+    rotulos = [b.value for b in botoes_modal]
+    assert "Sair" in rotulos
+    assert "Continuar" in rotulos
+
+
+@pytest.mark.unit
+def test_workspace_metadados_titulos_destacados_vermelho_e_fonte_maior() -> None:
+    #arrange
+    from tokstance.frontend.theme import APP_CSS
+    from tokstance.frontend.components import render_video_card
+
+    #assert CSS titulo de metadados em vermelho e fonte maior
+    assert ".metadata-title {" in APP_CSS
+    assert "color: #9c0014 !important;" in APP_CSS
+    assert "font-size: 13px !important;" in APP_CSS
+
+    #assert renderizacao dos titulos no card do video
+    item = {
+        "target": "Tema",
+        "video_description": "Descricao do video teste",
+        "voice_to_text": "Transcricao do audio teste",
+        "url": "https://www.tiktok.com/@u/video/123",
+    }
+    card_html = render_video_card(item)
+    assert "<div class='metadata-title'>Descrição do vídeo</div>" in card_html
+    assert "Transcrição do áudio" in card_html
+
+
+
 
 
 

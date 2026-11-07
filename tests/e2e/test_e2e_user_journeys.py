@@ -323,7 +323,7 @@ def test_e2e_modal_aviso_conteudo_sensivel_e_saida_segura(
     assert "Conteúdo Sensível" in texto_modal or "Aviso" in texto_modal
 
     #act safe exit
-    pagina_navegador.get_by_role("button", name="Parar de rotular").click()
+    pagina_navegador.locator(".sensitive-warning-card").get_by_role("button", name=re.compile(r"^(Sair|Parar de rotular)$")).click()
 
     #assert return to hub
     pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)

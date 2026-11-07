@@ -1835,7 +1835,7 @@ APP_CSS = """
     .video-description.unavailable { color: #64748b; }
     .video-transcription { padding: 14px 16px; margin: 0; border: 1px solid #e2e8f0; background: #f8fafc; line-height: 1.5; overflow-wrap: anywhere; font-size: 14px; border-radius: 8px; max-height: 200px; overflow-y: auto; }
     .video-transcription strong { display: block; color: #9c0014; margin-bottom: 6px; }
-    .transcription-note { color: #64748b; font-size: 0.82em; font-style: italic; font-weight: 400; }
+    .transcription-note { color: #64748b !important; font-size: 0.85em !important; font-style: italic !important; font-weight: 400 !important; text-transform: none !important; }
     .video-transcription.unavailable { color: #64748b; }
 
     code, .dark code, pre, .dark pre, [data-testid="markdown"] code {
@@ -1896,6 +1896,21 @@ APP_CSS = """
         margin-top: 16px !important; width: 100% !important;
     }
     .sensitive-warning-actions > * { margin: 0 !important; flex: 1 1 0 !important; min-width: 0 !important; }
+    .sensitive-warning-actions button.sensitive-btn-stop,
+    .sensitive-warning-actions .sensitive-btn-stop {
+        background: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #475569 !important;
+        font-weight: 700 !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    }
+    .sensitive-warning-actions button.sensitive-btn-stop:hover,
+    .sensitive-warning-actions .sensitive-btn-stop:hover {
+        background: #e2e8f0 !important;
+        border-color: #94a3b8 !important;
+        color: #1e293b !important;
+        transform: translateY(-1px) !important;
+    }
 
     /* Tabelas Modernas do Painel Principal (Sem Menus Suspensos) */
     .hub-table-wrapper {
@@ -2555,12 +2570,12 @@ APP_CSS = """
         color: #64748b !important;
     }
     .metadata-title {
-        font-size: 11px !important;
+        font-size: 13px !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
         letter-spacing: 0.5px !important;
-        color: #64748b !important;
-        margin-bottom: 3px !important;
+        color: #9c0014 !important;
+        margin-bottom: 4px !important;
     }
     .metadata-text {
         font-size: 13px !important;

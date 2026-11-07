@@ -660,8 +660,8 @@ def construir_interface(
                                 </div>
                             """)
                             with gr.Row(elem_classes="sensitive-warning-actions"):
+                                btn_parar_sensivel = gr.Button("Sair", elem_classes=["secondary-btn", "sensitive-btn-stop"])
                                 btn_continuar_sensivel = gr.Button("Continuar", elem_classes=["ufmg-btn", "sensitive-btn-continue"])
-                                btn_parar_sensivel = gr.Button("Parar de rotular", elem_classes=["error-btn", "sensitive-btn-stop"])
 
                     with gr.Row(elem_classes="labeler-layout"):
                         with gr.Column(scale=0, min_width=640, elem_classes="video-column"):
