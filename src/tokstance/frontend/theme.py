@@ -1008,6 +1008,81 @@ APP_CSS = """
         flex-direction: column !important;
         gap: 16px !important;
     }
+    /* Stepper em etapas do assistente de criacao */
+    .wizard-stepper-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 12px !important;
+        margin-bottom: 20px !important;
+        width: 100% !important;
+    }
+    .wizard-tab-btn,
+    button.wizard-tab-btn {
+        flex: 1 1 0 !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        border-radius: 8px !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #64748b !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .wizard-tab-btn.active,
+    button.wizard-tab-btn.active {
+        background: #ffffff !important;
+        border: 2px solid #9c0014 !important;
+        color: #9c0014 !important;
+        box-shadow: 0 2px 6px rgba(156, 0, 20, 0.12) !important;
+    }
+    .wizard-tab-btn.completed,
+    button.wizard-tab-btn.completed {
+        background: #f0fdf4 !important;
+        border: 1px solid #86efac !important;
+        color: #166534 !important;
+    }
+    .wizard-step-container {
+        width: 100% !important;
+        animation: fadeIn 0.15s ease-in-out !important;
+    }
+    .wizard-step-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 20px !important;
+        width: 100% !important;
+        align-items: flex-start !important;
+    }
+    .wizard-step-row > * {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+    }
+    .wizard-step-footer {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-top: 20px !important;
+        padding-top: 16px !important;
+        border-top: 1px solid #e2e8f0 !important;
+        width: 100% !important;
+        gap: 12px !important;
+    }
+    .wizard-next-btn,
+    button.wizard-next-btn,
+    .wizard-submit-btn,
+    button.wizard-submit-btn {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        height: 42px !important;
+        min-height: 42px !important;
+    }
+
     .wizard-section-card {
         background: #ffffff !important;
         border: 1px solid #e2e8f0 !important;

@@ -486,13 +486,13 @@ def construir_interface(
                             btn_cancelar_convite = gr.Button("Cancelar", elem_classes="error-btn", scale=0, min_width=110)
 
             # ==================================================================
-            # 3. TELA DE CRIACAO DE TAREFA (WIZARD)
+            # 3. TELA DE CRIACAO DE TAREFA (WIZARD EM ETAPAS)
             # ==================================================================
             with gr.Column(visible=False, elem_classes="admin-panel") as painel_wizard:
                 with gr.Row(elem_classes="admin-header"):
-                    gr.Markdown("## Criador de Nova Tarefa de Pesquisa")
+                    gr.Markdown("## Criar Nova Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
-                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
+                        btn_voltar_hub_wizard = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
 
                 with gr.Column(elem_classes="form-wizard-card"):
                     gr.HTML("""
@@ -507,19 +507,16 @@ def construir_interface(
                         </div>
                     </div>
                     """)
-                    with gr.Row(elem_classes="wizard-grid"):
-                        with gr.Column(scale=1, min_width=0, elem_classes="wizard-col"):
-                            with gr.Column(elem_classes=["wizard-section-card", "card-pergunta"]):
-                                gr.HTML("""
-                                <div class="wizard-section-header">
-                                    <span class="wizard-badge">1</span>
-                                    <div>
-                                        <div class="admin-config-title" style="font-size: 11px; margin-bottom: 2px;">PARÂMETROS DA ANÁLISE</div>
-                                        <h4 class="wizard-section-title">Pergunta Norteadora e Opções de Resposta</h4>
-                                        <p class="wizard-section-subtitle">Defina o tema e as categorias de posicionamento para os anotadores</p>
-                                    </div>
-                                </div>
-                                """)
+
+                    with gr.Row(elem_classes="wizard-stepper-row"):
+                        btn_tab_passo1 = gr.Button("1 · Pergunta e Rótulos", elem_classes=["wizard-tab-btn", "active"], scale=1)
+                        btn_tab_passo2 = gr.Button("2 · Equipe e Acesso", elem_classes=["wizard-tab-btn"], scale=1)
+                        btn_tab_passo3 = gr.Button("3 · Vídeos e Reserva", elem_classes=["wizard-tab-btn"], scale=1)
+
+                    # ETAPA 1: Pergunta Norteadora e Opcoes de Resposta
+                    with gr.Column(visible=True, elem_classes=["wizard-step-container", "wizard-passo-1"]) as wizard_passo_1:
+                        with gr.Row(elem_classes="wizard-step-row"):
+                            with gr.Column(scale=1, min_width=0):
                                 wizard_titulo = gr.Textbox(
                                     label="Título da Tarefa",
                                     value=NOME_TAREFA_PADRAO,
@@ -530,92 +527,88 @@ def construir_interface(
                                     value=PERGUNTA_TAREFA_PADRAO,
                                     placeholder='Com relação ao target "{target}", como você classifica a posição deste vídeo?',
                                 )
+                            with gr.Column(scale=1, min_width=0):
                                 wizard_opcoes = gr.Textbox(
                                     label="Opções de Resposta (uma por linha)",
                                     value="\n".join(OPCOES_TAREFA_PADRAO),
-                                    lines=4,
+                                    lines=5,
                                 )
-                                with gr.Accordion("Pesos de discordância entre opções (avançado)", open=False, elem_classes="wizard-accordion"):
-                                    gr.HTML("<p class='wizard-section-subtitle' style='margin-bottom: 8px;'>Defina penalidades par a par usadas no cálculo do Alfa de Krippendorff ordinal.</p>")
-                                    tabela_penalidades_inicial = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
-                                    wizard_tabela_penalidades = gr.Dataframe(
-                                        value=tabela_penalidades_inicial,
-                                        headers=["Opção A", "Opção B", "Penalidade"],
-                                        datatype=["str", "str", "number"],
-                                        interactive=True,
-                                        elem_classes="pairwise-penalty-table",
-                                        max_height=200,
-                                    )
-                                    btn_atualizar_pares = gr.Button("Recalcular combinações", elem_classes=["ufmg-btn", "wizard-inline-btn"], scale=0)
+                        with gr.Accordion("Pesos de discordância entre opções (avançado)", open=False, elem_classes="wizard-accordion"):
+                            gr.HTML("<p class='wizard-section-subtitle' style='margin-bottom: 8px;'>Defina penalidades par a par usadas no cálculo do Alfa de Krippendorff ordinal.</p>")
+                            tabela_penalidades_inicial = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
+                            wizard_tabela_penalidades = gr.Dataframe(
+                                value=tabela_penalidades_inicial,
+                                headers=["Opção A", "Opção B", "Penalidade"],
+                                datatype=["str", "str", "number"],
+                                interactive=True,
+                                elem_classes="pairwise-penalty-table",
+                                max_height=180,
+                            )
+                            btn_atualizar_pares = gr.Button("Recalcular combinações", elem_classes=["ufmg-btn", "wizard-inline-btn"], scale=0)
 
-                        with gr.Column(scale=1, min_width=0, elem_classes="wizard-col"):
-                            with gr.Column(elem_classes=["wizard-section-card", "card-equipe"]):
-                                gr.HTML("""
-                                <div class="wizard-section-header">
-                                    <span class="wizard-badge badge-blue">2</span>
-                                    <div>
-                                        <div class="admin-config-title" style="font-size: 11px; margin-bottom: 2px; color: #0284c7;">COORDENAÇÃO & ACESSO</div>
-                                        <h4 class="wizard-section-title">Equipe, Sobreposição e Código de Convite</h4>
-                                        <p class="wizard-section-subtitle">Vagas de rotuladores, sobreposição estatística e chave de acesso</p>
-                                    </div>
-                                </div>
-                                """)
-                                with gr.Row(elem_classes="wizard-slider-row"):
-                                    wizard_vagas = gr.Slider(
-                                        label="Vagas de Rotuladores",
-                                        minimum=1,
-                                        maximum=20,
-                                        value=3,
-                                        step=1,
-                                    )
-                                    wizard_overlap = gr.Slider(
-                                        label="Sobreposição (%)",
-                                        minimum=0.0,
-                                        maximum=100.0,
-                                        value=20.0,
-                                        step=5.0,
-                                    )
-                                with gr.Row(elem_classes="wizard-action-row"):
-                                    wizard_convite = gr.Textbox(
-                                        label="Código de Convite",
-                                        value=gerar_codigo_convite(),
-                                        scale=1,
-                                    )
-                                    btn_copiar_codigo = gr.Button(
-                                        value="",
-                                        elem_id="btn_copiar_codigo_wizard",
-                                        elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-copiar"],
-                                        scale=0,
-                                        min_width=42,
-                                    )
-                                    btn_gerar_novo_codigo = gr.Button(
-                                        value="",
-                                        elem_id="btn_gerar_novo_codigo_wizard",
-                                        elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-refresh"],
-                                        scale=0,
-                                        min_width=42,
-                                    )
-                                with gr.Column(elem_classes="wizard-checkbox-card"):
-                                    wizard_admin_como_rotulador = gr.Checkbox(
-                                        label="Participar também como rotulador (Vaga 1)",
-                                        value=True,
-                                        elem_classes="wizard-checkbox",
-                                    )
+                        with gr.Row(elem_classes="wizard-step-footer"):
+                            btn_passo1_voltar_hub = gr.Button("← Voltar ao Hub", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=150)
+                            btn_passo1_proximo = gr.Button("Próximo: Equipe e Acesso →", elem_classes=["ufmg-btn", "wizard-next-btn"], scale=0, min_width=240)
 
-                            with gr.Column(elem_classes=["wizard-section-card", "card-videos"]):
-                                gr.HTML("""
-                                <div class="wizard-section-header">
-                                    <span class="wizard-badge badge-green">3</span>
-                                    <div>
-                                        <div class="admin-config-title" style="font-size: 11px; margin-bottom: 2px; color: #059669;">COLEÇÃO DE MÍDIA</div>
-                                        <h4 class="wizard-section-title">Vídeos e Reserva Técnica</h4>
-                                        <p class="wizard-section-subtitle">Dataset customizado ou coleção oficial de vídeos TikTok da UFMG</p>
-                                    </div>
-                                </div>
-                                <div class="wizard-info-callout">
-                                    <strong>Coleção Padrão Integrada:</strong> Caso nenhum arquivo CSV seja enviado, o TokStance carrega automaticamente o acervo oficial de 60 vídeos autênticos do TikTok.
-                                </div>
-                                """)
+                    # ETAPA 2: Equipe, Vagas e Codigo de Convite
+                    with gr.Column(visible=False, elem_classes=["wizard-step-container", "wizard-passo-2"]) as wizard_passo_2:
+                        with gr.Row(elem_classes="wizard-slider-row"):
+                            wizard_vagas = gr.Slider(
+                                label="Vagas de Rotuladores",
+                                minimum=1,
+                                maximum=20,
+                                value=3,
+                                step=1,
+                                scale=1,
+                            )
+                            wizard_overlap = gr.Slider(
+                                label="Sobreposição (%)",
+                                minimum=0.0,
+                                maximum=100.0,
+                                value=20.0,
+                                step=5.0,
+                                scale=1,
+                            )
+                        with gr.Row(elem_classes="wizard-action-row"):
+                            wizard_convite = gr.Textbox(
+                                label="Código de Convite",
+                                value=gerar_codigo_convite(),
+                                scale=1,
+                            )
+                            btn_copiar_codigo = gr.Button(
+                                value="",
+                                elem_id="btn_copiar_codigo_wizard",
+                                elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-copiar"],
+                                scale=0,
+                                min_width=42,
+                            )
+                            btn_gerar_novo_codigo = gr.Button(
+                                value="",
+                                elem_id="btn_gerar_novo_codigo_wizard",
+                                elem_classes=["wizard-icon-btn", "wizard-tool-btn", "btn-icon-refresh"],
+                                scale=0,
+                                min_width=42,
+                            )
+                        with gr.Column(elem_classes="wizard-checkbox-card"):
+                            wizard_admin_como_rotulador = gr.Checkbox(
+                                label="Participar também como rotulador (Vaga 1)",
+                                value=True,
+                                elem_classes="wizard-checkbox",
+                            )
+
+                        with gr.Row(elem_classes="wizard-step-footer"):
+                            btn_passo2_voltar = gr.Button("← Voltar ao Passo 1", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=160)
+                            btn_passo2_proximo = gr.Button("Próximo: Vídeos e Reserva →", elem_classes=["ufmg-btn", "wizard-next-btn"], scale=0, min_width=240)
+
+                    # ETAPA 3: Videos e Reserva Tecnica
+                    with gr.Column(visible=False, elem_classes=["wizard-step-container", "wizard-passo-3"]) as wizard_passo_3:
+                        gr.HTML("""
+                        <div class="wizard-info-callout">
+                            <strong>Coleção Padrão Integrada:</strong> Caso nenhum arquivo CSV seja enviado, o TokStance carrega automaticamente o acervo oficial de 60 vídeos autênticos do TikTok.
+                        </div>
+                        """)
+                        with gr.Row(elem_classes="wizard-step-row"):
+                            with gr.Column(scale=1, min_width=0):
                                 wizard_qtd_principal = gr.Number(
                                     label="Quantidade de vídeos a distribuir",
                                     info="O restante dos vídeos da coleção será direcionado para a reserva técnica.",
@@ -624,18 +617,19 @@ def construir_interface(
                                     minimum=1,
                                     elem_classes=["wizard-number-input"],
                                 )
+                            with gr.Column(scale=1, min_width=0):
                                 wizard_arquivo_videos = gr.File(
                                     label="CSV de Vídeos (opcional)",
                                     file_types=[".csv"],
-                                    height=110,
+                                    height=100,
                                     elem_classes=["wizard-file-upload"],
                                 )
 
-                    with gr.Column(elem_classes="wizard-footer-card"):
                         wizard_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot", "wizard-feedback-slot"])
-                        with gr.Row(elem_classes="wizard-submit-row"):
-                            btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"], scale=0, min_width=300)
-                    wizard_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot", "wizard-feedback-slot"])
+
+                        with gr.Row(elem_classes="wizard-step-footer"):
+                            btn_passo3_voltar = gr.Button("← Voltar ao Passo 2", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=160)
+                            btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"], scale=0, min_width=260)
 
             # ==================================================================
             # 4. TELA DE ROTULACAO (WORKSPACE DO ROTULADOR)
@@ -643,7 +637,7 @@ def construir_interface(
             with gr.Column(visible=False, elem_classes="labeler-panel") as painel_rotulador:
                 with gr.Row(elem_classes="labeler-header-bar"):
                     rotulador_tarefa_meta_topo = gr.HTML("<div class='workspace-header-title'><h2>Workspace de Rotulação</h2></div>", scale=1)
-                    btn_voltar_hub_rotulacao = gr.Button("← Sair do Workspace", elem_classes=["ufmg-btn", "labeler-exit-btn"], scale=0)
+                    btn_voltar_hub_rotulacao = gr.Button("← Sair", elem_classes=["ufmg-btn", "labeler-exit-btn"], scale=0)
 
                 with gr.Column(elem_classes="labeler-workspace-container"):
                     with gr.Column(visible=False, elem_classes="sensitive-warning-wrapper") as painel_aviso_sensivel:
@@ -688,7 +682,7 @@ def construir_interface(
                     admin_titulo_tarefa = gr.Markdown("## Console de Administração da Tarefa")
                     with gr.Row(elem_classes="compact-actions"):
                         btn_excluir_tarefa_admin = gr.Button("Excluir esta Tarefa", elem_classes=["ufmg-btn", "hub-btn", "btn-icon-trash"], scale=0, min_width=170)
-                        btn_voltar_hub_admin = gr.Button("← Voltar ao Painel Principal", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=180)
+                        btn_voltar_hub_admin = gr.Button("← Voltar ao Hub", elem_classes=["ufmg-btn", "hub-btn"], scale=0, min_width=150)
 
                 #primeira visao oficial: visao geral do acervo e distribuicao por target
                 admin_configuracao_view = gr.HTML(elem_classes="admin-configuration")
@@ -1047,11 +1041,53 @@ def construir_interface(
                 gr.update(value=""),
             )
 
-        #funcoes do wizard de criacao de tarefa
-        def abrir_wizard_criacao() -> Tuple[Any, Any, str, Any, str]:
+        #funcoes do wizard de criacao de tarefa em etapas
+        def ir_para_passo(passo: int) -> Tuple[Any, Any, Any, Any, Any, Any]:
+            if passo == 1:
+                return (
+                    gr.update(visible=True),
+                    gr.update(visible=False),
+                    gr.update(visible=False),
+                    gr.update(elem_classes=["wizard-tab-btn", "active"]),
+                    gr.update(elem_classes=["wizard-tab-btn"]),
+                    gr.update(elem_classes=["wizard-tab-btn"]),
+                )
+            elif passo == 2:
+                return (
+                    gr.update(visible=False),
+                    gr.update(visible=True),
+                    gr.update(visible=False),
+                    gr.update(elem_classes=["wizard-tab-btn", "completed"]),
+                    gr.update(elem_classes=["wizard-tab-btn", "active"]),
+                    gr.update(elem_classes=["wizard-tab-btn"]),
+                )
+            else:
+                return (
+                    gr.update(visible=False),
+                    gr.update(visible=False),
+                    gr.update(visible=True),
+                    gr.update(elem_classes=["wizard-tab-btn", "completed"]),
+                    gr.update(elem_classes=["wizard-tab-btn", "completed"]),
+                    gr.update(elem_classes=["wizard-tab-btn", "active"]),
+                )
+
+        def abrir_wizard_criacao() -> Tuple[Any, Any, str, Any, str, Any, Any, Any, Any, Any, Any]:
             novo_codigo = gerar_codigo_convite()
             tabela_df = gerar_tabela_penalidades_df("\n".join(OPCOES_TAREFA_PADRAO))
-            return gr.update(visible=False), gr.update(visible=True), novo_codigo, tabela_df, ""
+            p1, p2, p3, t1, t2, t3 = ir_para_passo(1)
+            return (
+                gr.update(visible=False),
+                gr.update(visible=True),
+                novo_codigo,
+                tabela_df,
+                "",
+                p1,
+                p2,
+                p3,
+                t1,
+                t2,
+                t3,
+            )
 
         def voltar_hub_de_wizard(sessao: Dict[str, Any]) -> Tuple[Any, Any, str, str, str, str]:
             h_adm, h_rot, saudacao = atualizar_visoes_hub(sessao)
@@ -1744,10 +1780,31 @@ def construir_interface(
             outputs=saidas_hub,
         )
 
+        wizard_passo_outputs = [
+            wizard_passo_1,
+            wizard_passo_2,
+            wizard_passo_3,
+            btn_tab_passo1,
+            btn_tab_passo2,
+            btn_tab_passo3,
+        ]
+
         btn_ir_criar_tarefa.click(
             abrir_wizard_criacao,
             inputs=[],
-            outputs=[painel_hub, painel_wizard, wizard_convite, wizard_tabela_penalidades, wizard_aviso],
+            outputs=[
+                painel_hub,
+                painel_wizard,
+                wizard_convite,
+                wizard_tabela_penalidades,
+                wizard_aviso,
+                wizard_passo_1,
+                wizard_passo_2,
+                wizard_passo_3,
+                btn_tab_passo1,
+                btn_tab_passo2,
+                btn_tab_passo3,
+            ],
         )
 
         btn_voltar_hub_wizard.click(
@@ -1762,6 +1819,28 @@ def construir_interface(
                 wizard_aviso,
             ],
         )
+
+        btn_passo1_voltar_hub.click(
+            voltar_hub_de_wizard,
+            inputs=[estado_sessao],
+            outputs=[
+                painel_hub,
+                painel_wizard,
+                hub_admin_cards_html,
+                hub_rotulador_cards_html,
+                hub_saudacao,
+                wizard_aviso,
+            ],
+        )
+
+        btn_passo1_proximo.click(lambda: ir_para_passo(2), inputs=[], outputs=wizard_passo_outputs)
+        btn_passo2_voltar.click(lambda: ir_para_passo(1), inputs=[], outputs=wizard_passo_outputs)
+        btn_passo2_proximo.click(lambda: ir_para_passo(3), inputs=[], outputs=wizard_passo_outputs)
+        btn_passo3_voltar.click(lambda: ir_para_passo(2), inputs=[], outputs=wizard_passo_outputs)
+
+        btn_tab_passo1.click(lambda: ir_para_passo(1), inputs=[], outputs=wizard_passo_outputs)
+        btn_tab_passo2.click(lambda: ir_para_passo(2), inputs=[], outputs=wizard_passo_outputs)
+        btn_tab_passo3.click(lambda: ir_para_passo(3), inputs=[], outputs=wizard_passo_outputs)
 
         def atualizar_qtd_videos_upload(arquivo_upload: Any) -> Any:
             """Atualiza dinamicamente a contagem pre-preenchida de videos a distribuir conforme upload."""

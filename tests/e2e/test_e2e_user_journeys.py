@@ -407,9 +407,10 @@ def test_e2e_criacao_de_tarefa_e_auditoria_console_administrador(
 
     pagina_navegador.wait_for_selector(".hub-header-bar", timeout=10000)
 
-    #act open wizard
+    #act open wizard e avancar para etapa de submissao
     pagina_navegador.locator(".hub-plus-admin").click()
     pagina_navegador.wait_for_selector(".admin-panel", timeout=10000)
+    pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
 
     #act submit task with default videos
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
@@ -607,6 +608,7 @@ def test_e2e_criacao_de_multiplas_tarefas_exibe_mensagem_em_todas_e_em_falhas(
     pagina_navegador.wait_for_selector(".admin-panel", timeout=8000)
 
     #act criar primeira tarefa com sucesso
+    pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
 
     #assert toast e aviso inline exibidos para a primeira tarefa
@@ -620,7 +622,9 @@ def test_e2e_criacao_de_multiplas_tarefas_exibe_mensagem_em_todas_e_em_falhas(
     assert "criada com sucesso" in (inline_aviso.text_content() or "").lower()
 
     #act criar segunda tarefa consecutiva com outro titulo
+    pagina_navegador.get_by_role("button", name=re.compile(r"1 · Pergunta")).click()
     pagina_navegador.get_by_label("Título da Tarefa").fill("Estudo de Posicionamento Segundo Lote")
+    pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
 
     #assert mensagem de sucesso exibida tambem para a segunda tarefa
@@ -632,7 +636,9 @@ def test_e2e_criacao_de_multiplas_tarefas_exibe_mensagem_em_todas_e_em_falhas(
     assert "criada com sucesso" in (inline_aviso.text_content() or "").lower()
 
     #act forcar falha informando apenas uma opcao de resposta
+    pagina_navegador.get_by_role("button", name=re.compile(r"1 · Pergunta")).click()
     pagina_navegador.get_by_label("Opções de Resposta (uma por linha)").fill("ApenasUmaOpcao")
+    pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
 
     #assert mensagem de erro exibida no toast e no aviso inline
@@ -659,6 +665,7 @@ def test_e2e_redefinicao_senha_preserva_tarefas_administradas_atribuidas_e_progr
     pagina_navegador.locator(".hub-plus-admin").click()
     pagina_navegador.wait_for_selector(".admin-panel", timeout=8000)
     pagina_navegador.get_by_label("Título da Tarefa").fill("Estudo Preservação de Progresso")
+    pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
     pagina_navegador.locator(".wizard-feedback-slot .auth-inline-success").wait_for(state="visible", timeout=8000)
 
