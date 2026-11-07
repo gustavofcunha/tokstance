@@ -37,6 +37,7 @@ test-results/
 # Local runtime data and databases
 data/*.db
 data/*.sqlite3
+data/*.jsonl
 data/*.csv
 !data/videos.csv
 !data/videos_reserva.csv
