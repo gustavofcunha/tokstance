@@ -79,29 +79,21 @@ df -h /
 
 O serviço de produção executa o código que reside em **`/opt/tokstance`**. Quando você fizer alterações no computador local e der `git push origin main`:
 
-### Opção Rápida (Recomendada):
-Conecte-se na VM pelo terminal e execute:
+### Opção Rápida (Script Automatizado de Atualização de Código):
+Conecte-se na VM pelo terminal e execute o script genérico (ele puxa o Git, sincroniza dependências e reinicia o serviço, **sem alterar o banco de dados**):
 
 ```bash
-# 1. Navegar até a pasta do serviço em produção
 cd /opt/tokstance
-
-# 2. Puxar as novidades do GitHub
-git pull origin main
-
-# 3. (Opcional) Instalar novas bibliotecas se requirements.txt tiver mudado:
-# /opt/tokstance/.venv/bin/pip install -r requirements.txt
-
-# 4. Reiniciar o serviço para carregar o novo código
-sudo systemctl restart tokstance.service
+bash deploy/atualizar.sh
 ```
 
-### Opção Automatizada (Re-executar o script de provisionamento):
+### Reiniciar o Banco de Dados com Dados de Demonstração (Demo):
+Caso deseje resetar a base relacional SQLite para o estado original da avaliação do professor com os vídeos autênticos de `videos.csv`:
+
 ```bash
-cd ~/tokstance
-./deploy/setup_vm.sh
+cd /opt/tokstance
+bash deploy/resetar_banco_demo.sh
 ```
-*(O script detecta `/opt/tokstance`, faz o pull, atualiza pacotes/seeds e reinicia o serviço)*.
 
 ---
 
