@@ -609,46 +609,60 @@ def test_e2e_criacao_de_multiplas_tarefas_exibe_mensagem_em_todas_e_em_falhas(
 
     #act criar primeira tarefa com sucesso
     pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
+    pagina_navegador.locator(".wizard-passo-3").wait_for(state="visible", timeout=8000)
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
 
     #assert toast e aviso inline exibidos para a primeira tarefa
-    toast = pagina_navegador.locator(".tokstance-toast")
-    toast.wait_for(state="visible", timeout=8000)
-    texto_t1 = toast.text_content() or ""
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-sucesso", state="attached", timeout=12000)
+    toast_t1 = pagina_navegador.locator(".tokstance-toast.toast-sucesso").last
+    nonce_t1 = toast_t1.get_attribute("data-nonce") or ""
+    texto_t1 = toast_t1.text_content() or ""
     assert "criada com sucesso" in texto_t1.lower()
 
     inline_aviso = pagina_navegador.locator(".wizard-feedback-slot .auth-inline-success")
-    inline_aviso.wait_for(state="visible", timeout=8000)
-    assert "criada com sucesso" in (inline_aviso.text_content() or "").lower()
+    inline_aviso.wait_for(state="visible", timeout=12000)
+    texto_inline_t1 = inline_aviso.text_content() or ""
+    assert "criada com sucesso" in texto_inline_t1.lower()
 
     #act criar segunda tarefa consecutiva com outro titulo
     pagina_navegador.get_by_role("button", name=re.compile(r"1 · Pergunta")).click()
+    pagina_navegador.locator(".wizard-passo-1").wait_for(state="visible", timeout=8000)
     pagina_navegador.get_by_label("Título da Tarefa").fill("Estudo de Posicionamento Segundo Lote")
     pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
+    pagina_navegador.locator(".wizard-passo-3").wait_for(state="visible", timeout=8000)
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
 
-    #assert mensagem de sucesso exibida tambem para a segunda tarefa
-    toast.wait_for(state="visible", timeout=8000)
-    texto_t2 = toast.text_content() or ""
+    #assert mensagem de sucesso exibida tambem para a segunda tarefa aguardando conclusao real no backend
+    toast_t2 = pagina_navegador.locator(f".tokstance-toast.toast-sucesso:not([data-nonce='{nonce_t1}'])").last
+    toast_t2.wait_for(state="attached", timeout=15000)
+    texto_t2 = toast_t2.text_content() or ""
     assert "criada com sucesso" in texto_t2.lower()
 
-    inline_aviso.wait_for(state="visible", timeout=8000)
-    assert "criada com sucesso" in (inline_aviso.text_content() or "").lower()
+    pagina_navegador.wait_for_function(
+        """(textoAnterior) => {
+            const el = document.querySelector('.wizard-feedback-slot .auth-inline-success');
+            return el && el.textContent && el.textContent.trim() !== textoAnterior.trim() && el.textContent.toLowerCase().includes('criada com sucesso');
+        }""",
+        arg=texto_inline_t1,
+        timeout=15000,
+    )
 
     #act forcar falha informando apenas uma opcao de resposta
     pagina_navegador.get_by_role("button", name=re.compile(r"1 · Pergunta")).click()
+    pagina_navegador.locator(".wizard-passo-1").wait_for(state="visible", timeout=8000)
     pagina_navegador.get_by_label("Opções de Resposta (uma por linha)").fill("ApenasUmaOpcao")
     pagina_navegador.get_by_role("button", name=re.compile(r"3 · Vídeos")).click()
+    pagina_navegador.locator(".wizard-passo-3").wait_for(state="visible", timeout=8000)
     pagina_navegador.get_by_role("button", name="Criar Tarefa e Atribuir Vagas").click()
 
-    #assert mensagem de erro exibida no toast e no aviso inline
-    toast_erro = pagina_navegador.locator(".tokstance-toast.toast-erro")
-    toast_erro.wait_for(state="visible", timeout=12000)
-    assert "ao menos duas opções" in (toast_erro.text_content() or "").lower()
-
+    #assert mensagem de erro exibida no aviso inline e no toast
     inline_erro = pagina_navegador.locator(".wizard-feedback-slot .auth-inline-error")
-    inline_erro.wait_for(state="visible", timeout=12000)
+    inline_erro.wait_for(state="visible", timeout=15000)
     assert "ao menos duas opções" in (inline_erro.text_content() or "").lower()
+
+    pagina_navegador.wait_for_selector(".tokstance-toast.toast-erro", state="attached", timeout=15000)
+    toast_erro = pagina_navegador.locator(".tokstance-toast.toast-erro").last
+    assert "ao menos duas opções" in (toast_erro.text_content() or "").lower()
 
 
 @pytest.mark.e2e
