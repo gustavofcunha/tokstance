@@ -1189,6 +1189,17 @@ def test_recuperacao_senha_transiciona_estagios_ocultando_passos_anteriores(
     assert res_redef[-2].get("visible") is False  # recuperar_passo_codigo oculto
     assert res_redef[-1].get("visible") is False  # recuperar_passo_senha oculto
 
+    # Campos de senha e confirmacao em cadastro e recuperacao ficam empilhados verticalmente (nao em gr.Row)
+    campos_senha = [
+        comp for comp in app.blocks.values()
+        if isinstance(comp, gr.Textbox) and getattr(comp, "label", "") in {
+            "Senha de Acesso", "Confirmar Senha", "Nova Senha", "Confirmar Nova Senha"
+        }
+    ]
+    assert len(campos_senha) >= 4
+    for campo in campos_senha:
+        assert not isinstance(campo.parent, gr.Row)
+
 
 
 

@@ -379,23 +379,20 @@ def construir_interface(
                             )
                             cadastro_usuario = gr.Textbox(label="Nome de Usuário", placeholder="Ex: pesquisador_1")
                             cadastro_email = gr.Textbox(label="E-mail", placeholder="Ex: usuario@dominio.com")
-                            with gr.Row():
-                                cadastro_senha = gr.Textbox(
-                                    label="Senha de Acesso",
-                                    type="password",
-                                    placeholder="Mínimo 6 caracteres (letras e números)",
-                                    info="Mínimo de 6 caracteres, com ao menos uma letra e um número.",
-                                    scale=1,
-                                    elem_classes=["campo-senha-com-olho"],
-                                )
-                                cadastro_confirma = gr.Textbox(
-                                    label="Confirmar Senha",
-                                    type="password",
-                                    placeholder="Repita a senha",
-                                    info="Digite novamente a senha para confirmação.",
-                                    scale=1,
-                                    elem_classes=["campo-senha-com-olho"],
-                                )
+                            cadastro_senha = gr.Textbox(
+                                label="Senha de Acesso",
+                                type="password",
+                                placeholder="Mínimo 6 caracteres (letras e números)",
+                                info="Mínimo de 6 caracteres, com ao menos uma letra e um número.",
+                                elem_classes=["campo-senha-com-olho"],
+                            )
+                            cadastro_confirma = gr.Textbox(
+                                label="Confirmar Senha",
+                                type="password",
+                                placeholder="Repita a senha",
+                                info="Digite novamente a senha para confirmação.",
+                                elem_classes=["campo-senha-com-olho"],
+                            )
                             cadastro_convite = gr.Textbox(label="Código de Convite (opcional)", placeholder="Ex: TOKSTANCE-2026")
                             cadastro_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                             btn_cadastrar = gr.Button("Cadastrar e Acessar", elem_classes="ufmg-btn", size="lg")
@@ -415,23 +412,20 @@ def construir_interface(
                                     btn_verificar_codigo = gr.Button("Verificar Código", elem_classes="ufmg-btn", size="lg")
 
                             with gr.Column(visible=False) as recuperar_passo_senha:
-                                with gr.Row():
-                                    recuperar_nova_senha = gr.Textbox(
-                                        label="Nova Senha",
-                                        type="password",
-                                        placeholder="Mínimo 6 caracteres (letras e números)",
-                                        info="Mínimo de 6 caracteres, com ao menos uma letra e um número.",
-                                        scale=1,
-                                        elem_classes=["campo-senha-com-olho"],
-                                    )
-                                    recuperar_confirma_senha = gr.Textbox(
-                                        label="Confirmar Nova Senha",
-                                        type="password",
-                                        placeholder="Repita a nova senha",
-                                        info="Digite novamente a nova senha para confirmação.",
-                                        scale=1,
-                                        elem_classes=["campo-senha-com-olho"],
-                                    )
+                                recuperar_nova_senha = gr.Textbox(
+                                    label="Nova Senha",
+                                    type="password",
+                                    placeholder="Mínimo 6 caracteres (letras e números)",
+                                    info="Mínimo de 6 caracteres, com ao menos uma letra e um número.",
+                                    elem_classes=["campo-senha-com-olho"],
+                                )
+                                recuperar_confirma_senha = gr.Textbox(
+                                    label="Confirmar Nova Senha",
+                                    type="password",
+                                    placeholder="Repita a nova senha",
+                                    info="Digite novamente a nova senha para confirmação.",
+                                    elem_classes=["campo-senha-com-olho"],
+                                )
                                 recuperar_aviso_senha = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
                                 btn_redefinir_senha = gr.Button("Redefinir Senha", elem_classes="ufmg-btn", size="lg")
 
