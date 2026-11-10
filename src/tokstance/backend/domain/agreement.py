@@ -109,6 +109,7 @@ def calcular_concordancia(
     discordancia_observada = 0.0
     total_pares = 0
     videos_com_discordancia: list[dict[str, Any]] = []
+    resultados_filtrados = resultados[mascara_valida]
     for id_video, rotulos in utilizaveis.items():
         distancias = [
             distancia_rotulos(
@@ -120,10 +121,29 @@ def calcular_concordancia(
         discordancia_observada += sum(distancias)
         total_pares += len(distancias)
         if any(distancia > 0 for distancia in distancias):
+            grupo_video = resultados_filtrados[
+                resultados_filtrados["video_id"].astype(str) == str(id_video)
+            ]
+            anotacoes_por_rotulador: list[dict[str, str]] = []
+            url_video = ""
+            target_video = ""
+            for linha in grupo_video.itertuples():
+                rot_nome = str(getattr(linha, "labeler", "") or "").strip()
+                pos_nome = str(getattr(linha, "stance", "") or "").strip()
+                if not url_video:
+                    url_video = str(getattr(linha, "url", "") or "").strip()
+                if not target_video:
+                    target_video = str(getattr(linha, "target", "") or "").strip()
+                anotacoes_por_rotulador.append(
+                    {"rotulador": rot_nome, "stance": pos_nome}
+                )
             videos_com_discordancia.append(
                 {
                     "video_id": str(id_video),
+                    "url": url_video,
+                    "target": target_video,
                     "anotacoes": rotulos,
+                    "anotacoes_por_rotulador": anotacoes_por_rotulador,
                     "discordancia_ordinal": round(
                         sum(distancias) / len(distancias), 4
                     ),
@@ -152,11 +172,25 @@ def calcular_concordancia(
         key=lambda item: item["discordancia_ordinal"], reverse=True
     )
 
+    contagem_total_por_rotulador: dict[str, int] = {}
+    if "labeler" in resultados_filtrados.columns:
+        contagem_total_por_rotulador = (
+            resultados_filtrados.groupby("labeler")["video_id"]
+            .nunique()
+            .astype(int)
+            .to_dict()
+        )
+
     discordancias_por_rotulador: dict[str, float] = {}
+    videos_comparados_por_rotulador: dict[str, int] = {}
+    videos_divergentes_por_rotulador: dict[str, int] = {}
     resultados_validos = resultados[resultados["video_id"].isin(utilizaveis.index)]
     for _, resultados_video in resultados_validos.groupby("video_id"):
         rotulos = resultados_video["stance"].tolist()
         for linha in resultados_video.itertuples():
+            videos_comparados_por_rotulador[linha.labeler] = (
+                videos_comparados_por_rotulador.get(linha.labeler, 0) + 1
+            )
             outros_rotulos = [
                 rotulo for rotulo in rotulos if rotulo != linha.stance
             ]
@@ -168,10 +202,30 @@ def calcular_concordancia(
                 discordancias_por_rotulador[linha.labeler] = (
                     discordancias_por_rotulador.get(linha.labeler, 0.0) + pontuacao
                 )
+                videos_divergentes_por_rotulador[linha.labeler] = (
+                    videos_divergentes_por_rotulador.get(linha.labeler, 0) + 1
+                )
 
     ranking_rotuladores = [
         {
             "rotulador": rotulador,
+            "labeler": rotulador,
+            "quantidade_videos": int(
+                contagem_total_por_rotulador.get(
+                    rotulador, videos_comparados_por_rotulador.get(rotulador, 0)
+                )
+            ),
+            "videos_comparados": int(
+                videos_comparados_por_rotulador.get(rotulador, 0)
+            ),
+            "videos_divergentes": int(
+                videos_divergentes_por_rotulador.get(rotulador, 0)
+            ),
+            "penalidade_media": round(
+                pontuacao
+                / max(1, videos_comparados_por_rotulador.get(rotulador, 1)),
+                2,
+            ),
             "penalidade": round(pontuacao, 2),
         }
         for rotulador, pontuacao in discordancias_por_rotulador.items()

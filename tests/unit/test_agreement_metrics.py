@@ -159,8 +159,17 @@ def test_calcular_concordancia_classifica_rotulador_divergente_no_topo_das_penal
 
     assert penalidades[0]["rotulador"] == "carol"
     assert penalidades[0]["penalidade"] == 3.0
+    assert penalidades[0]["quantidade_videos"] == 2
+    assert penalidades[0]["videos_divergentes"] == 2
+    assert penalidades[0]["penalidade_media"] == 1.5
     assert penalidades[-1]["rotulador"] == "bob"
     assert penalidades[-1]["penalidade"] == 2.0
+    assert penalidades[-1]["quantidade_videos"] == 2
+    assert resumo["videos_com_discordancia"][0]["anotacoes_por_rotulador"] == [
+        {"rotulador": "alice", "stance": "Contra"},
+        {"rotulador": "bob", "stance": "Neutro"},
+        {"rotulador": "carol", "stance": "A Favor"},
+    ]
 
 
 @pytest.mark.unit

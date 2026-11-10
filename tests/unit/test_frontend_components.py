@@ -166,7 +166,14 @@ def test_admin_insights_html_and_agreement_summary() -> None:
         }
     ])
     videos = pd.DataFrame([
-        {"id": "vid1", "target": "Alvo A", "video_duration": "20.0"},
+        {
+            "id": "vid1",
+            "url": "https://www.tiktok.com/@canal/video/7111222333444555666",
+            "target": "Alvo A",
+            "video_description": "Descrição detalhada do vídeo divergente.",
+            "voice_to_text": "Transcrição completa do áudio do vídeo.",
+            "video_duration": "20.0",
+        },
         {"id": "vid2", "target": "Alvo A", "video_duration": "25.0"},
     ])
     concordancia = {
@@ -221,6 +228,16 @@ def test_admin_insights_html_and_agreement_summary() -> None:
     assert "rodada_piloto" in html_dashboard
     assert "Anotações mais rápidas que o vídeo" in html_dashboard
     assert "Vídeos concluídos por dia e rotulador" in html_dashboard
+    assert "Qtd. de Vídeos" in html_dashboard
+    assert "Média / Vídeo" in html_dashboard
+    assert "Penalidade acumulada" in html_dashboard
+    assert "https://www.tiktok.com/@canal/video/7111222333444555666" in html_dashboard
+    assert "Descrição detalhada do vídeo divergente." in html_dashboard
+    assert "Transcrição completa do áudio do vídeo." in html_dashboard
+    assert "annotator-vote-item" in html_dashboard
+    assert "disagreement-full-row" in html_dashboard
+    assert "tokstanceFiltrarDiscordancia" in html_dashboard
+    assert "Assistir vídeo" in html_dashboard
 
 
 def test_construir_interface_and_hub_cards() -> None:

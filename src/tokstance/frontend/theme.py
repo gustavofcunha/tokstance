@@ -95,10 +95,78 @@ JS_FORCAR_MODO_CLARO = """
         });
     }
 
+    function configurarFuncoesDiscordancia() {
+        window.tokstanceAplicarFiltrosDiscordancia = function(cardEl) {
+            if (!cardEl) return;
+            const inputEl = cardEl.querySelector('.disagreement-search-input');
+            const termo = inputEl ? (inputEl.value || '').trim().toLowerCase() : '';
+            const btnAtivo = cardEl.querySelector('.disagreement-filter-btn.active');
+            const sevFiltro = btnAtivo ? (btnAtivo.getAttribute('data-filter') || 'all') : 'all';
+            const linhas = cardEl.querySelectorAll('tr.disagreement-row');
+            let visiveis = 0;
+            linhas.forEach(function(tr) {
+                const sev = tr.getAttribute('data-severity') || '';
+                const busca = (tr.getAttribute('data-search') || tr.innerText || '').toLowerCase();
+                const passaSev = (sevFiltro === 'all') || (sev === sevFiltro);
+                const passaTermo = !termo || busca.indexOf(termo) !== -1;
+                if (passaSev && passaTermo) {
+                    tr.style.display = '';
+                    visiveis += 1;
+                } else {
+                    tr.style.display = 'none';
+                }
+            });
+            const linhaVazia = cardEl.querySelector('.disagreement-no-match-row');
+            if (linhaVazia) {
+                linhaVazia.style.display = (linhas.length > 0 && visiveis === 0) ? '' : 'none';
+            }
+        };
+
+        window.tokstanceFiltrarDiscordancia = function(inputEl) {
+            const cardEl = inputEl ? inputEl.closest('.disagreement-full-card') : document.querySelector('.disagreement-full-card');
+            window.tokstanceAplicarFiltrosDiscordancia(cardEl);
+        };
+
+        window.tokstanceFiltrarSeveridade = function(btnEl, sev) {
+            if (!btnEl) return;
+            const cardEl = btnEl.closest('.disagreement-full-card') || document.querySelector('.disagreement-full-card');
+            if (cardEl) {
+                cardEl.querySelectorAll('.disagreement-filter-btn').forEach(function(b) {
+                    b.classList.toggle('active', b === btnEl);
+                });
+                window.tokstanceAplicarFiltrosDiscordancia(cardEl);
+            }
+        };
+
+        window.tokstanceAlternarPlayer = function(btnEl, containerId, url) {
+            const box = document.getElementById(containerId);
+            if (!box) return;
+            const aberto = box.style.display !== 'none' && box.innerHTML.trim() !== '';
+            if (aberto) {
+                box.style.display = 'none';
+                box.innerHTML = '';
+                if (btnEl) {
+                    btnEl.innerText = '▶ Assistir vídeo';
+                    btnEl.classList.remove('active');
+                }
+            } else {
+                const limpo = String(url || '').replace(/\/+$/, '').split('/').pop().split('?')[0];
+                const playerUrl = 'https://www.tiktok.com/player/v1/' + encodeURIComponent(limpo) + '?music_info=1&description=1&rel=0';
+                box.innerHTML = '<iframe src="' + playerUrl + '" title="Preview do vídeo TikTok" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen scrolling="no"></iframe>';
+                box.style.display = 'block';
+                if (btnEl) {
+                    btnEl.innerText = '✕ Ocultar vídeo';
+                    btnEl.classList.add('active');
+                }
+            }
+        };
+    }
+
     function executarRotinasInterface() {
         varrerCamposSenha();
         reiniciarAnimacaoToasts();
         configurarAtalhoEnter();
+        configurarFuncoesDiscordancia();
     }
 
     function configurarAtalhoEnter() {
@@ -1751,8 +1819,106 @@ APP_CSS = """
     .kpi { border: 1px solid #e2e8f0; border-left: 4px solid #9c0014; padding: 14px 16px; background: #fffafa; border-radius: 6px; }
     .kpi span { display: block; color: #475569; font-size: 14px; text-transform: uppercase; font-weight: 700; }
     .kpi strong { display: block; color: #9c0014; font-size: 28px; margin-top: 4px; font-weight: 800; }
-    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 20px; }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1.38fr); gap: 20px; align-items: stretch; }
     .analytics-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 20px; margin-top: 20px; }
+    .disagreement-full-row { width: 100%; margin-top: 20px; }
+    .disagreement-full-card { width: 100%; border-top: 4px solid #9c0014 !important; padding: 22px !important; box-sizing: border-box !important; }
+    .penalty-leaderboard-card { border-top: 4px solid #176b87 !important; display: flex; flex-direction: column; }
+    .daily-annotation-chart { border-top: 4px solid #b56b00 !important; display: flex; flex-direction: column; }
+    .card-heading-block { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 2px; }
+    .card-heading-block h3 { margin: 2px 0 4px !important; font-size: 19px; color: #0f172a; font-weight: 800; }
+
+    /* Tabela de Anotadores com Maior Penalidade */
+    .penalty-table { width: 100%; border-collapse: collapse; margin-top: 4px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+    .penalty-table th { font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; color: #475569 !important; background: #f8fafc !important; padding: 10px 10px !important; font-weight: 700 !important; border-bottom: 2px solid #e2e8f0 !important; white-space: nowrap !important; }
+    .penalty-table td { padding: 12px 10px !important; vertical-align: middle !important; border-bottom: 1px solid #f1f5f9 !important; font-size: 13.5px !important; }
+    .penalty-table .th-right, .penalty-table .td-penalty-total { text-align: right !important; }
+    .penalty-annotator-cell { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .penalty-rank-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 6px; border-radius: 6px; background: #f1f5f9 !important; color: #475569 !important; font-size: 11.5px; font-weight: 800; border: 1px solid #cbd5e1; }
+    .penalty-table tbody tr:first-child .penalty-rank-badge { background: #fff0f2 !important; color: #9c0014 !important; border-color: #ffd6dc !important; }
+    .penalty-user-name { color: #0f172a !important; font-weight: 700; font-size: 14px; }
+    .penalty-videos-cell { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 6px; white-space: nowrap; }
+    .penalty-videos-count { color: #1e293b !important; font-size: 13.5px; }
+    .penalty-videos-count strong { color: #0f172a !important; font-weight: 800; }
+    .penalty-divergent-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #fff8eb !important; color: #9a5b00 !important; border: 1px solid #fde68a !important; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .penalty-avg-badge { display: inline-block; padding: 3px 8px; border-radius: 6px; background: #f8fafc !important; color: #334155 !important; border: 1px solid #e2e8f0 !important; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+    .penalty-avg-badge small { color: #64748b !important; font-weight: 500; font-size: 11px; }
+    .penalty-bar-wrap { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; white-space: nowrap; }
+    .penalty-total-val { font-size: 15px; font-weight: 800; color: #9c0014 !important; min-width: 38px; text-align: right; }
+    .penalty-bar-track { width: 78px; min-width: 60px; height: 8px; background: #f1f5f9 !important; border-radius: 999px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06); }
+    .penalty-bar-fill { height: 100%; background: linear-gradient(90deg, #d34758 0%, #9c0014 100%) !important; border-radius: 999px; transition: width 0.3s ease; }
+    .penalty-summary-footer { margin-top: auto; padding-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .penalty-stat-item { padding: 10px 12px; border: 1px solid #e2e8f0 !important; border-radius: 6px; background: #f8fafc !important; display: flex; flex-direction: column; gap: 2px; }
+    .penalty-stat-item span { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b !important; }
+    .penalty-stat-item strong { font-size: 17px; font-weight: 800; color: #0f172a !important; }
+
+    /* Quadro Interativo de Videos com Maior Discordancia (Largura Total) */
+    .disagreement-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .disagreement-card-header h3 { margin: 2px 0 4px !important; font-size: 20px; font-weight: 800; color: #0f172a; }
+    .disagreement-total-badge { padding: 5px 12px; border-radius: 999px; background: #fff0f2 !important; color: #9c0014 !important; border: 1px solid #ffd6dc !important; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+    .disagreement-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 10px 0 16px; padding: 12px 14px; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; border-radius: 8px; flex-wrap: wrap; }
+    .disagreement-search-wrap { flex: 1 1 320px; min-width: 240px; }
+    .disagreement-search-input { width: 100% !important; height: 38px !important; padding: 6px 12px !important; font-size: 13.5px !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important; background: #ffffff !important; color: #0f172a !important; box-sizing: border-box !important; }
+    .disagreement-search-input:focus { border-color: #9c0014 !important; box-shadow: 0 0 0 3px rgba(156, 0, 20, 0.1) !important; }
+    .disagreement-filter-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .disagreement-filter-btn { height: 36px !important; padding: 0 13px !important; border-radius: 6px !important; border: 1px solid #cbd5e1 !important; background: #ffffff !important; color: #475569 !important; font-size: 12.5px !important; font-weight: 700 !important; cursor: pointer !important; transition: all 0.15s ease !important; }
+    .disagreement-filter-btn:hover { border-color: #94a3b8 !important; color: #0f172a !important; background: #f1f5f9 !important; }
+    .disagreement-filter-btn.active { background: #9c0014 !important; color: #ffffff !important; border-color: #9c0014 !important; box-shadow: 0 2px 6px rgba(156, 0, 20, 0.2) !important; }
+
+    .disagreement-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff !important; }
+    .disagreement-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 920px; }
+    .disagreement-table th { font-size: 12px !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; color: #475569 !important; background: #f8fafc !important; padding: 12px 14px !important; font-weight: 700 !important; border-bottom: 2px solid #e2e8f0 !important; }
+    .disagreement-table td { padding: 14px !important; vertical-align: top !important; border-bottom: 1px solid #e2e8f0 !important; font-size: 13.5px !important; }
+    .disagreement-table .th-col-video { width: 25%; }
+    .disagreement-table .th-col-context { width: 41%; }
+    .disagreement-table .th-col-votes { width: 22%; }
+    .disagreement-table .th-col-dist { width: 12%; text-align: right !important; }
+
+    .disagreement-target-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .disagreement-target-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b !important; }
+    .disagreement-target-pill { display: inline-block; padding: 2px 9px; border-radius: 6px; background: #fff0f2 !important; color: #9c0014 !important; border: 1px solid #ffd6dc !important; font-size: 12px; font-weight: 800; }
+    .disagreement-url-link { display: inline-flex; align-items: flex-start; gap: 6px; color: #176b87 !important; font-weight: 700; font-size: 12.5px; line-height: 1.4; text-decoration: none !important; overflow-wrap: anywhere; padding: 7px 10px; background: #f0f9ff !important; border: 1px solid #bae6fd !important; border-radius: 6px; transition: all 0.15s ease; width: 100%; box-sizing: border-box; }
+    .disagreement-url-link:hover { background: #e0f2fe !important; border-color: #7dd3fc !important; color: #0e4c61 !important; text-decoration: underline !important; }
+    .disagreement-url-link .url-ext-icon { flex: 0 0 13px; margin-top: 2px; color: #176b87 !important; }
+    .disagreement-url-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .disagreement-mini-btn { padding: 5px 10px !important; font-size: 12px !important; font-weight: 700 !important; border-radius: 6px !important; border: 1px solid #cbd5e1 !important; background: #ffffff !important; color: #334155 !important; cursor: pointer !important; transition: all 0.15s ease !important; }
+    .disagreement-mini-btn:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; color: #0f172a !important; }
+    .disagreement-mini-btn.preview-toggle-btn { background: #fffafa !important; color: #9c0014 !important; border-color: #fecdd3 !important; }
+    .disagreement-mini-btn.preview-toggle-btn:hover, .disagreement-mini-btn.preview-toggle-btn.active { background: #9c0014 !important; color: #ffffff !important; border-color: #9c0014 !important; }
+    .disagreement-inline-player { margin-top: 10px; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; background: #000000 !important; width: 100%; max-width: 280px; }
+    .disagreement-inline-player iframe { width: 100% !important; height: 460px !important; border: none !important; display: block !important; }
+
+    .disagreement-context-grid { display: flex; flex-direction: column; gap: 8px; }
+    .disagreement-context-box { padding: 9px 12px; border: 1px solid #e2e8f0 !important; border-left: 3px solid #176b87 !important; border-radius: 6px; background: #ffffff !important; }
+    .disagreement-context-box.transcription { border-left-color: #9c0014 !important; background: #f8fafc !important; }
+    .disagreement-context-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569 !important; margin-bottom: 3px; }
+    .disagreement-context-box.transcription .disagreement-context-title { color: #9c0014 !important; }
+    .disagreement-context-text { font-size: 13px; line-height: 1.48; color: #1e293b !important; max-height: 96px; overflow-y: auto; word-break: break-word; scrollbar-width: thin; }
+    .disagreement-empty-meta { color: #64748b !important; font-style: italic; font-size: 12.5px; }
+
+    .annotator-vote-list { display: flex; flex-direction: column; gap: 7px; }
+    .annotator-vote-item { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 10px; border: 1px solid #e2e8f0 !important; border-radius: 6px; background: #f8fafc !important; }
+    .annotator-vote-name { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: #0f172a !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .annotator-vote-name strong { color: #0f172a !important; font-weight: 700; }
+    .annotator-vote-right { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+    .vote-user-icon { flex: 0 0 12px; color: #64748b !important; }
+    .annotator-vote-sep { color: #94a3b8 !important; font-weight: 700; font-size: 12px; flex: 0 0 auto; }
+    .annotator-stance-pill { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 800; white-space: nowrap; border: 1px solid transparent; }
+    .annotator-stance-pill.stance-favor { background: #ecfdf5 !important; color: #047857 !important; border-color: #a7f3d0 !important; }
+    .annotator-stance-pill.stance-contra { background: #fff1f2 !important; color: #be123c !important; border-color: #fecdd3 !important; }
+    .annotator-stance-pill.stance-neutro { background: #fffbeb !important; color: #b45309 !important; border-color: #fde68a !important; }
+    .annotator-stance-pill.stance-outro { background: #f1f5f9 !important; color: #334155 !important; border-color: #cbd5e1 !important; }
+    .annotator-votes-summary { margin-top: 7px; font-size: 11.5px; color: #64748b !important; font-weight: 600; }
+
+    .disagreement-score-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+    .disagreement-score-val { font-size: 20px; font-weight: 800; color: #9c0014 !important; line-height: 1.1; }
+    .disagreement-severity-badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+    .disagreement-severity-badge.alta { background: #fff1f2 !important; color: #9c0014 !important; border: 1px solid #fecdd3 !important; }
+    .disagreement-severity-badge.moderada { background: #fffbeb !important; color: #9a5b00 !important; border: 1px solid #fde68a !important; }
+    .disagreement-dist-bar { width: 100%; max-width: 90px; height: 7px; background: #f1f5f9 !important; border-radius: 999px; overflow: hidden; }
+    .disagreement-dist-fill { height: 100%; border-radius: 999px; }
+    .disagreement-dist-fill.alta { background: #9c0014 !important; }
+    .disagreement-dist-fill.moderada { background: #d97706 !important; }
     .bar-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) 28px; align-items: center; gap: 8px; margin: 10px 0; font-size: 13px; }
     .bar-track { height: 12px; background: #f1f5f9; overflow: hidden; border-radius: 4px; }
     .bar-fill { height: 100%; background: #9c0014; }

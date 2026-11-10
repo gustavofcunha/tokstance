@@ -13,6 +13,8 @@ from tokstance.backend.domain.models import (
     NOME_TAREFA_PADRAO,
     OPCOES_TAREFA_PADRAO,
     PERGUNTA_TAREFA_PADRAO,
+    POOL_PRINCIPAL,
+    POOL_RESERVA,
     chave_par_rotulos,
     gerar_combinacoes_rotulos,
     limpar_usuarios,
@@ -316,7 +318,7 @@ def construir_interface(
         gr.HTML(elem_classes="toast-slot", value=f"""
         <style>{APP_CSS}</style>
         <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>Código '+t+' copiado</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}}; window.tokstanceForcarMaiusculo=function(){{document.addEventListener('input',function(e){{if(e.target&&(e.target.matches('.campo-nome-maiusculo input')||e.target.closest('.campo-nome-maiusculo'))){{var inp=e.target.tagName==='INPUT'?e.target:e.target.querySelector('input');if(inp){{var s=inp.selectionStart,end=inp.selectionEnd;inp.value=inp.value.toUpperCase();if(s!==null&&end!==null){{inp.setSelectionRange(s,end);}}}}}}}},true);}}; window.tokstanceForcarMaiusculo(); window.tokstanceAcessibilidadeBotoes=function(){{var bCop=document.querySelector('#btn_copiar_codigo_wizard, .btn-icon-copiar'); if(bCop){{bCop.setAttribute('title','Copiar código de convite');bCop.setAttribute('aria-label','Copiar código de convite');}}}}; setInterval(window.tokstanceAcessibilidadeBotoes,1500); window.tokstanceAcessibilidadeBotoes();"
+             onload="window.tokstanceAcao=function(tipo,id){{var el=document.querySelector('#tokstance_hub_trigger textarea, #tokstance_hub_trigger input'); if(el){{el.value=tipo+':'+id+':'+Date.now(); el.dispatchEvent(new Event('input',{{bubbles:true}})); el.dispatchEvent(new Event('change',{{bubbles:true}}));}}}}; window.tokstanceCopiar=function(t){{var ok=function(){{var d=document.createElement('div');d.className='tokstance-toast toast-sucesso toast-curto';var msg=(String(t||'').indexOf('http')===0)?'URL copiada para a área de transferência':'Código '+t+' copiado';d.innerHTML='<span class=toast-icone>✓</span><div class=toast-texto>'+msg+'</div>';document.body.appendChild(d);setTimeout(function(){{d.remove();}},3200);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(t).then(ok);}}else{{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();ok();}}}}; window.tokstanceForcarMaiusculo=function(){{document.addEventListener('input',function(e){{if(e.target&&(e.target.matches('.campo-nome-maiusculo input')||e.target.closest('.campo-nome-maiusculo'))){{var inp=e.target.tagName==='INPUT'?e.target:e.target.querySelector('input');if(inp){{var s=inp.selectionStart,end=inp.selectionEnd;inp.value=inp.value.toUpperCase();if(s!==null&&end!==null){{inp.setSelectionRange(s,end);}}}}}}}},true);}}; window.tokstanceForcarMaiusculo(); window.tokstanceAcessibilidadeBotoes=function(){{var bCop=document.querySelector('#btn_copiar_codigo_wizard, .btn-icon-copiar'); if(bCop){{bCop.setAttribute('title','Copiar código de convite');bCop.setAttribute('aria-label','Copiar código de convite');}}}}; setInterval(window.tokstanceAcessibilidadeBotoes,1500); window.tokstanceAcessibilidadeBotoes();"
              style="display:none;" />
         """)
 
@@ -1533,7 +1535,9 @@ def construir_interface(
             df_atrib = repo_e.carregar_atribuicoes_tarefa_df(t_id)
             df_anot = repo_e.carregar_anotacoes_tarefa_df(t_id)
             df_err = repo_e.carregar_erros_videos_tarefa_df(t_id)
-            df_vid = repo_e.carregar_videos_tarefa_df(t_id)
+            df_vid_p = repo_e.carregar_videos_tarefa_df(t_id, tipo_pool=POOL_PRINCIPAL)
+            df_vid_r = repo_e.carregar_videos_tarefa_df(t_id, tipo_pool=POOL_RESERVA)
+            df_vid = pd.concat([df_vid_p, df_vid_r], ignore_index=True) if not df_vid_r.empty else df_vid_p
             df_log = repo_e.carregar_logs_acesso_df(tarefa_id=t_id)
 
             dashboard_html = agreement_summary(

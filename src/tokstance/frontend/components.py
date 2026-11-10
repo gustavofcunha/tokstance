@@ -205,7 +205,7 @@ def fast_annotations_html(fast_annotations: List[Dict[str, Any]]) -> str:
         return ""
     fast_rows = "".join(
         f"<tr><td>{escape(str(item.get('video_id', '')))}</td>"
-        f"<td>{escape(str(item.get('labeler', '')))}</td>"
+        f"<td>{escape(str(item.get('rotulador') or item.get('labeler') or ''))}</td>"
         f"<td>{float(item.get('video_duration', 0.0)):.1f}s</td>"
         f"<td>{float(item.get('tempo_analise_segundos', 0.0)):.1f}s</td>"
         f"<td>{float(item.get('diferenca_segundos', 0.0)):.1f}s</td></tr>"
@@ -478,6 +478,19 @@ def admin_insights_html(
     """
 
 
+def _classe_cor_posicao(stance: str) -> str:
+    """Retorna a classe CSS semantica para o badge de uma posicao de anotacao."""
+    texto = str(stance or "").strip().lower()
+    if any(k in texto for k in ("favor", "positiv", "concord", "apoia", "sim")):
+        return "stance-favor"
+    if any(k in texto for k in ("contra", "negativ", "discord", "oposi", "tóxic", "toxic", "não", "nao")):
+        if "não relacionado" not in texto and "nao relacionado" not in texto:
+            return "stance-contra"
+    if any(k in texto for k in ("neutr", "incert", "moderad", "imparcial")):
+        return "stance-neutro"
+    return "stance-outro"
+
+
 def agreement_summary(
     agreement_data: Dict[str, Any],
     assignments_df: Union[pd.DataFrame, List[Dict[str, Any]], None] = None,
@@ -503,6 +516,7 @@ def agreement_summary(
     completed_ids.update(df_errors.get("assignment_id", pd.Series(dtype=str)).astype(str).str.strip())
 
     assignment_progress = ""
+    contagem_concluidos_por_rotulador: Dict[str, int] = {}
     if df_assignments.empty or "labeler" not in df_assignments.columns:
         assignment_progress = "<p class='muted'>Nenhuma atribuição ativa nesta rodada.</p>"
     else:
@@ -510,6 +524,7 @@ def agreement_summary(
         for labeler, labeler_assignments in df_assignments.groupby("labeler", sort=False):
             assigned = len(labeler_assignments)
             completed = int(labeler_assignments["assignment_id"].astype(str).isin(completed_ids).sum()) if "assignment_id" in labeler_assignments.columns else 0
+            contagem_concluidos_por_rotulador[str(labeler).strip()] = completed
             pending = assigned - completed
             prog_pct = (completed / assigned) if assigned > 0 else 0.0
             progress_rows.append(
@@ -522,19 +537,266 @@ def agreement_summary(
         </table>
         """
 
+    #mapa consolidado de metadados de videos (url, target, descricao e transcricao)
+    mapa_videos: Dict[str, Dict[str, str]] = {}
+    for quadro, col_id in (
+        (df_videos, "id"),
+        (df_videos, "video_id"),
+        (df_assignments, "video_id"),
+        (df_results, "video_id"),
+    ):
+        if quadro.empty or col_id not in quadro.columns:
+            continue
+        for _, row in quadro.iterrows():
+            vid_key = str(row.get(col_id, "") or "").strip()
+            if not vid_key:
+                continue
+            reg = mapa_videos.setdefault(
+                vid_key,
+                {"url": "", "target": "", "video_description": "", "voice_to_text": ""},
+            )
+            for campo in ("url", "target", "video_description", "voice_to_text"):
+                if not reg[campo] and campo in row:
+                    val = str(row.get(campo, "") or "").strip()
+                    if val:
+                        reg[campo] = val
+
+    #mapa de votos por video e contagem de videos avaliados por rotulador
+    votos_por_video: Dict[str, List[Dict[str, str]]] = {}
+    contagem_resultados_por_rotulador: Dict[str, int] = {}
+    if not df_results.empty and "labeler" in df_results.columns:
+        if "video_id" in df_results.columns:
+            contagem_resultados_por_rotulador = (
+                df_results.groupby("labeler")["video_id"].nunique().astype(int).to_dict()
+            )
+        else:
+            contagem_resultados_por_rotulador = (
+                df_results.groupby("labeler").size().astype(int).to_dict()
+            )
+    if not df_results.empty and {"video_id", "stance"}.issubset(df_results.columns):
+        for _, row in df_results.iterrows():
+            vid_key = str(row.get("video_id", "") or "").strip()
+            pos_val = str(row.get("stance", "") or "").strip()
+            rot_val = str(row.get("labeler", "") or "").strip()
+            if vid_key and pos_val:
+                votos_por_video.setdefault(vid_key, []).append(
+                    {"rotulador": rot_val, "stance": pos_val}
+                )
+
     daily_chart = annotation_daily_chart(df_results)
     alfa_val = agreement_data.get("alfa")
     alfa_str = "ainda não calculável" if alfa_val is None else f"{float(alfa_val):.3f}"
 
-    labeler_rows = "".join(
-        f"<tr><td>{escape(str(item.get('labeler', '')))}</td><td>{float(item.get('penalidade', 0.0)):.2f}</td></tr>"
-        for item in agreement_data.get("labelers_com_maior_discordancia", [])[:10]
-    ) or "<tr><td colspan='2' class='muted'>Ainda não há discordâncias mensuráveis.</td></tr>"
+    lista_videos_discordantes = list(agreement_data.get("videos_com_discordancia", []) or [])
+    divergencias_por_rotulador_fallback: Dict[str, int] = {}
+    for item_v in lista_videos_discordantes:
+        v_id_tmp = str(item_v.get("video_id", "") or "").strip()
+        votos_tmp = item_v.get("anotacoes_por_rotulador") or votos_por_video.get(v_id_tmp, [])
+        for r_unica in {str(v.get("rotulador", "") or "").strip() for v in votos_tmp if v.get("rotulador")}:
+            divergencias_por_rotulador_fallback[r_unica] = divergencias_por_rotulador_fallback.get(r_unica, 0) + 1
 
-    video_rows = "".join(
-        f"<tr><td>{escape(str(item.get('video_id', '')))}</td><td>{' · '.join(escape(str(r)) for r in item.get('anotacoes', []))}</td><td>{float(item.get('discordancia_ordinal', 0.0)):.2f}</td></tr>"
-        for item in agreement_data.get("videos_com_discordancia", [])[:10]
-    ) or "<tr><td colspan='3' class='muted'>Ainda não há vídeos com múltiplas anotações discordantes.</td></tr>"
+    lista_penalidades = (
+        agreement_data.get("rotuladores_com_maior_discordancia")
+        or agreement_data.get("labelers_com_maior_discordancia")
+        or []
+    )
+    max_penalidade = max((float(it.get("penalidade", 0.0)) for it in lista_penalidades), default=1.0) or 1.0
+
+    linhas_penalidade_html = []
+    for idx, item in enumerate(lista_penalidades[:10], start=1):
+        nome_rot = str(item.get("rotulador") or item.get("labeler") or "").strip()
+        pen_val = float(item.get("penalidade", 0.0))
+        qtd_videos_raw = item.get("quantidade_videos")
+        if qtd_videos_raw is None:
+            qtd_videos_raw = (
+                contagem_resultados_por_rotulador.get(nome_rot)
+                or contagem_concluidos_por_rotulador.get(nome_rot)
+                or divergencias_por_rotulador_fallback.get(nome_rot)
+                or (1 if pen_val > 0 else 0)
+            )
+        qtd_videos = int(qtd_videos_raw)
+        qtd_div_raw = item.get("videos_divergentes")
+        if qtd_div_raw is None:
+            qtd_div_raw = divergencias_por_rotulador_fallback.get(nome_rot, 0)
+        qtd_div = int(qtd_div_raw)
+        pen_media_raw = item.get("penalidade_media")
+        if pen_media_raw is None:
+            pen_media_raw = pen_val / max(1, qtd_videos)
+        pen_media = float(pen_media_raw)
+        pct_bar = min(100.0, max(8.0, (pen_val / max_penalidade) * 100.0)) if pen_val > 0 else 0.0
+        rotulo_unid = "vídeo" if qtd_videos == 1 else "vídeos"
+        pill_div = (
+            f"<span class='penalty-divergent-pill' title='Vídeos em que houve divergência com outros anotadores'>"
+            f"{qtd_div} {'divergente' if qtd_div == 1 else 'divergentes'}</span>"
+            if qtd_div > 0
+            else ""
+        )
+        linhas_penalidade_html.append(
+            f"<tr>"
+            f"<td class='td-penalty-user'><div class='penalty-annotator-cell'><span class='penalty-rank-badge'>{idx}º</span><strong class='penalty-user-name'>{escape(nome_rot)}</strong></div></td>"
+            f"<td class='td-penalty-videos'><div class='penalty-videos-cell'><span class='penalty-videos-count'><strong>{qtd_videos}</strong> {rotulo_unid}</span>{pill_div}</div></td>"
+            f"<td class='td-penalty-avg'><span class='penalty-avg-badge'>{pen_media:.2f} <small>/ vídeo</small></span></td>"
+            f"<td class='td-penalty-total'><div class='penalty-bar-wrap'><strong class='penalty-total-val'>{pen_val:.2f}</strong><div class='penalty-bar-track'><div class='penalty-bar-fill' style='width:{pct_bar:.0f}%;'></div></div></div></td>"
+            f"</tr>"
+        )
+
+    labeler_rows = "".join(linhas_penalidade_html) or "<tr><td colspan='4' class='muted'>Ainda não há discordâncias mensuráveis.</td></tr>"
+
+    max_dist_video = max((float(it.get("discordancia_ordinal", 0.0)) for it in lista_videos_discordantes), default=1.0) or 1.0
+    linhas_videos_html = []
+    for idx_v, item in enumerate(lista_videos_discordantes[:30], start=1):
+        vid_id = str(item.get("video_id", "") or "").strip()
+        meta = mapa_videos.get(vid_id, {})
+        url_raw = str(item.get("url", "") or meta.get("url", "") or "").strip()
+        if url_raw:
+            url_href = url_raw
+            url_display = url_raw
+        elif vid_id.isdigit():
+            url_href = f"https://www.tiktok.com/video/{vid_id}"
+            url_display = url_href
+        else:
+            url_href = f"https://www.tiktok.com/video/{vid_id}"
+            url_display = f"{url_href} ({vid_id})"
+
+        target_val = str(item.get("target", "") or meta.get("target", "") or "").strip()
+        desc_val = str(item.get("video_description", "") or meta.get("video_description", "") or "").strip()
+        trans_val = str(item.get("voice_to_text", "") or meta.get("voice_to_text", "") or "").strip()
+
+        desc_html = (
+            escape(desc_val).replace("\n", "<br>")
+            if desc_val
+            else "<span class='disagreement-empty-meta'>Descrição não informada no acervo.</span>"
+        )
+        trans_html = (
+            escape(trans_val).replace("\n", "<br>")
+            if trans_val
+            else "<span class='disagreement-empty-meta'>Transcrição indisponível para este vídeo.</span>"
+        )
+
+        votos_det = (
+            votos_por_video.get(vid_id)
+            or item.get("anotacoes_por_rotulador")
+            or [
+                {"rotulador": f"Rotulador {i + 1}", "stance": str(r)}
+                for i, r in enumerate(item.get("anotacoes", []))
+            ]
+        )
+        chips_votos = []
+        for voto in votos_det:
+            r_nome = str(voto.get("rotulador", "") or "").strip() or "Rotulador"
+            p_nome = str(voto.get("stance", "") or "").strip()
+            classe_cor = _classe_cor_posicao(p_nome)
+            chips_votos.append(
+                f"<div class='annotator-vote-item'>"
+                f"<span class='annotator-vote-name' title='Rotulador'>"
+                f"<svg class='vote-user-icon' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/></svg>"
+                f"<strong>{escape(r_nome)}</strong></span>"
+                f"<span class='annotator-vote-right'>"
+                f"<span class='annotator-vote-sep'>→</span>"
+                f"<span class='annotator-stance-pill {classe_cor}'>{escape(p_nome)}</span>"
+                f"</span>"
+                f"</div>"
+            )
+        lista_anotacoes_bruta = item.get("anotacoes") or [v.get("stance", "") for v in votos_det]
+        resumo_anotacoes_str = " · ".join(escape(str(r)) for r in lista_anotacoes_bruta if str(r).strip())
+        votos_cell_html = (
+            f"<div class='annotator-vote-list'>{''.join(chips_votos)}</div>"
+            f"<div class='annotator-votes-summary'>Posições: {resumo_anotacoes_str}</div>"
+        )
+
+        dist_val = float(item.get("discordancia_ordinal", 0.0))
+        sev_tipo = "alta" if dist_val >= 1.5 else "moderada"
+        sev_rotulo = "Alta divergência" if dist_val >= 1.5 else "Divergência moderada"
+        pct_dist = min(100.0, max(14.0, (dist_val / max_dist_video) * 100.0))
+
+        target_pill_html = (
+            f"<div class='disagreement-target-row'>"
+            f"<span class='disagreement-target-label'>Target:</span>"
+            f"<span class='disagreement-target-pill'>{escape(target_val)}</span>"
+            f"</div>"
+            if target_val
+            else ""
+        )
+
+        busca_indexada = (
+            f"{vid_id} {url_display} {target_val} {desc_val} {trans_val} "
+            + " ".join(f"{v.get('rotulador', '')} {v.get('stance', '')}" for v in votos_det)
+        ).lower()
+        player_dom_id = f"disagreement-player-{re.sub(r'[^a-zA-Z0-9_-]', '_', vid_id)}_{idx_v}"
+
+        linhas_videos_html.append(
+            f"<tr class='disagreement-row' data-severity='{sev_tipo}' data-video-id='{escape(vid_id)}' data-search='{escape(busca_indexada)}'>"
+            f"<td class='td-disagreement-video'>"
+            f"{target_pill_html}"
+            f"<a href='{escape(url_href)}' target='_blank' rel='noopener noreferrer' class='disagreement-url-link' title='Abrir vídeo em nova aba ({escape(vid_id)})'>"
+            f"<svg class='url-ext-icon' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/><polyline points='15 3 21 3 21 9'/><line x1='10' y1='14' x2='21' y2='3'/></svg>"
+            f"<span>{escape(url_display)}</span></a>"
+            f"<div class='disagreement-url-actions'>"
+            f"<button type='button' class='disagreement-mini-btn' onclick=\"window.tokstanceCopiar('{escape(url_href)}')\">Copiar URL</button>"
+            f"<button type='button' class='disagreement-mini-btn preview-toggle-btn' onclick=\"window.tokstanceAlternarPlayer(this, '{escape(player_dom_id)}', '{escape(url_href)}')\">▶ Assistir vídeo</button>"
+            f"</div>"
+            f"<div id='{escape(player_dom_id)}' class='disagreement-inline-player' style='display:none;'></div>"
+            f"</td>"
+            f"<td class='td-disagreement-context'>"
+            f"<div class='disagreement-context-grid'>"
+            f"<div class='disagreement-context-box'>"
+            f"<div class='disagreement-context-title'>Descrição do vídeo</div>"
+            f"<div class='disagreement-context-text'>{desc_html}</div>"
+            f"</div>"
+            f"<div class='disagreement-context-box transcription'>"
+            f"<div class='disagreement-context-title'>Transcrição do áudio</div>"
+            f"<div class='disagreement-context-text'>{trans_html}</div>"
+            f"</div>"
+            f"</div>"
+            f"</td>"
+            f"<td class='td-disagreement-votes'>{votos_cell_html}</td>"
+            f"<td class='td-disagreement-distance'>"
+            f"<div class='disagreement-score-cell'>"
+            f"<strong class='disagreement-score-val'>{dist_val:.2f}</strong>"
+            f"<span class='disagreement-severity-badge {sev_tipo}'>{sev_rotulo}</span>"
+            f"<div class='disagreement-dist-bar'><div class='disagreement-dist-fill {sev_tipo}' style='width:{pct_dist:.0f}%;'></div></div>"
+            f"</div>"
+            f"</td>"
+            f"</tr>"
+        )
+
+    video_rows = (
+        "".join(linhas_videos_html)
+        or "<tr><td colspan='4' class='muted'>Ainda não há vídeos com múltiplas anotações discordantes.</td></tr>"
+    )
+    qtd_discordantes = len(lista_videos_discordantes)
+    qtd_alta_sev = sum(1 for it in lista_videos_discordantes if float(it.get("discordancia_ordinal", 0.0)) >= 1.5)
+    qtd_mod_sev = qtd_discordantes - qtd_alta_sev
+
+    media_pen_equipe = (
+        sum(float(it.get("penalidade", 0.0)) for it in lista_penalidades) / len(lista_penalidades)
+        if lista_penalidades
+        else 0.0
+    )
+    rodape_penalidades_html = (
+        f"<div class='penalty-summary-footer'>"
+        f"<div class='penalty-stat-item'><span>Anotadores com desvio</span><strong>{len(lista_penalidades)}</strong></div>"
+        f"<div class='penalty-stat-item'><span>Penalidade média da equipe</span><strong>{media_pen_equipe:.2f}</strong></div>"
+        f"<div class='penalty-stat-item'><span>Vídeos em disputa</span><strong>{qtd_discordantes}</strong></div>"
+        f"</div>"
+        if lista_penalidades
+        else ""
+    )
+
+    toolbar_discordancia_html = (
+        f"<div class='disagreement-toolbar'>"
+        f"<div class='disagreement-search-wrap'>"
+        f"<input type='search' class='disagreement-search-input' placeholder='Filtrar por URL, target, rotulador, posição, descrição ou transcrição...' oninput='window.tokstanceFiltrarDiscordancia(this)' aria-label='Filtrar vídeos com discordância' />"
+        f"</div>"
+        f"<div class='disagreement-filter-pills'>"
+        f"<button type='button' class='disagreement-filter-btn active' data-filter='all' onclick=\"window.tokstanceFiltrarSeveridade(this, 'all')\">Todos ({qtd_discordantes})</button>"
+        f"<button type='button' class='disagreement-filter-btn' data-filter='alta' onclick=\"window.tokstanceFiltrarSeveridade(this, 'alta')\">Alta divergência ({qtd_alta_sev})</button>"
+        f"<button type='button' class='disagreement-filter-btn' data-filter='moderada' onclick=\"window.tokstanceFiltrarSeveridade(this, 'moderada')\">Moderada ({qtd_mod_sev})</button>"
+        f"</div>"
+        f"</div>"
+        if qtd_discordantes > 0
+        else ""
+    )
 
     fast_warning = fast_annotations_html(fast_annotations)
     admin_insights = admin_insights_html(
@@ -566,20 +828,67 @@ def agreement_summary(
             <div class='kpi'><span>Anotações consideradas</span><strong>{agreement_data.get('anotacoes_consideradas', 0)}</strong></div>
         </div>
         <div class='dashboard-grid'>
-            <section class='dashboard-card'>
-                <h3>Anotadores com maior penalidade</h3>
-                <table><thead><tr><th>Anotador</th><th>Penalidade acumulada</th></tr></thead><tbody>{labeler_rows}</tbody></table>
+            <section class='dashboard-card penalty-leaderboard-card'>
+                <div class='card-heading-block'>
+                    <div>
+                        <span class='section-eyebrow'>Consistência por anotador</span>
+                        <h3>Anotadores com maior penalidade</h3>
+                    </div>
+                </div>
+                <p class='metric-note'>Relação entre a quantidade de vídeos avaliados, a frequência de divergência e a penalidade acumulada.</p>
+                <table class='penalty-table'>
+                    <thead>
+                        <tr>
+                            <th>Anotador</th>
+                            <th>Qtd. de Vídeos</th>
+                            <th>Média / Vídeo</th>
+                            <th class='th-right'>Penalidade acumulada</th>
+                        </tr>
+                    </thead>
+                    <tbody>{labeler_rows}</tbody>
+                </table>
+                {rodape_penalidades_html}
             </section>
-            <section class='dashboard-card'>
-                <h3>Vídeos com maior discordância</h3>
-                <table><thead><tr><th>Vídeo</th><th>Anotações</th><th>Distância</th></tr></thead><tbody>{video_rows}</tbody></table>
-            </section>
-        </div>
-        <section class='analytics-grid'>
             <section class='dashboard-card daily-annotation-chart'>
-                <h3>Vídeos concluídos por dia e rotulador</h3>
+                <div class='card-heading-block'>
+                    <div>
+                        <span class='section-eyebrow'>Ritmo de execução</span>
+                        <h3>Vídeos concluídos por dia e rotulador</h3>
+                    </div>
+                </div>
                 <p class='metric-note'>Cada linha representa um rotulador: o eixo x mostra a data e o eixo y a quantidade de vídeos concluídos no dia.</p>
                 {daily_chart}
+            </section>
+        </div>
+        <section class='disagreement-full-row'>
+            <section class='dashboard-card disagreement-full-card'>
+                <div class='disagreement-card-header'>
+                    <div>
+                        <span class='section-eyebrow'>Diagnóstico de consenso e adjudicação</span>
+                        <h3>Vídeos com maior discordância</h3>
+                        <p class='metric-note'>Inspeção detalhada dos vídeos com divergência entre rotuladores, exibindo URL direta, descrição, transcrição e a posição atribuída por cada anotador.</p>
+                    </div>
+                    <span class='disagreement-total-badge'>{qtd_discordantes} {'vídeo divergente' if qtd_discordantes == 1 else 'vídeos divergentes'}</span>
+                </div>
+                {toolbar_discordancia_html}
+                <div class='disagreement-table-wrapper'>
+                    <table class='disagreement-table'>
+                        <thead>
+                            <tr>
+                                <th class='th-col-video'>Vídeo (URL e Target)</th>
+                                <th class='th-col-context'>Descrição e Transcrição</th>
+                                <th class='th-col-votes'>Anotações por Rotulador</th>
+                                <th class='th-col-dist'>Distância</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {video_rows}
+                            <tr class='disagreement-no-match-row' style='display:none;'>
+                                <td colspan='4' class='muted'>Nenhum vídeo divergente corresponde ao filtro informado.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </section>
     </section>
