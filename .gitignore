@@ -28,10 +28,9 @@ tests/.test-data/
 test-results/
 
 # Environment variables and secrets
-# .env mantido rastreado conforme requisicao para deploy
+.env
 .env.local
 .env.*
-!.env
 !.env.example
 
 # Local runtime data and databases
