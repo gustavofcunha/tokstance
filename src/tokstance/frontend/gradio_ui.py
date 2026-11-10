@@ -402,9 +402,10 @@ def construir_interface(
 
                         with gr.Tab("Recuperar Senha", id="tab_recuperar"):
                             #progressive recovery step
-                            recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou e-mail")
-                            recuperar_aviso_identificador = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                            btn_solicitar_recuperacao = gr.Button("Enviar Código de Recuperação", elem_classes="ufmg-btn", size="lg")
+                            with gr.Column(visible=True) as recuperar_passo_identificador:
+                                recuperar_identificador = gr.Textbox(label="Nome de Usuário ou E-mail Cadastrado", placeholder="Digite seu usuário ou e-mail")
+                                recuperar_aviso_identificador = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
+                                btn_solicitar_recuperacao = gr.Button("Enviar Código de Recuperação", elem_classes="ufmg-btn", size="lg")
 
                             with gr.Column(visible=False) as recuperar_passo_codigo:
                                 recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456")
@@ -764,7 +765,7 @@ def construir_interface(
             cadastro_nome_completo, cadastro_usuario, cadastro_email, cadastro_senha, cadastro_confirma, cadastro_convite,
             recuperar_identificador, recuperar_codigo, recuperar_nova_senha, recuperar_confirma_senha,
         ]
-        saidas_formularios = campos_acesso + [recuperar_passo_codigo, recuperar_passo_senha]
+        saidas_formularios = campos_acesso + [recuperar_passo_identificador, recuperar_passo_codigo, recuperar_passo_senha]
 
         def sessao_vazia() -> Dict[str, Any]:
             return {"usuario_id": None, "nome_usuario": "", "nome_completo": "", "tarefa_ativa_id": None, "login_time": 0.0, "start_time": 0.0, "assignment_id": "", "pergunta_template": "", "opcoes_posicao": [], "previous_target": ""}
@@ -778,10 +779,10 @@ def construir_interface(
             idx_codigo = campos_acesso.index(recuperar_codigo)
             valores[idx_identificador] = gr.update(value="", interactive=True)
             valores[idx_codigo] = gr.update(value="", interactive=True)
-            return valores + [gr.update(visible=False), gr.update(visible=False)]
+            return valores + [gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)]
 
         def formularios_mantidos() -> List[Any]:
-            return [gr.update() for _ in range(len(campos_acesso) + 2)]
+            return [gr.update() for _ in range(len(saidas_formularios))]
 
         def resposta_acesso_falha(mensagem: str, origem: str = "login") -> Tuple[Any, ...]:
             aviso_inline_html = renderizar_aviso_inline(mensagem, tipo="erro")
@@ -866,7 +867,7 @@ def construir_interface(
             return executar_login(usuario, senha)
 
         def executar_solicitar_recuperacao(identificador: str) -> Tuple[Any, ...]:
-            sem_mudanca = (gr.update(), gr.update(), gr.update())
+            sem_mudanca = (gr.update(), gr.update(), gr.update(), gr.update(), gr.update())
             try:
                 res = auth.solicitar_recuperacao_senha(identificador)
             except Exception as exc:
@@ -889,7 +890,9 @@ def construir_interface(
                 msg = "Código gerado. O envio de e-mail não está configurado: consulte o terminal do servidor."
             return (
                 renderizar_toast_html(f"✅ {msg}"),
+                "",
                 renderizar_aviso_inline(msg, tipo="sucesso"),
+                gr.update(visible=False),
                 gr.update(visible=True),
                 gr.update(visible=False),
                 gr.update(interactive=False),
@@ -905,10 +908,17 @@ def construir_interface(
                     renderizar_aviso_inline(msg_erro, tipo="erro"),
                     gr.update(),
                     gr.update(),
+                    gr.update(),
+                    gr.update(),
+                    gr.update(),
                 )
+            msg_ok = "Código confirmado. Defina sua nova senha."
             return (
-                renderizar_toast_html("✅ Código confirmado. Defina sua nova senha."),
+                renderizar_toast_html(f"✅ {msg_ok}"),
                 "",
+                renderizar_aviso_inline(msg_ok, tipo="sucesso"),
+                gr.update(visible=False),
+                gr.update(visible=False),
                 gr.update(visible=True),
                 gr.update(interactive=False),
             )
@@ -918,9 +928,10 @@ def construir_interface(
                 "",
                 "",
                 "",
+                gr.update(visible=True),
                 gr.update(visible=False),
                 gr.update(visible=False),
-                gr.update(interactive=True),
+                gr.update(value="", interactive=True),
                 gr.update(value="", interactive=True),
                 gr.update(value=""),
                 gr.update(value=""),
@@ -937,7 +948,7 @@ def construir_interface(
                     aviso_html,
                     gr.update(),
                     gr.update(),
-                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                    *formularios_mantidos(),
                 )
             try:
                 validar_complexidade_senha(nova_senha)
@@ -951,7 +962,7 @@ def construir_interface(
                     aviso_html,
                     gr.update(),
                     gr.update(),
-                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                    *formularios_mantidos(),
                 )
             if nova_senha != confirma:
                 msg_erro = "A nova senha e a confirmação de senha não coincidem."
@@ -963,7 +974,7 @@ def construir_interface(
                     aviso_html,
                     gr.update(),
                     gr.update(),
-                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                    *formularios_mantidos(),
                 )
             try:
                 res = auth.redefinir_senha_com_codigo(identificador, codigo, nova_senha)
@@ -977,7 +988,7 @@ def construir_interface(
                     aviso_html,
                     gr.update(),
                     gr.update(),
-                    *[gr.update() for _ in range(len(campos_acesso) + 2)],
+                    *formularios_mantidos(),
                 )
             aviso_login_sucesso = renderizar_aviso_inline(
                 "Senha redefinida com sucesso! Você já pode entrar com sua nova senha.", tipo="sucesso"
@@ -1714,7 +1725,15 @@ def construir_interface(
         handler_solicitar_params = {
             "fn": executar_solicitar_recuperacao,
             "inputs": [recuperar_identificador],
-            "outputs": [recuperar_mensagem, recuperar_aviso_identificador, recuperar_passo_codigo, recuperar_passo_senha, recuperar_identificador],
+            "outputs": [
+                recuperar_mensagem,
+                recuperar_aviso_identificador,
+                recuperar_aviso_codigo,
+                recuperar_passo_identificador,
+                recuperar_passo_codigo,
+                recuperar_passo_senha,
+                recuperar_identificador,
+            ],
         }
         btn_solicitar_recuperacao.click(**handler_solicitar_params)
         recuperar_identificador.submit(**handler_solicitar_params)
@@ -1722,7 +1741,15 @@ def construir_interface(
         handler_verificar_params = {
             "fn": executar_verificar_codigo,
             "inputs": [recuperar_identificador, recuperar_codigo],
-            "outputs": [recuperar_mensagem, recuperar_aviso_codigo, recuperar_passo_senha, recuperar_codigo],
+            "outputs": [
+                recuperar_mensagem,
+                recuperar_aviso_codigo,
+                recuperar_aviso_senha,
+                recuperar_passo_identificador,
+                recuperar_passo_codigo,
+                recuperar_passo_senha,
+                recuperar_codigo,
+            ],
         }
         btn_verificar_codigo.click(**handler_verificar_params)
         recuperar_codigo.submit(**handler_verificar_params)
@@ -1734,6 +1761,7 @@ def construir_interface(
                 recuperar_aviso_identificador,
                 recuperar_aviso_codigo,
                 recuperar_aviso_senha,
+                recuperar_passo_identificador,
                 recuperar_passo_codigo,
                 recuperar_passo_senha,
                 recuperar_identificador,

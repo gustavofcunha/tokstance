@@ -1133,6 +1133,64 @@ def test_botao_voltar_ao_painel_principal_largura_e_padding() -> None:
         assert b.min_width is not None and b.min_width >= 240
 
 
+@pytest.mark.unit
+def test_recuperacao_senha_transiciona_estagios_ocultando_passos_anteriores(
+    servicos: Dict[str, Any],
+) -> None:
+    auth = servicos["auth"]
+    auth.cadastrar_usuario("gustavo_fluxo", "Senha123", email="gustavo_fluxo@ufmg.br")
+
+    app = construir_interface(
+        servico_auth=auth,
+        servico_fila=servicos["fila"],
+        servico_admin=servicos["admin"],
+    )
+    handlers = {
+        getattr(fn.fn, "__name__", ""): fn.fn
+        for fn in app.fns.values()
+        if getattr(fn.fn, "__name__", "")
+    }
+    fn_solicitar = handlers["executar_solicitar_recuperacao"]
+    fn_verificar = handlers["executar_verificar_codigo"]
+    fn_trocar = handlers["executar_trocar_identificador"]
+    fn_redefinir = handlers["executar_redefinir_senha"]
+
+    # Estagio 1 -> Estagio 2 (solicitar codigo oculta passo identificador e exibe passo codigo)
+    res_solic = fn_solicitar("gustavo_fluxo")
+    assert res_solic[1] == ""
+    assert "auth-inline-success" in res_solic[2]
+    assert res_solic[3].get("visible") is False  # recuperar_passo_identificador oculto
+    assert res_solic[4].get("visible") is True   # recuperar_passo_codigo visivel
+    assert res_solic[5].get("visible") is False  # recuperar_passo_senha oculto
+
+    # Botao Usar outro e-mail restaura Estagio 1 e oculta Estagio 2 e 3
+    res_troca = fn_trocar()
+    assert res_troca[3].get("visible") is True   # recuperar_passo_identificador visivel
+    assert res_troca[4].get("visible") is False  # recuperar_passo_codigo oculto
+    assert res_troca[5].get("visible") is False  # recuperar_passo_senha oculto
+
+    # Solicita novamente e pega codigo gerado
+    dados_recup = auth.solicitar_recuperacao_senha("gustavo_fluxo")
+    codigo = dados_recup["codigo"]
+
+    # Estagio 2 -> Estagio 3 (verificar codigo oculta passo codigo e exibe apenas passo senha)
+    res_verif = fn_verificar("gustavo_fluxo", codigo)
+    assert res_verif[1] == ""
+    assert "auth-inline-success" in res_verif[2]
+    assert res_verif[3].get("visible") is False  # recuperar_passo_identificador oculto
+    assert res_verif[4].get("visible") is False  # recuperar_passo_codigo oculto
+    assert res_verif[5].get("visible") is True   # recuperar_passo_senha visivel
+
+    # Estagio 3 -> Login (redefinir senha vai para tab_entrar, exibe msg de sucesso e reseta estagios)
+    res_redef = fn_redefinir("gustavo_fluxo", codigo, "NovaSenhaForte123", "NovaSenhaForte123")
+    assert res_redef[4].get("selected") == "tab_entrar"
+    assert "auth-inline-success" in res_redef[5]
+    assert res_redef[-3].get("visible") is True   # recuperar_passo_identificador resetado para visivel
+    assert res_redef[-2].get("visible") is False  # recuperar_passo_codigo oculto
+    assert res_redef[-1].get("visible") is False  # recuperar_passo_senha oculto
+
+
+
 
 
 
