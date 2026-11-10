@@ -98,6 +98,90 @@ JS_FORCAR_MODO_CLARO = """
     function executarRotinasInterface() {
         varrerCamposSenha();
         reiniciarAnimacaoToasts();
+        configurarAtalhoEnter();
+    }
+
+    function configurarAtalhoEnter() {
+        if (window._tokstanceEnterConfigurado) return;
+        window._tokstanceEnterConfigurado = true;
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' || e.isComposing) return;
+
+            // Se o usuario estiver digitando em uma textarea multilinha, respeitar a quebra de linha
+            if (e.target && e.target.tagName === 'TEXTAREA') return;
+
+            // 1. Aviso de Conteudo Sensivel aberto
+            const avisoSensivel = document.querySelector('.sensitive-warning-wrapper, .sensitive-warning-card');
+            if (avisoSensivel && (avisoSensivel.offsetWidth > 0 || avisoSensivel.offsetHeight > 0) && window.getComputedStyle(avisoSensivel).display !== 'none') {
+                const btnContinuar = avisoSensivel.querySelector('.sensitive-btn-continue, button.sensitive-btn-continue');
+                if (btnContinuar && !btnContinuar.disabled && (btnContinuar.offsetWidth > 0 || btnContinuar.offsetHeight > 0)) {
+                    e.preventDefault();
+                    btnContinuar.click();
+                    return;
+                }
+            }
+
+            // 2. Modal de Convite (Ingressar em Tarefa)
+            const modalConvite = document.querySelector('.modal-overlay:not(.hide):not(.hidden), #modal_convite');
+            if (modalConvite && (modalConvite.offsetWidth > 0 || modalConvite.offsetHeight > 0) && window.getComputedStyle(modalConvite).display !== 'none') {
+                const btnEntrar = modalConvite.querySelector('.modal-btn-confirm, button.modal-btn-confirm, button.ufmg-btn');
+                if (btnEntrar && !btnEntrar.disabled) {
+                    e.preventDefault();
+                    btnEntrar.click();
+                    return;
+                }
+            }
+
+            // 3. Etapas do Wizard de Criacao
+            const wizard3 = document.querySelector('.wizard-passo-3');
+            if (wizard3 && (wizard3.offsetWidth > 0 || wizard3.offsetHeight > 0) && window.getComputedStyle(wizard3).display !== 'none') {
+                const btnCriar = wizard3.querySelector('.wizard-submit-btn, button.wizard-submit-btn');
+                if (btnCriar && !btnCriar.disabled) {
+                    e.preventDefault();
+                    btnCriar.click();
+                    return;
+                }
+            }
+
+            const wizard2 = document.querySelector('.wizard-passo-2');
+            if (wizard2 && (wizard2.offsetWidth > 0 || wizard2.offsetHeight > 0) && window.getComputedStyle(wizard2).display !== 'none') {
+                const btnProx2 = wizard2.querySelector('.wizard-next-btn, button.wizard-next-btn');
+                if (btnProx2 && !btnProx2.disabled) {
+                    e.preventDefault();
+                    btnProx2.click();
+                    return;
+                }
+            }
+
+            const wizard1 = document.querySelector('.wizard-passo-1');
+            if (wizard1 && (wizard1.offsetWidth > 0 || wizard1.offsetHeight > 0) && window.getComputedStyle(wizard1).display !== 'none') {
+                const btnProx1 = wizard1.querySelector('.wizard-next-btn, button.wizard-next-btn');
+                if (btnProx1 && !btnProx1.disabled) {
+                    e.preventDefault();
+                    btnProx1.click();
+                    return;
+                }
+            }
+
+            // 4. Workspace de Rotulacao (com radio selecionado)
+            const painelRotulador = document.querySelector('.labeler-panel');
+            if (painelRotulador && (painelRotulador.offsetWidth > 0 || painelRotulador.offsetHeight > 0) && window.getComputedStyle(painelRotulador).display !== 'none') {
+                const aviso = document.querySelector('.sensitive-warning-wrapper');
+                const avisoAberto = aviso && (aviso.offsetWidth > 0 || aviso.offsetHeight > 0) && window.getComputedStyle(aviso).display !== 'none';
+                if (!avisoAberto) {
+                    const radioChecked = painelRotulador.querySelector('.wrap-radio input[type="radio"]:checked');
+                    if (radioChecked) {
+                        const btnSalvar = painelRotulador.querySelector('.annotation-controls button.ufmg-btn');
+                        if (btnSalvar && !btnSalvar.disabled) {
+                            e.preventDefault();
+                            btnSalvar.click();
+                            return;
+                        }
+                    }
+                }
+            }
+        }, true);
     }
 
     executarRotinasInterface();
@@ -579,6 +663,56 @@ APP_CSS = """
         background: #7a0010 !important;
         box-shadow: 0 4px 10px rgba(156, 0, 20, 0.3) !important;
         transform: translateY(-1px) !important;
+    }
+
+    button.secondary-btn,
+    .secondary-btn,
+    .wizard-step-footer button.secondary-btn,
+    .compact-actions button.secondary-btn,
+    .auth-actions-row button.secondary-btn,
+    button.hub-btn.secondary-btn {
+        background: #f1f5f9 !important;
+        background-color: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #475569 !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        padding: 10px 18px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.2s ease !important;
+        min-height: 42px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+    }
+    button.secondary-btn:hover,
+    .secondary-btn:hover,
+    .wizard-step-footer button.secondary-btn:hover,
+    .compact-actions button.secondary-btn:hover,
+    .auth-actions-row button.secondary-btn:hover,
+    button.hub-btn.secondary-btn:hover {
+        background: #e2e8f0 !important;
+        background-color: #e2e8f0 !important;
+        border-color: #94a3b8 !important;
+        color: #1e293b !important;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    .auth-actions-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 12px !important;
+        width: 100% !important;
+        margin-top: 10px !important;
+    }
+    .auth-actions-row > * {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        width: 100% !important;
     }
 
     button.error-btn {
@@ -1736,11 +1870,53 @@ APP_CSS = """
         box-shadow: none !important;
     }
     .target-transition {
-        animation: target-highlight 12s ease-in-out !important;
+        position: relative !important;
+        overflow: hidden !important;
+        animation: target-highlight 15s ease-in-out !important;
         will-change: background, border-color, box-shadow, transform;
     }
+    .target-transition::after {
+        content: "" !important;
+        position: absolute !important;
+        top: -50% !important;
+        left: -40% !important;
+        width: 35% !important;
+        height: 200% !important;
+        background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.5) 25%,
+            rgba(255, 255, 255, 1) 50%,
+            rgba(255, 255, 255, 0.5) 75%,
+            rgba(255, 255, 255, 0) 100%
+        ) !important;
+        box-shadow: 0 0 25px 10px rgba(255, 255, 255, 0.95), 0 0 40px 15px rgba(225, 29, 72, 0.35) !important;
+        transform: skewX(-25deg) !important;
+        pointer-events: none !important;
+        z-index: 3 !important;
+        animation: target-feixe-luz 2.5s ease-in-out 6 !important;
+    }
     .target-transition .target-name-badge {
-        animation: target-badge-pulse 12s ease-in-out !important;
+        animation: target-badge-pulse 15s ease-in-out !important;
+        position: relative !important;
+        z-index: 4 !important;
+    }
+    @keyframes target-feixe-luz {
+        0% {
+            left: -40%;
+            opacity: 0;
+        }
+        5% {
+            opacity: 1;
+        }
+        60% {
+            left: 115%;
+            opacity: 1;
+        }
+        65%, 100% {
+            left: 115%;
+            opacity: 0;
+        }
     }
     @keyframes target-highlight {
         0%, 100% {
@@ -1750,31 +1926,19 @@ APP_CSS = """
             box-shadow: none !important;
             transform: translateY(0);
         }
-        8% {
+        5%, 21%, 37%, 53%, 69%, 85% {
             background: #ffd6dc !important;
-            border-color: #d34758 !important;
-            border-left-color: #d34758 !important;
+            border-color: #9c0014 !important;
+            border-left-color: #9c0014 !important;
             box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.28), 0 8px 20px rgba(156, 0, 20, 0.16) !important;
-            transform: translateY(-3px);
+            transform: translateY(-2px);
         }
-        28% {
-            background: #fff0f2 !important;
-            border-color: #b51f35 !important;
-            border-left-color: #b51f35 !important;
-            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.22), 0 5px 14px rgba(156, 0, 20, 0.12) !important;
+        13%, 29%, 45%, 61%, 77%, 93% {
+            background: #fff8f9 !important;
+            border-color: #fca5a5 !important;
+            border-left-color: #9c0014 !important;
+            box-shadow: 0 0 0 1px rgba(211, 71, 88, 0.18), 0 2px 8px rgba(156, 0, 20, 0.08) !important;
             transform: translateY(0);
-        }
-        55% {
-            background: #ffe1e5 !important;
-            border-color: #c12d42 !important;
-            border-left-color: #c12d42 !important;
-            box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.24), 0 6px 16px rgba(156, 0, 20, 0.14) !important;
-        }
-        78% {
-            background: #fff1f3 !important;
-            border-color: #ae1c32 !important;
-            border-left-color: #ae1c32 !important;
-            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.18), 0 4px 12px rgba(156, 0, 20, 0.1) !important;
         }
     }
     @keyframes pulse-target {
@@ -1785,31 +1949,19 @@ APP_CSS = """
             box-shadow: none !important;
             transform: translateY(0);
         }
-        8% {
-            background: #ffd6dc !important;
+        5%, 21%, 37%, 53%, 69%, 85% {
+            background: #ffe3e7 !important;
             border-color: #d34758 !important;
-            border-left-color: #d34758 !important;
+            border-left-color: #9c0014 !important;
             box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.28), 0 8px 20px rgba(156, 0, 20, 0.16) !important;
-            transform: translateY(-3px);
+            transform: translateY(-2px);
         }
-        28% {
-            background: #fff0f2 !important;
-            border-color: #b51f35 !important;
-            border-left-color: #b51f35 !important;
-            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.22), 0 5px 14px rgba(156, 0, 20, 0.12) !important;
+        13%, 29%, 45%, 61%, 77%, 93% {
+            background: #fff8f9 !important;
+            border-color: #fca5a5 !important;
+            border-left-color: #9c0014 !important;
+            box-shadow: 0 0 0 1px rgba(211, 71, 88, 0.18), 0 2px 8px rgba(156, 0, 20, 0.08) !important;
             transform: translateY(0);
-        }
-        55% {
-            background: #ffe1e5 !important;
-            border-color: #c12d42 !important;
-            border-left-color: #c12d42 !important;
-            box-shadow: 0 0 0 3px rgba(211, 71, 88, 0.24), 0 6px 16px rgba(156, 0, 20, 0.14) !important;
-        }
-        78% {
-            background: #fff1f3 !important;
-            border-color: #ae1c32 !important;
-            border-left-color: #ae1c32 !important;
-            box-shadow: 0 0 0 2px rgba(211, 71, 88, 0.18), 0 4px 12px rgba(156, 0, 20, 0.1) !important;
         }
     }
     @keyframes target-badge-pulse {
@@ -1819,20 +1971,23 @@ APP_CSS = """
             border: none !important;
             box-shadow: none !important;
             transform: scale(1);
+            text-shadow: none;
         }
-        8%, 55% {
-            color: #b91c1c !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            transform: scale(1.03);
-        }
-        28%, 78% {
+        5%, 21%, 37%, 53%, 69%, 85% {
             color: #7f000e !important;
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            transform: scale(1.01);
+            transform: scale(1.06);
+            text-shadow: 0 0 12px rgba(225, 29, 72, 0.45);
+        }
+        13%, 29%, 45%, 61%, 77%, 93% {
+            color: #9c0014 !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            transform: scale(1);
+            text-shadow: none;
         }
     }
     .video-content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
@@ -2070,8 +2225,7 @@ APP_CSS = """
         pointer-events: none !important;
     }
 
-    .target-question,
-    .target-question.target-transition {
+    .target-question {
         font-weight: 700 !important;
         font-size: 15px !important;
         line-height: 1.45 !important;
@@ -2084,8 +2238,6 @@ APP_CSS = """
         border-left: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
-        animation: none !important;
-        transition: none !important;
     }
     .target-question, .target-question strong, .target-question b, .target-question * {
         font-weight: 700 !important;
@@ -2273,7 +2425,16 @@ APP_CSS = """
     }
     .modal-titulo h3 { margin: 0; font-size: 19px; font-weight: 800; color: #0f172a; }
     .modal-titulo p { margin: 4px 0 0; font-size: 14px; color: #475569; }
-    .modal-card .compact-actions { justify-content: flex-end !important; }
+    .modal-card .compact-actions,
+    .modal-actions {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+        margin-top: 6px !important;
+    }
 
     /* Console do administrador */
     .admin-header { margin-bottom: 12px !important; padding-bottom: 12px !important; flex-wrap: nowrap !important; }
@@ -2548,11 +2709,36 @@ APP_CSS = """
         display: inline-block !important;
     }
     .video-meta.target-transition {
-        animation: target-highlight 12s ease-in-out !important;
+        position: relative !important;
+        overflow: hidden !important;
+        animation: target-highlight 15s ease-in-out !important;
         will-change: background, border-color, box-shadow, transform;
     }
+    .video-meta.target-transition::after {
+        content: "" !important;
+        position: absolute !important;
+        top: -50% !important;
+        left: -40% !important;
+        width: 35% !important;
+        height: 200% !important;
+        background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.5) 25%,
+            rgba(255, 255, 255, 1) 50%,
+            rgba(255, 255, 255, 0.5) 75%,
+            rgba(255, 255, 255, 0) 100%
+        ) !important;
+        box-shadow: 0 0 25px 10px rgba(255, 255, 255, 0.95), 0 0 40px 15px rgba(225, 29, 72, 0.35) !important;
+        transform: skewX(-25deg) !important;
+        pointer-events: none !important;
+        z-index: 3 !important;
+        animation: target-feixe-luz 2.5s ease-in-out 6 !important;
+    }
     .video-meta.target-transition .target-name-badge {
-        animation: target-badge-pulse 12s ease-in-out !important;
+        animation: target-badge-pulse 15s ease-in-out !important;
+        position: relative !important;
+        z-index: 4 !important;
     }
     .video-description, .video-transcription {
         background: transparent !important;
@@ -2713,8 +2899,7 @@ APP_CSS = """
         padding: 0 !important;
         flex: 0 0 auto !important;
     }
-    .annotation-controls .target-question,
-    .annotation-controls .target-question.target-transition {
+    .annotation-controls .target-question {
         padding: 2px 0 6px 0 !important;
         margin-bottom: 2px !important;
         font-size: 14.5px !important;
@@ -2725,7 +2910,40 @@ APP_CSS = """
         border-left: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
-        animation: none !important;
+    }
+    .annotation-controls .target-question.target-transition {
+        position: relative !important;
+        overflow: hidden !important;
+        padding: 6px 12px !important;
+        margin-bottom: 6px !important;
+        font-size: 14.5px !important;
+        line-height: 1.4 !important;
+        background: #fffafa !important;
+        border: 1px solid #ffd6dc !important;
+        border-left: 4px solid #9c0014 !important;
+        border-radius: 6px !important;
+        animation: target-highlight 15s ease-in-out !important;
+    }
+    .annotation-controls .target-question.target-transition::after {
+        content: "" !important;
+        position: absolute !important;
+        top: -50% !important;
+        left: -40% !important;
+        width: 35% !important;
+        height: 200% !important;
+        background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.5) 25%,
+            rgba(255, 255, 255, 1) 50%,
+            rgba(255, 255, 255, 0.5) 75%,
+            rgba(255, 255, 255, 0) 100%
+        ) !important;
+        box-shadow: 0 0 25px 10px rgba(255, 255, 255, 0.95), 0 0 40px 15px rgba(225, 29, 72, 0.35) !important;
+        transform: skewX(-25deg) !important;
+        pointer-events: none !important;
+        z-index: 3 !important;
+        animation: target-feixe-luz 2.5s ease-in-out 6 !important;
     }
     .hidden-cabecalho {
         display: none !important;

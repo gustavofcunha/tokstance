@@ -409,9 +409,9 @@ def construir_interface(
                             with gr.Column(visible=False) as recuperar_passo_codigo:
                                 recuperar_codigo = gr.Textbox(label="Código de Verificação (6 dígitos)", placeholder="Ex: 123456")
                                 recuperar_aviso_codigo = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                                with gr.Row(elem_classes="compact-actions"):
+                                with gr.Row(elem_classes=["auth-actions-row", "compact-actions"]):
+                                    btn_trocar_identificador = gr.Button("Usar outro e-mail", elem_classes=["secondary-btn", "auth-secondary-btn"], size="lg")
                                     btn_verificar_codigo = gr.Button("Verificar Código", elem_classes="ufmg-btn", size="lg")
-                                    btn_trocar_identificador = gr.Button("Usar outro e-mail", elem_classes="error-btn", size="lg")
 
                             with gr.Column(visible=False) as recuperar_passo_senha:
                                 with gr.Row():
@@ -479,9 +479,9 @@ def construir_interface(
                             placeholder="Ex: TOKSTANCE-2026",
                         )
                         modal_convite_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot"])
-                        with gr.Row(elem_classes="compact-actions"):
-                            btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes="ufmg-btn", scale=0, min_width=160)
-                            btn_cancelar_convite = gr.Button("Cancelar", elem_classes="error-btn", scale=0, min_width=110)
+                        with gr.Row(elem_classes=["modal-actions", "compact-actions"]):
+                            btn_cancelar_convite = gr.Button("Cancelar", elem_classes=["secondary-btn", "modal-btn-cancel"], scale=0, min_width=110)
+                            btn_entrar_convite = gr.Button("Entrar na Tarefa", elem_classes=["ufmg-btn", "modal-btn-confirm"], scale=0, min_width=160)
 
             # ==================================================================
             # 3. TELA DE CRIACAO DE TAREFA (WIZARD EM ETAPAS)
@@ -545,7 +545,7 @@ def construir_interface(
                             btn_atualizar_pares = gr.Button("Recalcular combinações", elem_classes=["ufmg-btn", "wizard-inline-btn"], scale=0)
 
                         with gr.Row(elem_classes="wizard-step-footer"):
-                            btn_passo1_voltar_hub = gr.Button("← Voltar ao Painel Principal", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=250)
+                            btn_passo1_voltar_hub = gr.Button("← Voltar ao Painel Principal", elem_classes=["secondary-btn", "hub-btn"], scale=0, min_width=250)
                             btn_passo1_proximo = gr.Button("Próximo: Equipe e Acesso →", elem_classes=["ufmg-btn", "wizard-next-btn"], scale=0, min_width=240)
 
                     # ETAPA 2: Equipe, Vagas e Codigo de Convite
@@ -613,7 +613,7 @@ def construir_interface(
                                 )
 
                         with gr.Row(elem_classes="wizard-step-footer"):
-                            btn_passo2_voltar = gr.Button("← Voltar ao Passo 1", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=200)
+                            btn_passo2_voltar = gr.Button("← Voltar ao Passo 1", elem_classes=["secondary-btn", "hub-btn"], scale=0, min_width=200)
                             btn_passo2_proximo = gr.Button("Próximo: Vídeos e Reserva →", elem_classes=["ufmg-btn", "wizard-next-btn"], scale=0, min_width=240)
 
                     # ETAPA 3: Videos e Reserva Tecnica
@@ -644,7 +644,7 @@ def construir_interface(
                         wizard_aviso = gr.HTML(value="", elem_classes=["auth-feedback-slot", "wizard-feedback-slot"])
 
                         with gr.Row(elem_classes="wizard-step-footer"):
-                            btn_passo3_voltar = gr.Button("← Voltar ao Passo 2", elem_classes=["error-btn", "hub-btn"], scale=0, min_width=160)
+                            btn_passo3_voltar = gr.Button("← Voltar ao Passo 2", elem_classes=["secondary-btn", "hub-btn"], scale=0, min_width=160)
                             btn_submeter_tarefa = gr.Button("Criar Tarefa e Atribuir Vagas", elem_classes=["ufmg-btn", "wizard-submit-btn"], scale=0, min_width=260)
 
             # ==================================================================
@@ -1850,8 +1850,13 @@ def construir_interface(
         )
 
         btn_passo1_proximo.click(lambda: ir_para_passo(2), inputs=[], outputs=wizard_passo_outputs)
+        wizard_titulo.submit(lambda: ir_para_passo(2), inputs=[], outputs=wizard_passo_outputs)
+        wizard_pergunta.submit(lambda: ir_para_passo(2), inputs=[], outputs=wizard_passo_outputs)
+
         btn_passo2_voltar.click(lambda: ir_para_passo(1), inputs=[], outputs=wizard_passo_outputs)
         btn_passo2_proximo.click(lambda: ir_para_passo(3), inputs=[], outputs=wizard_passo_outputs)
+        wizard_convite.submit(lambda: ir_para_passo(3), inputs=[], outputs=wizard_passo_outputs)
+
         btn_passo3_voltar.click(lambda: ir_para_passo(2), inputs=[], outputs=wizard_passo_outputs)
 
         btn_tab_passo1.click(lambda: ir_para_passo(1), inputs=[], outputs=wizard_passo_outputs)
@@ -1902,9 +1907,9 @@ def construir_interface(
             js="(codigo) => { if (codigo) { window.tokstanceCopiar(codigo); } }",
         )
 
-        btn_submeter_tarefa.click(
-            submeter_nova_tarefa,
-            inputs=[
+        handler_submeter_tarefa = {
+            "fn": submeter_nova_tarefa,
+            "inputs": [
                 estado_sessao,
                 wizard_titulo,
                 wizard_pergunta,
@@ -1917,8 +1922,10 @@ def construir_interface(
                 wizard_arquivo_videos,
                 wizard_qtd_principal,
             ],
-            outputs=[wizard_mensagem, wizard_convite, wizard_aviso],
-        )
+            "outputs": [wizard_mensagem, wizard_convite, wizard_aviso],
+        }
+        btn_submeter_tarefa.click(**handler_submeter_tarefa)
+        wizard_qtd_principal.submit(**handler_submeter_tarefa)
 
         #eventos da tela de rotulacao
         btn_continuar_sensivel.click(

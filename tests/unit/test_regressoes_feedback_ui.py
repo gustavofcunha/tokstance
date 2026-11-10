@@ -135,6 +135,8 @@ def test_solicitar_recuperacao_com_smtp_quebrado_nao_lanca_erro_de_logger(
     servicos["auth"].cadastrar_usuario("pesquisador", "senha123", email="p@exemplo.org")
     monkeypatch.setenv("SMTP_HOST", "servidor.invalido.local")
     monkeypatch.setenv("SMTP_PORT", "1")
+    monkeypatch.setenv("SMTP_USER", "pesquisador@exemplo.org")
+    monkeypatch.setenv("SMTP_PASSWORD", "senha_mock")
 
     resultado = servicos["auth"].solicitar_recuperacao_senha("pesquisador")
 
@@ -446,11 +448,12 @@ def test_destaque_target_transicao_primeiro_video_e_mudanca_alvo() -> None:
     assert "target-transition" in card2
     assert "target-transition" in perg2
 
-    #assert animacao legada de transicao de target configurada no css
+    #assert animacao de transicao de target configurada no css com feixe de luz
     from tokstance.frontend.theme import APP_CSS
     assert ".video-meta.target-transition" in APP_CSS
-    assert "animation: target-highlight 12s ease-in-out" in APP_CSS
+    assert "animation: target-highlight 15s ease-in-out" in APP_CSS
     assert "target-badge-pulse" in APP_CSS
+    assert "target-feixe-luz" in APP_CSS
     assert "rgba(211, 71, 88, 0.28)" in APP_CSS
 
 

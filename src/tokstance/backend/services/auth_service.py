@@ -178,8 +178,8 @@ class ServicoAutenticacao:
         smtp_user = (os.environ.get("SMTP_USER") or SMTP_USER_PADRAO).strip()
         smtp_pass_raw = (os.environ.get("SMTP_PASSWORD") or SMTP_PASSWORD_PADRAO).strip()
         smtp_pass = smtp_pass_raw.replace(" ", "") if "gmail" in (smtp_host or "").lower() else smtp_pass_raw
-        smtp_configurado = bool(smtp_host and email_destino and smtp_user and smtp_pass)
         mock_smtp = os.environ.get("TOKSTANCE_MOCK_SMTP") == "1"
+        smtp_configurado = bool(smtp_host and email_destino and ((smtp_user and smtp_pass) or mock_smtp))
 
         if mock_smtp and email_destino:
             #modo mock para testes automatizados sem conexao externa
