@@ -1163,7 +1163,7 @@ def test_recuperacao_senha_transiciona_estagios_ocultando_passos_anteriores(
     assert res_solic[4].get("visible") is True   # recuperar_passo_codigo visivel
     assert res_solic[5].get("visible") is False  # recuperar_passo_senha oculto
 
-    # Botao Usar outro e-mail restaura Estagio 1 e oculta Estagio 2 e 3
+    # Botao Recuperar outra conta restaura Estagio 1 e oculta Estagio 2 e 3
     res_troca = fn_trocar()
     assert res_troca[3].get("visible") is True   # recuperar_passo_identificador visivel
     assert res_troca[4].get("visible") is False  # recuperar_passo_codigo oculto
@@ -1188,17 +1188,6 @@ def test_recuperacao_senha_transiciona_estagios_ocultando_passos_anteriores(
     assert res_redef[-3].get("visible") is True   # recuperar_passo_identificador resetado para visivel
     assert res_redef[-2].get("visible") is False  # recuperar_passo_codigo oculto
     assert res_redef[-1].get("visible") is False  # recuperar_passo_senha oculto
-
-    # Campos de senha e confirmacao em cadastro e recuperacao ficam empilhados verticalmente (nao em gr.Row)
-    campos_senha = [
-        comp for comp in app.blocks.values()
-        if isinstance(comp, gr.Textbox) and getattr(comp, "label", "") in {
-            "Senha de Acesso", "Confirmar Senha", "Nova Senha", "Confirmar Nova Senha"
-        }
-    ]
-    assert len(campos_senha) >= 4
-    for campo in campos_senha:
-        assert not isinstance(campo.parent, gr.Row)
 
 
 
